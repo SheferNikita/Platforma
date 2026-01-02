@@ -1,0 +1,262 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+:root {
+  /* Основная палитра - тёплые бежевые тона */
+  --book-bg: linear-gradient(135deg, #f5f3ed 0%, #ebe8dc 50%, #f0ede3 100%);
+  --book-page: #faf8f3;
+  --book-text: #3d3527;
+  --book-border: #d4c9b0;
+  
+  /* Золотые акценты - более приглушённые */
+  --book-accent: #a67c52;
+  --book-accent-light: #c4a57b;
+  --book-accent-gradient: linear-gradient(135deg, #a67c52 0%, #c4a57b 100%);
+  
+  /* Тени - более мягкие */
+  --book-shadow: rgba(61, 53, 39, 0.06);
+  --book-shadow-medium: rgba(61, 53, 39, 0.12);
+  --book-shadow-strong: rgba(61, 53, 39, 0.18);
+  
+  /* Зелёные тона для успеха - приглушённые оливковые */
+  --success-green: #6b8e6f;
+  --success-gradient: linear-gradient(135deg, #5a7a5e 0%, #6b8e6f 100%);
+  
+  /* Красные для предупреждений */
+  --danger-red: #a85d5d;
+  
+  /* Золотое свечение */
+  --gold-shimmer: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%);
+  
+  /* Небесные оттенки - более глубокие синие */
+  --sky-blue: #7d9db5;
+  --sky-light: #b5cad9;
+  --sky-soft: #e3ebf1;
+  --sky-dark: #4a6b85;
+  
+  /* Духовные золотые тона */
+  --celestial-gold: #b5966d;
+  --divine-gold: #d4b896;
+  
+  /* Градиенты */
+  --heaven-gradient: linear-gradient(135deg, #e3ebf1 0%, #b5cad9 30%, #f5f3ed 70%, #f0ede3 100%);
+  --sky-accent-gradient: linear-gradient(135deg, #7d9db5 0%, #b5966d 50%, #a67c52 100%);
+  
+  /* Тени с синевой */
+  --ethereal-shadow: rgba(77, 107, 133, 0.10);
+  --ethereal-glow: rgba(77, 107, 133, 0.20);
+  
+  /* Дополнительные нейтральные тона */
+  --warm-white: #fdfbf7;
+  --soft-beige: #f2ede3;
+  --light-sand: #e8e3d8;
+  
+  /* Бежевые оттенки для UI элементов */
+  --beige-light: #d9cdb8;
+  --beige-medium: #c4b399;
+  --beige-warm: #b39c7f;
+  --beige-deep: #9d8567;
+  --beige-dark: #8a7456;
+  
+  /* Бежевые градиенты для состояний */
+  --beige-complete-gradient: linear-gradient(135deg, #d9cdb8 0%, #c4b399 100%);
+  --beige-active-gradient: linear-gradient(135deg, #b39c7f 0%, #d9cdb8 50%, #c4b399 100%);
+  
+  /* Сине-сиреневые оттенки для кнопок */
+  --button-lavender: #8b95bc;
+  --button-lavender-light: #9ba5ca;
+  --button-lavender-dark: #7a84ab;
+  
+  /* Цвет для иконок */
+  --icon-lavender: #8b8b9a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Crimson Text', 'Georgia', serif;
+  background: linear-gradient(to bottom, #e3ebf1 0%, #f5f3ed 100%);
+  background-image: 
+    radial-gradient(circle at 20% 20%, rgba(125, 157, 181, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 80% 60%, rgba(181, 150, 109, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(125, 157, 181, 0.05) 0%, transparent 50%),
+    repeating-linear-gradient(90deg, transparent 0px, rgba(166, 124, 82, 0.02) 1px, transparent 2px, transparent 40px);
+  color: var(--book-text);
+  line-height: 1.7;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 1.5rem 0;
+  font-family: 'EB Garamond', 'Georgia', serif;
+}
+
+h2 {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0 0 1rem 0;
+  font-family: 'EB Garamond', 'Georgia', serif;
+}
+
+h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0 0 0.75rem 0;
+  font-family: 'EB Garamond', 'Georgia', serif;
+}
+
+h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0 0 0.5rem 0;
+}
+
+p {
+  margin: 0 0 1rem 0;
+}
+
+button {
+  font-family: 'Crimson Text', 'Georgia', serif;
+}
+
+/* Hide scrollbar for all browsers */
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Additional book-style enhancements */
+::selection {
+  background: var(--book-accent);
+  color: var(--book-page);
+}
+
+/* Drop cap effect for first paragraph (optional) */
+.drop-cap::first-letter {
+  font-size: 3.5em;
+  line-height: 0.9;
+  float: left;
+  margin: 0.1em 0.1em 0 0;
+  color: var(--book-accent);
+  font-family: 'EB Garamond', 'Georgia', serif;
+}
+
+/* Ornamental divider */
+.ornamental-divider {
+  text-align: center;
+  margin: 2rem 0;
+  color: var(--book-accent);
+  opacity: 0.3;
+}
+
+.ornamental-divider::before {
+  content: '❦';
+  font-size: 1.5rem;
+}
+
+/* Custom animations */
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-gentle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes shimmer-sky {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out;
+}
+
+.animate-fade-out {
+  animation: fade-out 0.5s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out;
+}
+
+.animate-float-gentle {
+  animation: float-gentle 4s ease-in-out infinite;
+}

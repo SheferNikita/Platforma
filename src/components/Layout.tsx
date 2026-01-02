@@ -1,0 +1,60 @@
+import React from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { Navigation } from './Navigation';
+import { Toaster } from 'sonner@2.0.3';
+
+export function Layout() {
+  const location = useLocation();
+
+  // Scroll to top on route change
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
+  return (
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Небесный фоновый эффект */}
+      <div className="fixed inset-0 pointer-events-none opacity-30">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#7d9db5]/20 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/3 right-1/4 w-80 h-80 bg-[#b5cad9]/15 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 left-1/2 w-72 h-72 bg-[#7d9db5]/20 rounded-full blur-3xl"></div>
+      </div>
+
+      {/* Navigation */}
+      <Navigation />
+
+      {/* Main Content with padding for fixed navigation */}
+      <div className="pt-0 md:pt-24 pb-44 md:pb-8 px-4 md:px-8 lg:px-12 relative z-10">
+        <div className="max-w-7xl mx-auto mt-8">
+          <Outlet />
+          
+          {/* Footer */}
+          <footer className="mt-10 text-center opacity-50 text-sm tracking-wide">
+            <div className="inline-block">
+              <p className="relative">
+                © 2025 Платформа «Путь к Трезвости». Ваш путь к здоровой жизни.
+                <span className="absolute -bottom-1 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#d4c9b0] to-transparent"></span>
+              </p>
+            </div>
+          </footer>
+        </div>
+      </div>
+      
+      {/* Toast Notifications */}
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: 'linear-gradient(135deg, rgba(253,251,247,0.95) 0%, rgba(242,237,227,0.9) 100%)',
+            border: '2px solid rgba(166,124,82,0.2)',
+            borderRadius: '12px',
+            boxShadow: '0 8px 24px rgba(77,107,133,0.15), 0 4px 12px rgba(0,0,0,0.1)',
+            backdropFilter: 'blur(8px)',
+            padding: '16px 20px',
+          },
+          className: 'font-serif',
+        }}
+      />
+    </div>
+  );
+}

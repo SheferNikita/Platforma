@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Lock, CheckCircle, PlayCircle } from 'lucide-react';
+import { BookOpen, Lock, CheckCircle, PlayCircle, Book, FileText } from 'lucide-react';
 
 interface Lesson {
   id: number;
@@ -11,6 +11,8 @@ interface Lesson {
   isLocked: boolean;
   module: number;
   moduleName: string;
+  hasDiary: boolean;
+  hasNotes: boolean;
 }
 
 export function LessonsTab() {
@@ -25,6 +27,8 @@ export function LessonsTab() {
       isLocked: false,
       module: 1,
       moduleName: 'Модуль 1: Основы трезвости',
+      hasDiary: true,
+      hasNotes: true,
     },
     {
       id: 2,
@@ -35,6 +39,8 @@ export function LessonsTab() {
       isLocked: false,
       module: 1,
       moduleName: 'Модуль 1: Основы трезвости',
+      hasDiary: false,
+      hasNotes: false,
     },
     {
       id: 3,
@@ -45,6 +51,8 @@ export function LessonsTab() {
       isLocked: false,
       module: 1,
       moduleName: 'Модуль 1: Основы трезвости',
+      hasDiary: true,
+      hasNotes: true,
     },
     {
       id: 4,
@@ -55,6 +63,8 @@ export function LessonsTab() {
       isLocked: false,
       module: 1,
       moduleName: 'Модуль 1: Основы трезвости',
+      hasDiary: true,
+      hasNotes: true,
     },
     {
       id: 5,
@@ -65,6 +75,8 @@ export function LessonsTab() {
       isLocked: true,
       module: 2,
       moduleName: 'Модуль 2: Управление зависимостью',
+      hasDiary: true,
+      hasNotes: true,
     },
     {
       id: 6,
@@ -75,6 +87,8 @@ export function LessonsTab() {
       isLocked: true,
       module: 2,
       moduleName: 'Модуль 2: Управление зависимостью',
+      hasDiary: true,
+      hasNotes: true,
     },
     {
       id: 7,
@@ -85,6 +99,8 @@ export function LessonsTab() {
       isLocked: true,
       module: 2,
       moduleName: 'Модуль 2: Управление зависимостью',
+      hasDiary: true,
+      hasNotes: true,
     },
     {
       id: 8,
@@ -95,6 +111,8 @@ export function LessonsTab() {
       isLocked: true,
       module: 2,
       moduleName: 'Модуль 2: Управление зависимостью',
+      hasDiary: true,
+      hasNotes: true,
     },
   ]);
 
@@ -208,6 +226,28 @@ export function LessonsTab() {
                       <p className="text-sm mb-5 md:mb-6 opacity-80 leading-relaxed">
                         {lesson.description}
                       </p>
+                      
+                      {/* Метки дневника и конспекта */}
+                      {!lesson.isLocked && (
+                        <div className="flex items-center gap-2 mb-4 flex-wrap">
+                          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border transition-all duration-300 ${
+                            lesson.hasDiary 
+                              ? 'bg-gradient-to-r from-[var(--success-green)]/10 to-[var(--success-green)]/5 border-[var(--success-green)]/30 text-[var(--success-green)]'
+                              : 'bg-gray-50 border-gray-300/50 text-gray-500'
+                          }`}>
+                            <Book className="w-3.5 h-3.5" />
+                            <span>{lesson.hasDiary ? 'Дневник заполнен' : 'Дневник не заполнен'}</span>
+                          </div>
+                          <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border transition-all duration-300 ${
+                            lesson.hasNotes 
+                              ? 'bg-gradient-to-r from-[var(--success-green)]/10 to-[var(--success-green)]/5 border-[var(--success-green)]/30 text-[var(--success-green)]'
+                              : 'bg-gray-50 border-gray-300/50 text-gray-500'
+                          }`}>
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>{lesson.hasNotes ? 'Конспект заполнен' : 'Конспект не заполнен'}</span>
+                          </div>
+                        </div>
+                      )}
                       
                       <div className="flex flex-col sm:flex-row gap-3">
                         {!lesson.isLocked && (

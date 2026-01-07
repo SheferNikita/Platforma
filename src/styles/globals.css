@@ -75,6 +75,11 @@
   box-sizing: border-box;
 }
 
+html {
+  color-scheme: light;
+  background: #e3ebf1;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -85,8 +90,10 @@ body {
     radial-gradient(circle at 80% 60%, rgba(181, 150, 109, 0.04) 0%, transparent 40%),
     radial-gradient(circle at 50% 80%, rgba(125, 157, 181, 0.05) 0%, transparent 50%),
     repeating-linear-gradient(90deg, transparent 0px, rgba(166, 124, 82, 0.02) 1px, transparent 2px, transparent 40px);
+  background-attachment: fixed;
   color: var(--book-text);
   line-height: 1.7;
+  min-height: 100vh;
 }
 
 h1 {

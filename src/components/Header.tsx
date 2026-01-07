@@ -1,8 +1,8 @@
 import React from 'react';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, Calendar, Users } from 'lucide-react';
 import { SobrietyCounter } from './SobrietyCounter';
 import { NotificationBell } from './NotificationBell';
-import { useLocation } from 'react-router-dom';
+import { useLocation, NavLink } from 'react-router-dom';
 
 export function Header() {
   const location = useLocation();
@@ -31,9 +31,45 @@ export function Header() {
       </div>
       
       <div className="flex justify-between items-center relative z-10">
-        <div className="w-12"></div> {/* Spacer for balance */}
-        <SobrietyCounter />
-        <NotificationBell />
+        {/* Mobile quick links - Left side */}
+        <div className="flex items-center gap-2">
+          <div className="md:hidden flex items-center gap-2">
+            <NavLink
+              to="/schedule"
+              className={({ isActive }) =>
+                `p-2.5 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                  isActive
+                    ? 'bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] border-[var(--button-lavender-dark)] text-white shadow-lg'
+                    : 'bg-white/60 border-[var(--sky-light)]/50 hover:border-[var(--button-lavender)]/60 hover:bg-[var(--button-lavender)]/10'
+                }`
+              }
+            >
+              <Calendar className="w-5 h-5" />
+            </NavLink>
+            <NavLink
+              to="/contacts"
+              className={({ isActive }) =>
+                `p-2.5 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 active:scale-95 ${
+                  isActive
+                    ? 'bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] border-[var(--button-lavender-dark)] text-white shadow-lg'
+                    : 'bg-white/60 border-[var(--sky-light)]/50 hover:border-[var(--button-lavender)]/60 hover:bg-[var(--button-lavender)]/10'
+                }`
+              }
+            >
+              <Users className="w-5 h-5" />
+            </NavLink>
+          </div>
+        </div>
+        
+        {/* Center - Sobriety Counter */}
+        <div className="flex-1 flex justify-center">
+          <SobrietyCounter />
+        </div>
+        
+        {/* Right side - Notifications */}
+        <div className="flex items-center">
+          <NotificationBell />
+        </div>
       </div>
     </header>
   );

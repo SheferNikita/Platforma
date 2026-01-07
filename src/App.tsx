@@ -10,6 +10,9 @@ import { ContactsPage } from './pages/ContactsPage';
 import { CommunitiesPage } from './pages/CommunitiesPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SOSPage } from './pages/SOSPage';
+import { MyDiariesPage } from './pages/MyDiariesPage';
+import { MyNotesPage } from './pages/MyNotesPage';
+import { MiniGroupPage } from './pages/MiniGroupPage';
 
 function LessonsRedirect() {
   const { lessonId } = useParams();
@@ -33,7 +36,10 @@ export default function App() {
           <Route path="schedule" element={<SchedulePage />} />
           <Route path="contacts" element={<ContactsPage />} />
           <Route path="communities" element={<CommunitiesPage />} />
+          <Route path="mini-group" element={<MiniGroupPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="my-diaries" element={<MyDiariesPage />} />
+          <Route path="my-notes" element={<MyNotesPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

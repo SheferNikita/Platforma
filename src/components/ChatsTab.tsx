@@ -1,5 +1,6 @@
 import React from 'react';
-import { MessageCircle, Users, Phone, Video, ExternalLink } from 'lucide-react';
+import { MessageCircle, Users, Phone, Video, ExternalLink, Calendar } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface ChatLink {
   id: number;
@@ -9,9 +10,12 @@ interface ChatLink {
   icon: 'message' | 'group' | 'phone' | 'video';
   link: string;
   members?: number;
+  isSchedule?: boolean;
 }
 
 export function ChatsTab() {
+  const navigate = useNavigate();
+  
   const chats: ChatLink[] = [
     {
       id: 1,
@@ -33,37 +37,21 @@ export function ChatsTab() {
     },
     {
       id: 3,
-      name: 'Ежедневные видеовстречи',
-      description: 'Онлайн-встречи каждый день в 20:00 МСК для обсуждения прогресса и вопросов.',
+      name: 'Еженедельные встречи',
+      description: 'Онлайн встречи для помощи, поддержки, вопросов и ответов. Расписание по кнопке ниже',
       platform: 'Zoom',
       icon: 'video',
-      link: '#',
-    },
-    {
-      id: 4,
-      name: 'Чат новичков',
-      description: 'Специальный чат для тех, кто только начал свой путь к трезвости.',
-      platform: 'Telegram',
-      icon: 'message',
-      link: '#',
-      members: 156,
+      link: '/schedule',
+      isSchedule: true,
     },
     {
       id: 5,
-      name: 'Горячая линия поддержки',
-      description: 'Круглосуточная линия для экстренной психологической помощи (звонок бесплатный).',
-      platform: 'Телефон',
-      icon: 'phone',
-      link: '#',
-    },
-    {
-      id: 6,
-      name: 'Родственники и близкие',
-      description: 'Чат для родственников и друзей участников курса.',
+      name: 'Чат экстренных ситуаций',
+      description: 'В случае кризиса, вы можете написать в этот чат. Вам помогут',
       platform: 'Telegram',
-      icon: 'group',
+      icon: 'message',
       link: '#',
-      members: 72,
+      members: 42,
     },
   ];
 
@@ -112,7 +100,7 @@ export function ChatsTab() {
               <div className="flex-1 min-w-0">
                 <h3 className="mb-2 text-lg">{chat.name}</h3>
                 <div className="flex items-center gap-2 text-sm opacity-60 flex-wrap">
-                  <span className="font-medium">{chat.platform}</span>
+                  <span className="font-medium">Telegram</span>
                   {chat.members && (
                     <>
                       <span className="w-1 h-1 rounded-full bg-current opacity-50"></span>
@@ -127,16 +115,27 @@ export function ChatsTab() {
               {chat.description}
             </p>
 
-            <a
-              href={chat.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_8px_20px_rgba(139,149,188,0.45)] transition-all duration-300 text-sm transform hover:scale-[1.03] active:scale-[0.98] relative overflow-hidden group/btn z-10"
-            >
-              <span className="relative z-10 font-medium">Присоединиться</span>
-              <ExternalLink className="w-4 h-4 relative z-10" />
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700"></div>
-            </a>
+            {chat.isSchedule ? (
+              <button
+                onClick={() => navigate(chat.link)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_8px_20px_rgba(139,149,188,0.45)] transition-all duration-300 text-sm transform hover:scale-[1.03] active:scale-[0.98] relative overflow-hidden group/btn z-10"
+              >
+                <span className="relative z-10 font-medium">Расписание</span>
+                <Calendar className="w-4 h-4 relative z-10" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700"></div>
+              </button>
+            ) : (
+              <a
+                href={chat.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_8px_20px_rgba(139,149,188,0.45)] transition-all duration-300 text-sm transform hover:scale-[1.03] active:scale-[0.98] relative overflow-hidden group/btn z-10"
+              >
+                <span className="relative z-10 font-medium">Присоединиться</span>
+                <ExternalLink className="w-4 h-4 relative z-10" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700"></div>
+              </a>
+            )}
           </div>
         ))}
       </div>
@@ -157,7 +156,7 @@ export function ChatsTab() {
           </li>
           <li className="flex items-start gap-3">
             <span className="text-[var(--success-green)] mt-1 text-lg leading-none">•</span>
-            <span>Соблюдайте конфиденциальность — не де��итесь личной информацией других</span>
+            <span>Соблюдайте конфиденциальность — не деитесь личной информацией других</span>
           </li>
         </ul>
       </div>

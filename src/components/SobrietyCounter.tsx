@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Check, Award } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 export function SobrietyCounter() {
   const [startDate, setStartDate] = useState<string | null>(null);
   const [lastCheckIn, setLastCheckIn] = useState<string | null>(null);
   const [days, setDays] = useState(0);
   const [showSetup, setShowSetup] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Load data from localStorage
@@ -20,6 +25,32 @@ export function SobrietyCounter() {
       setShowSetup(true);
     }
   }, []);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      // Проверяем, что клик был вне контейнера счетчика И вне портала меню
+      if (
+        containerRef.current && 
+        !containerRef.current.contains(target) &&
+        menuRef.current &&
+        !menuRef.current.contains(target)
+      ) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside as any);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside as any);
+    };
+  }, [isMenuOpen]);
 
   const calculateDays = (start: string) => {
     const startDateTime = new Date(start).getTime();
@@ -62,6 +93,16 @@ export function SobrietyCounter() {
         startDate: today,
         lastCheckIn: today
       }));
+      setIsMenuOpen(false);
+    }
+  };
+
+  const toggleMenu = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsMenuOpen(!isMenuOpen);
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setMenuPosition({ top: rect.bottom, right: window.innerWidth - rect.right });
     }
   };
 
@@ -87,11 +128,16 @@ export function SobrietyCounter() {
 
   return (
     <div 
-      className="relative"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      className="relative z-[100]"
+      onMouseEnter={() => setIsMenuOpen(true)}
+      onMouseLeave={() => setIsMenuOpen(false)}
+      ref={containerRef}
     >
-      <div className="bg-gradient-to-br from-[#fdfbf7]/95 via-[#e3ebf1]/40 to-white/80 backdrop-blur-sm rounded-xl border-2 border-[#b5cad9]/40 px-4 py-2.5 shadow-[0_4px_16px_var(--ethereal-shadow),inset_0_1px_0_rgba(255,255,255,0.9)] transition-all duration-300 hover:shadow-[0_8px_24px_var(--ethereal-glow)]">
+      <div 
+        onClick={toggleMenu}
+        className="bg-gradient-to-br from-[#fdfbf7]/95 via-[#e3ebf1]/40 to-white/80 backdrop-blur-sm rounded-xl border-2 border-[#b5cad9]/40 px-4 py-2.5 shadow-[0_4px_16px_var(--ethereal-shadow),inset_0_1px_0_rgba(255,255,255,0.9)] transition-all duration-300 hover:shadow-[0_8px_24px_var(--ethereal-glow)] cursor-pointer active:scale-[0.98]"
+        ref={buttonRef}
+      >
         {/* Минималистичный вид */}
         <div className="flex items-center gap-3">
           <Award className="w-4 h-4 text-[var(--button-lavender-dark)] flex-shrink-0 drop-shadow-sm" />
@@ -107,7 +153,10 @@ export function SobrietyCounter() {
           {/* Кнопка отметки - всегда видна */}
           {!isCheckedInToday() ? (
             <button
-              onClick={handleCheckIn}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCheckIn();
+              }}
               className="ml-auto p-1.5 bg-gradient-to-r from-[#6b8e6f] to-[#7a9d7e] text-white rounded-lg hover:shadow-[0_6px_16px_rgba(107,142,111,0.35)] transition-all duration-300 transform hover:scale-110 active:scale-95 group flex-shrink-0"
               title="Отметить день"
             >
@@ -121,9 +170,13 @@ export function SobrietyCounter() {
         </div>
       </div>
 
-      {/* Расширенное меню при наведении */}
-      {isHovered && (
-        <div className="absolute top-full right-0 mt-2 bg-gradient-to-br from-[#fdfbf7]/98 via-[#e3ebf1]/50 to-white/85 backdrop-blur-lg rounded-xl border-2 border-[#b5cad9]/40 p-4 shadow-[0_12px_32px_var(--ethereal-shadow),0_4px_16px_var(--book-shadow)] min-w-[220px] z-50 animate-fade-in">
+      {/* Расширенное меню при наведении/клике */}
+      {isMenuOpen && createPortal(
+        <div 
+          ref={menuRef}
+          className="fixed bg-gradient-to-br from-[#fdfbf7]/98 via-[#e3ebf1]/50 to-white/85 backdrop-blur-lg rounded-xl border-2 border-[#b5cad9]/40 p-4 shadow-[0_12px_32px_var(--ethereal-shadow),0_4px_16px_var(--book-shadow)] min-w-[220px] z-[9999] animate-fade-in" 
+          style={{ top: `${menuPosition.top + 8}px`, right: `${menuPosition.right}px` }}
+        >
           <div className="text-[10px] opacity-60 mb-3 tracking-wide">
             Начало: {startDate && new Date(startDate).toLocaleDateString('ru-RU')}
           </div>
@@ -133,7 +186,8 @@ export function SobrietyCounter() {
           >
             Сбросить счетчик
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

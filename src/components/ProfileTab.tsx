@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Award, BookOpen, Target, Settings, Camera, CheckCircle, Trophy, Star } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Award, BookOpen, Target, Settings, Camera, CheckCircle, Trophy, Star, FileText, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Achievement {
   id: number;
@@ -11,7 +12,13 @@ interface Achievement {
 }
 
 export function ProfileTab() {
+  const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingPassword, setIsEditingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordUpdateSuccess, setPasswordUpdateSuccess] = useState(false);
+  const [profileUpdateSuccess, setProfileUpdateSuccess] = useState(false);
+  const [editableName, setEditableName] = useState('');
   const [userInfo, setUserInfo] = useState({
     name: 'Александр Иванов',
     email: 'alexander.ivanov@example.com',
@@ -92,6 +99,26 @@ export function ProfileTab() {
 
   return (
     <div className="animate-fade-in">
+      {/* Password Update Success Message */}
+      {passwordUpdateSuccess && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+          <div className="bg-[var(--success-green)] text-white px-6 py-3 rounded-xl shadow-[0_8px_24px_rgba(34,197,94,0.4)] flex items-center gap-2">
+            <CheckCircle className="w-5 h-5" />
+            <span>Пароль успешно обновлен</span>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Update Success Message */}
+      {profileUpdateSuccess && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+          <div className="bg-[var(--success-green)] text-white px-6 py-3 rounded-xl shadow-[0_8px_24px_rgba(34,197,94,0.4)] flex items-center gap-2">
+            <CheckCircle className="w-5 h-5" />
+            <span>Профиль успешно обновлен</span>
+          </div>
+        </div>
+      )}
+
       {/* Motivational Card - Mobile Only (at top) */}
       <div className="lg:hidden mb-6 border-2 border-[var(--button-lavender-dark)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/15 to-white/80 rounded-xl p-4 shadow-[0_8px_24px_var(--ethereal-shadow)]">
         <div className="text-center">
@@ -144,34 +171,106 @@ export function ProfileTab() {
               {/* User Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-xl md:text-2xl mb-2">{userInfo.name}</h3>
-                    <div className="flex items-center gap-2 text-sm opacity-60">
-                      <Calendar className="w-4 h-4 text-[var(--icon-lavender)]" />
-                      На платформе: {calculateMembershipDays()} {calculateMembershipDays() === 1 ? 'день' : calculateMembershipDays() < 5 ? 'дня' : 'дней'}
-                    </div>
+                  <div className="flex-1">
+                    {!isEditing ? (
+                      <h3 className="text-xl md:text-2xl mb-2">{userInfo.name}</h3>
+                    ) : (
+                      <input
+                        type="text"
+                        value={editableName}
+                        onChange={(e) => setEditableName(e.target.value)}
+                        className="w-full px-3 py-2 border-2 border-[var(--button-lavender)]/60 rounded-xl focus:outline-none focus:border-[var(--button-lavender-dark)] transition-colors duration-200 text-xl md:text-2xl mb-2"
+                        autoFocus
+                      />
+                    )}
                   </div>
-                  <button
-                    onClick={() => setIsEditing(!isEditing)}
-                    className="px-4 py-2 border-2 border-[var(--button-lavender)]/60 rounded-xl hover:bg-[var(--button-lavender)]/10 transition-all duration-300 text-sm flex items-center gap-2 transform hover:scale-105"
-                  >
-                    <Settings className="w-4 h-4" />
-                    <span className="hidden md:inline">{isEditing ? 'Сохранить' : 'Редактировать'}</span>
-                  </button>
+                  {!isEditing ? (
+                    <button
+                      onClick={() => {
+                        setEditableName(userInfo.name);
+                        setIsEditing(true);
+                      }}
+                      className="px-4 py-2 border-2 border-[var(--button-lavender)]/60 rounded-xl hover:bg-[var(--button-lavender)]/10 transition-all duration-300 text-sm flex items-center gap-2 transform hover:scale-105"
+                    >
+                      <Settings className="w-4 h-4" />
+                      <span className="hidden md:inline">Редактировать</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setUserInfo({ ...userInfo, name: editableName });
+                        setIsEditing(false);
+                        setProfileUpdateSuccess(true);
+                        setTimeout(() => {
+                          setProfileUpdateSuccess(false);
+                        }, 3000);
+                      }}
+                      className="w-10 h-10 bg-[var(--success-green)] hover:bg-[var(--success-green)]/80 rounded-xl flex items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-md"
+                    >
+                      <CheckCircle className="w-5 h-5 text-white" />
+                    </button>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="space-y-3 text-sm">
                   <div className="flex items-center gap-2 opacity-70">
                     <Mail className="w-4 h-4 text-[var(--icon-lavender)] flex-shrink-0" />
                     <span className="truncate">{userInfo.email}</span>
                   </div>
-                  <div className="flex items-center gap-2 opacity-70">
-                    <Phone className="w-4 h-4 text-[var(--icon-lavender)] flex-shrink-0" />
-                    <span>{userInfo.phone}</span>
-                  </div>
-                  <div className="flex items-center gap-2 opacity-70">
-                    <MapPin className="w-4 h-4 text-[var(--icon-lavender)] flex-shrink-0" />
-                    <span>{userInfo.city}</span>
+                  <div>
+                    {!isEditingPassword ? (
+                      <>
+                        <div className="flex items-center gap-2 opacity-70 mb-1">
+                          <Lock className="w-4 h-4 text-[var(--icon-lavender)] flex-shrink-0" />
+                          <span>••••••••</span>
+                        </div>
+                        <button 
+                          onClick={() => setIsEditingPassword(true)}
+                          className="ml-6 text-xs text-[var(--button-lavender-dark)] hover:text-[var(--button-lavender)] transition-colors duration-200 underline"
+                        >
+                          сменить пароль
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Lock className="w-4 h-4 text-[var(--icon-lavender)] flex-shrink-0 opacity-70" />
+                          <input
+                            type="text"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Введите новый пароль"
+                            className="flex-1 px-3 py-2 border border-[var(--button-lavender)]/30 rounded-lg focus:outline-none focus:border-[var(--button-lavender-dark)] transition-colors duration-200 text-sm"
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => {
+                              // Здесь логика сохранения пароля
+                              console.log('Новый пароль:', newPassword);
+                              setIsEditingPassword(false);
+                              setNewPassword('');
+                              setPasswordUpdateSuccess(true);
+                              // Автоматически скрыть уведомление через 3 секунды
+                              setTimeout(() => {
+                                setPasswordUpdateSuccess(false);
+                              }, 3000);
+                            }}
+                            className="w-8 h-8 bg-[var(--success-green)] hover:bg-[var(--success-green)]/80 rounded-lg flex items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-md"
+                          >
+                            <CheckCircle className="w-5 h-5 text-white" />
+                          </button>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            setIsEditingPassword(false);
+                            setNewPassword('');
+                          }}
+                          className="ml-6 text-xs text-gray-500 hover:text-gray-700 transition-colors duration-200"
+                        >
+                          отменить
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -227,6 +326,57 @@ export function ProfileTab() {
             </div>
           </div>
 
+          {/* My Content - Diaries & Notes */}
+          <div className="border-2 border-[var(--sky-light)]/40 bg-gradient-to-br from-white/90 to-white/50 rounded-2xl p-6 md:p-8 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)]">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] rounded-xl flex items-center justify-center shadow-lg">
+                <BookOpen className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h4 className="text-lg">Мои материалы</h4>
+                <p className="text-sm opacity-60">Дневники и конспекты уроков</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button
+                onClick={() => navigate('/my-diaries')}
+                className="group relative overflow-hidden p-6 rounded-xl border-2 border-[var(--button-lavender)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-white/80 hover:shadow-[0_8px_20px_rgba(139,149,188,0.3)] transition-all duration-300 transform hover:-translate-y-1 text-left"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                <div className="relative z-10">
+                  <div className="w-12 h-12 mb-4 bg-gradient-to-br from-[var(--button-lavender-dark)]/20 to-[var(--button-lavender-light)]/20 rounded-lg flex items-center justify-center">
+                    <BookOpen className="w-6 h-6 text-[var(--button-lavender-dark)]" />
+                  </div>
+                  <h5 className="text-base mb-2">Мои дневники</h5>
+                  <p className="text-xs opacity-70 leading-relaxed">Все заполненные дневники к урокам</p>
+                  <div className="mt-4 text-sm opacity-60 flex items-center gap-1">
+                    <span>3 записи</span>
+                    <span className="ml-auto">→</span>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => navigate('/my-notes')}
+                className="group relative overflow-hidden p-6 rounded-xl border-2 border-[var(--button-lavender)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-white/80 hover:shadow-[0_8px_20px_rgba(139,149,188,0.3)] transition-all duration-300 transform hover:-translate-y-1 text-left"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                <div className="relative z-10">
+                  <div className="w-12 h-12 mb-4 bg-gradient-to-br from-[var(--button-lavender-dark)]/20 to-[var(--button-lavender-light)]/20 rounded-lg flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-[var(--button-lavender-dark)]" />
+                  </div>
+                  <h5 className="text-base mb-2">Мои конспекты</h5>
+                  <p className="text-xs opacity-70 leading-relaxed">Все заполненные конспекты к урокам</p>
+                  <div className="mt-4 text-sm opacity-60 flex items-center gap-1">
+                    <span>2 записи</span>
+                    <span className="ml-auto">→</span>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Achievements */}
           <div className="border-2 border-[var(--sky-light)]/40 bg-gradient-to-br from-white/90 to-white/50 rounded-2xl p-6 md:p-8 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)]">
             <div className="flex items-center gap-3 mb-6">
@@ -276,6 +426,16 @@ export function ProfileTab() {
 
         {/* Right Column - Stats & Quick Info */}
         <div className="space-y-6">
+          {/* Motivational Card */}
+          <div className="hidden lg:block border-2 border-[var(--button-lavender-dark)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/15 to-white/80 rounded-2xl p-6 shadow-[0_8px_24px_var(--ethereal-shadow)]">
+            <div className="text-center">
+              <div className="text-4xl mb-3">✨</div>
+              <p className="text-sm italic opacity-80 leading-relaxed">
+                "Каждый день трезвости — это победа. Вы делаете большое дело!"
+              </p>
+            </div>
+          </div>
+
           {/* Sobriety Tracker */}
           <div className="border-2 border-[var(--button-lavender-dark)]/40 bg-gradient-to-br from-white/90 to-[var(--button-lavender-light)]/10 rounded-2xl p-6 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] relative overflow-hidden">
             <div className="absolute top-0 right-0 opacity-[0.06] text-[100px] pointer-events-none">
@@ -316,16 +476,6 @@ export function ProfileTab() {
                 <span className="text-sm opacity-70">Достижений</span>
                 <span className="font-medium text-[var(--button-lavender-dark)]">{achievements.filter(a => a.earned).length}/{achievements.length}</span>
               </div>
-            </div>
-          </div>
-
-          {/* Motivational Card */}
-          <div className="hidden lg:block border-2 border-[var(--button-lavender-dark)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/15 to-white/80 rounded-2xl p-6 shadow-[0_8px_24px_var(--ethereal-shadow)]">
-            <div className="text-center">
-              <div className="text-4xl mb-3">✨</div>
-              <p className="text-sm italic opacity-80 leading-relaxed">
-                "Каждый день трезвости — это победа. Вы делаете большое дело!"
-              </p>
             </div>
           </div>
         </div>

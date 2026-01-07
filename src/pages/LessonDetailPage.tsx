@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { PageWrapper } from '../components/PageWrapper';
-import { ArrowLeft, ArrowRight, List, CheckCircle, ArrowUp, MessageCircle, HelpCircle, BookOpen, Mic, Paperclip, Image, Video, File, X, StopCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, List, CheckCircle, ArrowUp, MessageCircle, HelpCircle, BookOpen, Mic, Paperclip, Image, Video, File, X, StopCircle, FileText, NotebookPen } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 
 interface Lesson {
@@ -31,6 +31,10 @@ export function LessonDetailPage() {
   const navigate = useNavigate();
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [feedback, setFeedback] = useState('');
+  
+  // States for diary and notes
+  const [diary, setDiary] = useState('');
+  const [notes, setNotes] = useState('');
   
   // States for attachments
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
@@ -189,6 +193,24 @@ export function LessonDetailPage() {
   const handleMarkComplete = () => {
     // Здесь должна быть логика для сохранения статуса урока
     toast.success('Урок отмечен как пройденный!');
+  };
+
+  const handleSaveDiary = () => {
+    if (diary.trim()) {
+      // Здесь должна быть логика для сохранения дневника
+      toast.success('Дневник сохранен!');
+    } else {
+      toast.error('Пожалуйста, напишите что-нибудь в дневнике');
+    }
+  };
+
+  const handleSaveNotes = () => {
+    if (notes.trim()) {
+      // Здесь должна быть логика для сохранения конспекта
+      toast.success('Конспект сохранен!');
+    } else {
+      toast.error('Пожалуйста, напишите что-нибудь в конспекте');
+    }
   };
 
   const handleSubmitFeedback = () => {
@@ -429,6 +451,70 @@ export function LessonDetailPage() {
           >
             <CheckCircle className="w-5 h-5 relative z-10 drop-shadow-sm" />
             <span className="relative z-10">Отметить урок пройденным</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+          </button>
+        </div>
+
+        {/* Форма дневника */}
+        <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
+          <div className="flex items-start gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
+              <FileText className="w-5 h-5 text-[var(--icon-lavender)]" />
+            </div>
+            <div className="flex-1">
+              <h3 className="mb-2 text-lg">Дневник к уроку</h3>
+              <p className="text-sm opacity-70 leading-relaxed">
+                Запишите свои мысли, эмоции и впечатления от пройденного урока
+              </p>
+            </div>
+          </div>
+
+          <div className="relative">
+            <textarea
+              value={diary}
+              onChange={(e) => setDiary(e.target.value)}
+              placeholder="Опишите, что вы узнали сегодня, какие мысли вызвал урок, что вы чувствуете..."
+              className="w-full px-4 py-3 border-2 border-[var(--sky-light)]/40 rounded-xl focus:outline-none focus:border-[var(--button-lavender-dark)]/50 focus:bg-white transition-all resize-none min-h-[150px] text-sm leading-relaxed backdrop-blur-sm bg-white/80 placeholder:text-xs md:placeholder:text-sm"
+            />
+          </div>
+
+          <button
+            onClick={handleSaveDiary}
+            className="mt-4 inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_8px_20px_rgba(139,149,188,0.45)] transition-all duration-300 text-sm font-medium transform hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden group"
+          >
+            <span className="relative z-10">Сохранить дневник</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+          </button>
+        </div>
+
+        {/* Форма конспекта */}
+        <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
+          <div className="flex items-start gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
+              <NotebookPen className="w-5 h-5 text-[var(--icon-lavender)]" />
+            </div>
+            <div className="flex-1">
+              <h3 className="mb-2 text-lg">Конспект к уроку</h3>
+              <p className="text-sm opacity-70 leading-relaxed">
+                Запишите основные моменты урока, важные понятия и выводы
+              </p>
+            </div>
+          </div>
+
+          <div className="relative">
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Основные тезисы урока, важные определения, техники и упражнения..."
+              className="w-full px-4 py-3 border-2 border-[var(--sky-light)]/40 rounded-xl focus:outline-none focus:border-[var(--button-lavender-dark)]/50 focus:bg-white transition-all resize-none min-h-[150px] text-sm leading-relaxed backdrop-blur-sm bg-white/80 placeholder:text-xs md:placeholder:text-sm"
+            />
+          </div>
+
+          <button
+            onClick={handleSaveNotes}
+            className="mt-4 inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_8px_20px_rgba(139,149,188,0.45)] transition-all duration-300 text-sm font-medium transform hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden group"
+          >
+            <span className="relative z-10">Сохранить конспект</span>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
           </button>
         </div>

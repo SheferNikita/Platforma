@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bell, Check, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 
 interface Notification {
   id: number;
@@ -15,6 +16,7 @@ interface Notification {
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, right: 0 });
   const [notifications, setNotifications] = useState<Notification[]>([
     {
       id: 1,
@@ -98,12 +100,45 @@ export function NotificationBell() {
   };
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Расчет позиции меню при открытии
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const isMobile = window.innerWidth < 768;
+      
+      if (isMobile) {
+        // На мобильных - фиксированное позиционирование с отступами
+        setMenuPosition({
+          top: rect.bottom,
+          left: 16,
+          right: 16
+        });
+      } else {
+        // На десктопе - выравнивание по правому краю кнопки
+        setMenuPosition({
+          top: rect.bottom,
+          left: 0,
+          right: window.innerWidth - rect.right
+        });
+      }
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      // Проверяем клик вне контейнера И вне меню в портале
+      if (
+        containerRef.current && 
+        !containerRef.current.contains(target) &&
+        menuRef.current &&
+        !menuRef.current.contains(target)
+      ) {
         setIsClosing(true);
         setTimeout(() => {
           setIsOpen(false);
@@ -115,11 +150,13 @@ export function NotificationBell() {
     // Небольшая задержка, чтобы избежать немедленного закрытия при открытии
     const timeoutId = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside as any);
     }, 100);
 
     return () => {
       clearTimeout(timeoutId);
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside as any);
     };
   }, [isOpen]);
 
@@ -127,6 +164,7 @@ export function NotificationBell() {
     <div className="relative" ref={containerRef}>
       {/* Bell Button */}
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2.5 rounded-xl bg-white/60 border-2 border-[var(--sky-light)]/50 hover:bg-white/80 hover:border-[var(--button-lavender-dark)]/50 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-[0_2px_8px_var(--book-shadow)]"
         aria-label="Уведомления"
@@ -142,7 +180,7 @@ export function NotificationBell() {
       </button>
 
       {/* Dropdown Menu */}
-      {isOpen && (
+      {isOpen && createPortal(
         <>
           {/* Overlay */}
           <div 
@@ -157,7 +195,16 @@ export function NotificationBell() {
           ></div>
           
           {/* Notification Panel */}
-          <div className={`fixed md:absolute left-4 right-4 md:left-auto md:right-0 bottom-full md:bottom-auto md:top-full mb-3 md:mb-0 md:mt-3 w-auto md:w-96 bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-sm rounded-2xl shadow-[0_12px_32px_var(--ethereal-shadow),0_4px_12px_var(--book-shadow)] border-2 border-[var(--sky-light)]/50 z-[110] overflow-hidden ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`}>
+          <div 
+            ref={menuRef}
+            className={`fixed w-auto bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-sm rounded-2xl shadow-[0_12px_32px_var(--ethereal-shadow),0_4px_12px_var(--book-shadow)] border-2 border-[var(--sky-light)]/50 z-[9999] overflow-hidden ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
+            style={{ 
+              top: `${menuPosition.top + 8}px`, 
+              left: menuPosition.left > 0 ? `${menuPosition.left}px` : 'auto',
+              right: menuPosition.right > 0 ? `${menuPosition.right}px` : 'auto',
+              maxWidth: window.innerWidth < 768 ? `calc(100vw - 32px)` : '384px'
+            }}
+          >
             {/* Header */}
             <div className="p-4 border-b-2 border-[var(--sky-light)]/30 bg-gradient-to-r from-[var(--sky-soft)]/30 to-transparent">
               <div className="flex items-center justify-between mb-2">
@@ -247,7 +294,8 @@ export function NotificationBell() {
               </div>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );

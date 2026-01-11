@@ -1,0 +1,295 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  CONTENT_MANAGER
+  SUPPORT
+  FINANCE
+  STUDENT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          UserRole  @default(STUDENT)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  student       Student?
+  adminLogs     AdminLog[]
+  sessions      Session[]
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Student {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone           String?
+  sobrietyDate    DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  progress        LessonProgress[]
+  payments        Payment[]
+  diaries         Diary[]
+  studentNotes    StudentNote[]
+  enrollments     Enrollment[]
+}
+
+model AdminLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  createdAt DateTime @default(now())
+}
+
+model Module {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  order       Int      @default(0)
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  lessons     Lesson[]
+}
+
+model Lesson {
+  id               String   @id @default(uuid())
+  moduleId         String
+  module           Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title            String
+  description      String?
+  content          String?
+  videoUrl         String?
+  videoDescription String?
+  duration         String?
+  order            Int      @default(0)
+  isPublished      Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  progress         LessonProgress[]
+  diaries          Diary[]
+  notes            StudentNote[]
+}
+
+model LessonProgress {
+  id          String    @id @default(uuid())
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([studentId, lessonId])
+}
+
+model Diary {
+  id        String   @id @default(uuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model StudentNote {
+  id        String   @id @default(uuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LibraryItem {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  type        String
+  url         String?
+  content     String?
+  order       Int      @default(0)
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ScheduleEvent {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  date        DateTime
+  time        String?
+  location    String?
+  isOnline    Boolean  @default(false)
+  link        String?
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Contact {
+  id          String   @id @default(uuid())
+  name        String
+  role        String?
+  phone       String?
+  email       String?
+  telegram    String?
+  photo       String?
+  order       Int      @default(0)
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Community {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  address     String?
+  city        String?
+  phone       String?
+  schedule    String?
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MiniGroup {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  schedule    String?
+  curator     String?
+  maxMembers  Int      @default(10)
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Product {
+  id                  String   @id @default(uuid())
+  name                String
+  description         String?
+  price               Float
+  currency            String   @default("RUB")
+  accessType          String
+  accessDuration      Int?
+  emailSubject        String?
+  emailTemplate       String?
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  
+  payments            Payment[]
+  enrollments         Enrollment[]
+}
+
+model Enrollment {
+  id         String    @id @default(uuid())
+  studentId  String
+  student    Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id])
+  expiresAt  DateTime?
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  
+  @@unique([studentId, productId])
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  studentId       String
+  student         Student       @relation(fields: [studentId], references: [id])
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  amount          Float
+  currency        String        @default("RUB")
+  status          PaymentStatus @default(PENDING)
+  paymentMethod   String?
+  robokassaInvId  Int?          @unique
+  robokassaData   Json?
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model EmailTemplate {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  subject   String
+  body      String
+  variables String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailJob {
+  id          String   @id @default(uuid())
+  to          String
+  subject     String
+  body        String
+  status      String   @default("pending")
+  error       String?
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Metric {
+  id            String   @id @default(uuid())
+  type          String
+  value         Float
+  date          DateTime
+  metadata      Json?
+  createdAt     DateTime @default(now())
+}

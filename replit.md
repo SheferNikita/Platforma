@@ -1,34 +1,149 @@
-# Sobriety Platform
+# Обучающая платформа по трезвости
 
-## Overview
-An educational platform for a sobriety course (Обучающая платформа по трезвости) with a vintage book-style design. This is a React + TypeScript frontend application using Vite as the build tool and Tailwind CSS v4 for styling.
+## Обзор
 
-## Project Structure
-- `/src` - Main source code
-  - `/components` - React components (UI library + custom components)
-  - `/pages` - Page components for routing
-  - `/styles` - Global CSS styles
-- `/index.html` - Entry HTML file
-- `/vite.config.ts` - Vite configuration
-- `/package.json` - Dependencies and scripts
-- `/tsconfig.json` - TypeScript configuration
+Полнофункциональная обучающая платформа по трезвости с русскоязычным интерфейсом, включающая:
+- Публичную часть для учеников (уроки, библиотека, расписание, общины)
+- Полноценную админ-панель для управления контентом и пользователями
+- Интеграцию с Robokassa для приема платежей
+- Систему автоматической записи на курсы после оплаты
+- Email-уведомления с кастомными шаблонами для каждого продукта
 
-## Tech Stack
-- **Framework**: React 18 with TypeScript
-- **Build Tool**: Vite 6
-- **Styling**: Tailwind CSS v4
-- **Routing**: React Router DOM
-- **UI Components**: Radix UI primitives
-- **Charts**: Recharts
-- **Icons**: Lucide React
+## Технологический стек
 
-## Development
-- **Port**: 5000 (configured for Replit)
-- **Start command**: `npm run dev`
-- **Build command**: `npm run build`
+### Frontend
+- React 18 с TypeScript
+- Vite для сборки
+- TailwindCSS 4.0 для стилей
+- React Router для навигации
+- Recharts для графиков в дашборде
+- Lucide React для иконок
+- Sonner для уведомлений
 
-## Recent Changes
-- 2026-01-11: Initial setup for Replit environment
-  - Configured Vite to run on port 5000 with all hosts allowed
-  - Added TypeScript configuration files
-  - Updated package.json with proper versions
+### Backend
+- Express.js (Node.js)
+- Prisma ORM 5.22.0 с PostgreSQL
+- JWT для аутентификации
+- Nodemailer для email
+
+## Структура проекта
+
+```
+├── prisma/
+│   ├── schema.prisma     # Схема базы данных
+│   └── seed.ts           # Начальные данные
+├── server/
+│   └── src/
+│       ├── index.ts      # Точка входа сервера
+│       ├── middleware/   # Auth middleware
+│       ├── routes/       # API маршруты
+│       └── services/     # Email сервис
+├── src/
+│   ├── admin/           # Админ-панель
+│   │   ├── components/  # AdminLayout
+│   │   └── pages/       # Страницы админки
+│   ├── components/      # Общие компоненты
+│   ├── lib/             # API client, Auth context
+│   └── pages/           # Публичные страницы
+```
+
+## Доступ к админ-панели
+
+- **URL:** `/admin`
+- **Email:** admin@sobriety.ru
+- **Пароль:** admin123
+
+## Роли пользователей
+
+- **SUPER_ADMIN** - Полный доступ ко всем функциям
+- **CONTENT_MANAGER** - Управление контентом (уроки, библиотека, расписание)
+- **SUPPORT** - Управление учениками
+- **FINANCE** - Управление продуктами и платежами
+- **STUDENT** - Обычный ученик
+
+## Функции админ-панели
+
+### Дашборд
+- Ключевые метрики: количество учеников, выручка, прогресс
+- График выручки за 30 дней
+- Последние платежи
+
+### Управление контентом
+- **Уроки** - Модули и уроки с поддержкой черновиков (isPublished)
+- **Библиотека** - Материалы (статьи, видео, книги)
+- **Расписание** - События (онлайн/оффлайн)
+- **Контакты** - Кураторы и их контакты
+- **Общины** - Список общин с адресами
+- **Мини-группы** - Группы с кураторами
+
+### Управление пользователями
+- **Ученики** - Просмотр, создание, редактирование
+- **Администраторы** - Управление админами и ролями
+
+### Финансы
+- **Продукты** - Создание продуктов с ценами и email-шаблонами
+- **Платежи** - CRM с историей платежей и статусами
+
+### Email
+- Отправка писем отдельным адресам
+- Массовая рассылка всем ученикам
+- Шаблоны писем
+
+## Интеграция Robokassa
+
+### Настройка
+Необходимо задать переменные окружения:
+- `ROBOKASSA_MERCHANT_LOGIN`
+- `ROBOKASSA_PASSWORD1`
+- `ROBOKASSA_PASSWORD2`
+- `ROBOKASSA_TEST_MODE` (true/false)
+
+### Webhook endpoints
+- `POST /api/payments/result` - Result URL для Robokassa
+- `GET /api/payments/success` - Success URL
+- `GET /api/payments/fail` - Fail URL
+
+### Процесс оплаты
+1. Создание платежа через `POST /api/payments/create`
+2. Перенаправление на Robokassa
+3. После успешной оплаты:
+   - Обновление статуса платежа на COMPLETED
+   - Автоматическая запись ученика на курс (Enrollment)
+   - Отправка email с кастомным шаблоном продукта
+
+### Переменные в email-шаблонах
+- `{{name}}` - Имя ученика
+- `{{productName}}` - Название продукта
+- `{{amount}}` - Сумма платежа
+
+## Скрипты
+
+```bash
+npm run dev           # Запуск frontend + backend
+npm run dev:client    # Только frontend (Vite)
+npm run dev:server    # Только backend (tsx)
+npm run db:seed       # Заполнение базы начальными данными
+```
+
+## Порты
+
+- Frontend: 5000 (Vite dev server)
+- Backend: 3001 (Express API)
+- API проксируется через Vite на `/api`
+
+## Последние изменения
+
+- 11.01.2026: Создана полная админ-панель с 12 страницами
+- 11.01.2026: Интегрирована оплата через Robokassa
+- 11.01.2026: Добавлена система ролей и прав доступа
+- 11.01.2026: Реализованы кастомные email-шаблоны для продуктов
+
+## Дизайн
+
+Админ-панель выполнена в теплых бежевых тонах, соответствующих основной платформе:
+- Основной фон: градиент от #f5f3ed через #ebe8dc к #f0ede3
+- Акцентный цвет: градиент от #a67c52 к #c4a57b
+- Текст: #3d3527
+- Границы: #d4c9b0
+- Скругленные углы: rounded-xl, rounded-2xl
+- Стеклянный эффект: backdrop-blur-md

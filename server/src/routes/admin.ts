@@ -1,0 +1,191 @@
+import { Router, Response } from 'express';
+import bcrypt from 'bcryptjs';
+import { prisma } from '../index';
+import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
+import { z } from 'zod';
+
+const router = Router();
+
+router.use(authenticate);
+router.use(requireRole('SUPER_ADMIN'));
+
+const createAdminSchema = z.object({
+  email: z.string().email('Некорректный email'),
+  password: z.string().min(6, 'Пароль должен содержать минимум 6 символов'),
+  name: z.string().min(2, 'Имя должно содержать минимум 2 символа'),
+  role: z.enum(['SUPER_ADMIN', 'CONTENT_MANAGER', 'SUPPORT', 'FINANCE'])
+});
+
+const updateAdminSchema = z.object({
+  name: z.string().min(2).optional(),
+  role: z.enum(['SUPER_ADMIN', 'CONTENT_MANAGER', 'SUPPORT', 'FINANCE']).optional(),
+  isActive: z.boolean().optional(),
+  password: z.string().min(6).optional()
+});
+
+router.get('/', async (req: AuthRequest, res: Response) => {
+  try {
+    const admins = await prisma.user.findMany({
+      where: {
+        role: { in: ['SUPER_ADMIN', 'CONTENT_MANAGER', 'SUPPORT', 'FINANCE'] }
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(admins);
+  } catch (error) {
+    console.error('Get admins error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/', async (req: AuthRequest, res: Response) => {
+  try {
+    const data = createAdminSchema.parse(req.body);
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: data.email }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
+    }
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    const admin = await prisma.user.create({
+      data: {
+        email: data.email,
+        password: hashedPassword,
+        name: data.name,
+        role: data.role
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        createdAt: true
+      }
+    });
+
+    await prisma.adminLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'CREATE',
+        entity: 'ADMIN',
+        entityId: admin.id,
+        details: { email: admin.email, role: admin.role }
+      }
+    });
+
+    res.status(201).json(admin);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    console.error('Create admin error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const data = updateAdminSchema.parse(req.body);
+
+    const updateData: any = { ...data };
+    if (data.password) {
+      updateData.password = await bcrypt.hash(data.password, 10);
+    }
+
+    const admin = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        createdAt: true
+      }
+    });
+
+    await prisma.adminLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'UPDATE',
+        entity: 'ADMIN',
+        entityId: admin.id,
+        details: data
+      }
+    });
+
+    res.json(admin);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    console.error('Update admin error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (id === req.user!.id) {
+      return res.status(400).json({ error: 'Нельзя удалить свой аккаунт' });
+    }
+
+    await prisma.user.delete({
+      where: { id }
+    });
+
+    await prisma.adminLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'DELETE',
+        entity: 'ADMIN',
+        entityId: id
+      }
+    });
+
+    res.json({ message: 'Администратор удален' });
+  } catch (error) {
+    console.error('Delete admin error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/logs', async (req: AuthRequest, res: Response) => {
+  try {
+    const logs = await prisma.adminLog.findMany({
+      include: {
+        user: {
+          select: { name: true, email: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    });
+
+    res.json(logs);
+  } catch (error) {
+    console.error('Get logs error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+export default router;

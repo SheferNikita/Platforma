@@ -1,0 +1,271 @@
+import React, { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
+import { Plus, Edit, Trash2, Shield, User } from 'lucide-react';
+import { toast } from 'sonner';
+import { useAuth } from '../../lib/auth';
+
+interface Admin {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export function AdminsAdmin() {
+  const { user } = useAuth();
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [editingAdmin, setEditingAdmin] = useState<Admin | null>(null);
+
+  useEffect(() => {
+    loadAdmins();
+  }, []);
+
+  async function loadAdmins() {
+    try {
+      const data = await api.get<Admin[]>('/admin');
+      setAdmins(data);
+    } catch (error) {
+      toast.error('Ошибка загрузки');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveAdmin(data: any) {
+    try {
+      if (editingAdmin) {
+        await api.put(`/admin/${editingAdmin.id}`, data);
+        toast.success('Администратор обновлен');
+      } else {
+        await api.post('/admin', data);
+        toast.success('Администратор создан');
+      }
+      loadAdmins();
+      setShowModal(false);
+      setEditingAdmin(null);
+    } catch (error: any) {
+      toast.error(error.message || 'Ошибка сохранения');
+    }
+  }
+
+  async function deleteAdmin(id: string) {
+    if (!confirm('Удалить администратора?')) return;
+    try {
+      await api.delete(`/admin/${id}`);
+      toast.success('Администратор удален');
+      loadAdmins();
+    } catch (error: any) {
+      toast.error(error.message || 'Ошибка удаления');
+    }
+  }
+
+  const roleLabels: Record<string, { label: string; color: string }> = {
+    SUPER_ADMIN: { label: 'Супер-админ', color: 'bg-purple-100 text-purple-700' },
+    CONTENT_MANAGER: { label: 'Контент-менеджер', color: 'bg-blue-100 text-blue-700' },
+    SUPPORT: { label: 'Поддержка', color: 'bg-green-100 text-green-700' },
+    FINANCE: { label: 'Финансы', color: 'bg-orange-100 text-orange-700' }
+  };
+
+  if (user?.role !== 'SUPER_ADMIN') {
+    return (
+      <div className="text-center py-12">
+        <Shield className="w-16 h-16 text-[#3d3527]/20 mx-auto mb-4" />
+        <p className="text-[#3d3527]/60">Доступ только для супер-администраторов</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-[#3d3527]">Администраторы</h1>
+          <p className="text-[#3d3527]/60 mt-1">Управление администраторами и ролями</p>
+        </div>
+        <button
+          onClick={() => { setEditingAdmin(null); setShowModal(true); }}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow"
+        >
+          <Plus className="w-5 h-5" /> Добавить админа
+        </button>
+      </div>
+
+      <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-[#f5f3ed]">
+            <tr>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Администратор</th>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Роль</th>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Статус</th>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Дата создания</th>
+              <th className="text-right px-6 py-4 text-sm font-semibold text-[#3d3527]">Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={5} className="text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#a67c52] mx-auto"></div>
+                </td>
+              </tr>
+            ) : admins.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-center py-12 text-[#3d3527]/60">Администраторы не найдены</td>
+              </tr>
+            ) : (
+              admins.map((admin) => (
+                <tr key={admin.id} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center">
+                        <User className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-[#3d3527]">{admin.name}</p>
+                        <p className="text-sm text-[#3d3527]/60">{admin.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-xs ${roleLabels[admin.role]?.color || 'bg-gray-100'}`}>
+                      {roleLabels[admin.role]?.label || admin.role}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-xs ${admin.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {admin.isActive ? 'Активен' : 'Неактивен'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-[#3d3527]/60">
+                    {new Date(admin.createdAt).toLocaleDateString('ru')}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => { setEditingAdmin(admin); setShowModal(true); }}
+                        className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                      >
+                        <Edit className="w-4 h-4 text-[#3d3527]" />
+                      </button>
+                      {admin.id !== user?.id && (
+                        <button
+                          onClick={() => deleteAdmin(admin.id)}
+                          className="p-2 hover:bg-red-50 rounded-lg"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {showModal && (
+        <AdminModal
+          admin={editingAdmin}
+          onSave={saveAdmin}
+          onClose={() => { setShowModal(false); setEditingAdmin(null); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function AdminModal({ admin, onSave, onClose }: { admin: Admin | null; onSave: (data: any) => void; onClose: () => void }) {
+  const [name, setName] = useState(admin?.name || '');
+  const [email, setEmail] = useState(admin?.email || '');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState(admin?.role || 'CONTENT_MANAGER');
+  const [isActive, setIsActive] = useState(admin?.isActive ?? true);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-lg">
+        <h2 className="text-xl font-bold text-[#3d3527] mb-4">{admin ? 'Редактировать админа' : 'Новый администратор'}</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Имя</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={!!admin}
+              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] disabled:bg-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">
+              Пароль {admin && '(оставьте пустым, чтобы не менять)'}
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Роль</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+            >
+              <option value="SUPER_ADMIN">Супер-админ</option>
+              <option value="CONTENT_MANAGER">Контент-менеджер</option>
+              <option value="SUPPORT">Поддержка</option>
+              <option value="FINANCE">Финансы</option>
+            </select>
+          </div>
+          {admin && (
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="w-4 h-4 rounded border-[#d4c9b0]"
+              />
+              <label htmlFor="isActive" className="text-sm text-[#3d3527]">Активен</label>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-3 mt-6">
+          <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
+          <button
+            onClick={() => {
+              const data: any = { name, role };
+              if (!admin) {
+                data.email = email;
+                data.password = password;
+              } else {
+                data.isActive = isActive;
+                if (password) data.password = password;
+              }
+              onSave(data);
+            }}
+            className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
+          >
+            Сохранить
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,443 @@
+import { Router, Response } from 'express';
+import { prisma } from '../index';
+import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
+import { z } from 'zod';
+
+const router = Router();
+
+router.use(authenticate);
+router.use(requireRole('SUPER_ADMIN', 'CONTENT_MANAGER'));
+
+const moduleSchema = z.object({
+  title: z.string().min(1, 'Название обязательно'),
+  description: z.string().optional(),
+  order: z.number().optional(),
+  isPublished: z.boolean().optional()
+});
+
+const lessonSchema = z.object({
+  moduleId: z.string().uuid(),
+  title: z.string().min(1, 'Название обязательно'),
+  description: z.string().optional(),
+  content: z.string().optional(),
+  videoUrl: z.string().optional(),
+  videoDescription: z.string().optional(),
+  duration: z.string().optional(),
+  order: z.number().optional(),
+  isPublished: z.boolean().optional()
+});
+
+router.get('/modules', async (req: AuthRequest, res: Response) => {
+  try {
+    const modules = await prisma.module.findMany({
+      include: {
+        lessons: {
+          orderBy: { order: 'asc' }
+        }
+      },
+      orderBy: { order: 'asc' }
+    });
+    res.json(modules);
+  } catch (error) {
+    console.error('Get modules error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/modules', async (req: AuthRequest, res: Response) => {
+  try {
+    const data = moduleSchema.parse(req.body);
+    const module = await prisma.module.create({ data });
+    
+    await prisma.adminLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'CREATE',
+        entity: 'MODULE',
+        entityId: module.id,
+        details: { title: module.title }
+      }
+    });
+    
+    res.status(201).json(module);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    console.error('Create module error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/modules/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const data = moduleSchema.partial().parse(req.body);
+    const module = await prisma.module.update({ where: { id }, data });
+    
+    await prisma.adminLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'UPDATE',
+        entity: 'MODULE',
+        entityId: module.id,
+        details: data
+      }
+    });
+    
+    res.json(module);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    console.error('Update module error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/modules/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.module.delete({ where: { id } });
+    
+    await prisma.adminLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'DELETE',
+        entity: 'MODULE',
+        entityId: id
+      }
+    });
+    
+    res.json({ message: 'Модуль удален' });
+  } catch (error) {
+    console.error('Delete module error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/lessons', async (req: AuthRequest, res: Response) => {
+  try {
+    const lessons = await prisma.lesson.findMany({
+      include: { module: true },
+      orderBy: [{ module: { order: 'asc' } }, { order: 'asc' }]
+    });
+    res.json(lessons);
+  } catch (error) {
+    console.error('Get lessons error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/lessons/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const lesson = await prisma.lesson.findUnique({
+      where: { id },
+      include: { module: true }
+    });
+    
+    if (!lesson) {
+      return res.status(404).json({ error: 'Урок не найден' });
+    }
+    
+    res.json(lesson);
+  } catch (error) {
+    console.error('Get lesson error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/lessons', async (req: AuthRequest, res: Response) => {
+  try {
+    const data = lessonSchema.parse(req.body);
+    const lesson = await prisma.lesson.create({ data });
+    
+    await prisma.adminLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'CREATE',
+        entity: 'LESSON',
+        entityId: lesson.id,
+        details: { title: lesson.title }
+      }
+    });
+    
+    res.status(201).json(lesson);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    console.error('Create lesson error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/lessons/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const data = lessonSchema.partial().parse(req.body);
+    const lesson = await prisma.lesson.update({ where: { id }, data });
+    
+    await prisma.adminLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'UPDATE',
+        entity: 'LESSON',
+        entityId: lesson.id,
+        details: data
+      }
+    });
+    
+    res.json(lesson);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors[0].message });
+    }
+    console.error('Update lesson error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/lessons/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.lesson.delete({ where: { id } });
+    
+    await prisma.adminLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'DELETE',
+        entity: 'LESSON',
+        entityId: id
+      }
+    });
+    
+    res.json({ message: 'Урок удален' });
+  } catch (error) {
+    console.error('Delete lesson error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/library', async (req: AuthRequest, res: Response) => {
+  try {
+    const items = await prisma.libraryItem.findMany({
+      orderBy: { order: 'asc' }
+    });
+    res.json(items);
+  } catch (error) {
+    console.error('Get library error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/library', async (req: AuthRequest, res: Response) => {
+  try {
+    const item = await prisma.libraryItem.create({ data: req.body });
+    res.status(201).json(item);
+  } catch (error) {
+    console.error('Create library item error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/library/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const item = await prisma.libraryItem.update({ where: { id }, data: req.body });
+    res.json(item);
+  } catch (error) {
+    console.error('Update library item error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/library/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.libraryItem.delete({ where: { id } });
+    res.json({ message: 'Элемент удален' });
+  } catch (error) {
+    console.error('Delete library item error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/schedule', async (req: AuthRequest, res: Response) => {
+  try {
+    const events = await prisma.scheduleEvent.findMany({
+      orderBy: { date: 'asc' }
+    });
+    res.json(events);
+  } catch (error) {
+    console.error('Get schedule error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/schedule', async (req: AuthRequest, res: Response) => {
+  try {
+    const event = await prisma.scheduleEvent.create({ data: req.body });
+    res.status(201).json(event);
+  } catch (error) {
+    console.error('Create schedule event error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/schedule/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const event = await prisma.scheduleEvent.update({ where: { id }, data: req.body });
+    res.json(event);
+  } catch (error) {
+    console.error('Update schedule event error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/schedule/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.scheduleEvent.delete({ where: { id } });
+    res.json({ message: 'Событие удалено' });
+  } catch (error) {
+    console.error('Delete schedule event error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/contacts', async (req: AuthRequest, res: Response) => {
+  try {
+    const contacts = await prisma.contact.findMany({
+      orderBy: { order: 'asc' }
+    });
+    res.json(contacts);
+  } catch (error) {
+    console.error('Get contacts error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/contacts', async (req: AuthRequest, res: Response) => {
+  try {
+    const contact = await prisma.contact.create({ data: req.body });
+    res.status(201).json(contact);
+  } catch (error) {
+    console.error('Create contact error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/contacts/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const contact = await prisma.contact.update({ where: { id }, data: req.body });
+    res.json(contact);
+  } catch (error) {
+    console.error('Update contact error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/contacts/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.contact.delete({ where: { id } });
+    res.json({ message: 'Контакт удален' });
+  } catch (error) {
+    console.error('Delete contact error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/communities', async (req: AuthRequest, res: Response) => {
+  try {
+    const communities = await prisma.community.findMany({
+      orderBy: { name: 'asc' }
+    });
+    res.json(communities);
+  } catch (error) {
+    console.error('Get communities error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/communities', async (req: AuthRequest, res: Response) => {
+  try {
+    const community = await prisma.community.create({ data: req.body });
+    res.status(201).json(community);
+  } catch (error) {
+    console.error('Create community error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/communities/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const community = await prisma.community.update({ where: { id }, data: req.body });
+    res.json(community);
+  } catch (error) {
+    console.error('Update community error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/communities/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.community.delete({ where: { id } });
+    res.json({ message: 'Община удалена' });
+  } catch (error) {
+    console.error('Delete community error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/mini-groups', async (req: AuthRequest, res: Response) => {
+  try {
+    const groups = await prisma.miniGroup.findMany({
+      orderBy: { title: 'asc' }
+    });
+    res.json(groups);
+  } catch (error) {
+    console.error('Get mini-groups error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/mini-groups', async (req: AuthRequest, res: Response) => {
+  try {
+    const group = await prisma.miniGroup.create({ data: req.body });
+    res.status(201).json(group);
+  } catch (error) {
+    console.error('Create mini-group error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/mini-groups/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const group = await prisma.miniGroup.update({ where: { id }, data: req.body });
+    res.json(group);
+  } catch (error) {
+    console.error('Update mini-group error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/mini-groups/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.miniGroup.delete({ where: { id } });
+    res.json({ message: 'Мини-группа удалена' });
+  } catch (error) {
+    console.error('Delete mini-group error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+export default router;

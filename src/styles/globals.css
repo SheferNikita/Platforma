@@ -1,5 +1,27 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #a67c52;
+  --color-primary-light: #c4a57b;
+  --color-primary-dark: #8a5d35;
+  
+  --color-bg: #f5f3ed;
+  --color-bg-alt: #ebe8dc;
+  --color-bg-light: #f0ede3;
+  --color-bg-card: #faf8f3;
+  
+  --color-text: #3d3527;
+  --color-text-light: #6b5d4a;
+  --color-text-muted: #8b7d6a;
+  
+  --color-border: #d4c9b0;
+  --color-border-light: #e5dcc8;
+  
+  --color-success: #6b8e6f;
+  --color-danger: #a85d5d;
+  --color-warning: #d4a84d;
+}
 
 :root {
   /* Основная палитра - тёплые бежевые тона */

@@ -173,7 +173,7 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
               <input
                 type="number"
                 value={price}
-                onChange={(e) => setPrice(parseInt(e.target.value))}
+                onChange={(e) => setPrice(parseInt(e.target.value) || 0)}
                 className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
               />
             </div>
@@ -205,7 +205,7 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
               <input
                 type="number"
                 value={accessDuration}
-                onChange={(e) => setAccessDuration(parseInt(e.target.value))}
+                onChange={(e) => setAccessDuration(parseInt(e.target.value) || 365)}
                 className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
               />
             </div>

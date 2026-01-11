@@ -267,7 +267,7 @@ function ModuleModal({ module, onSave, onClose }: { module: Module | null; onSav
             <input
               type="number"
               value={order}
-              onChange={(e) => setOrder(parseInt(e.target.value))}
+              onChange={(e) => setOrder(parseInt(e.target.value) || 0)}
               className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
             />
           </div>
@@ -349,7 +349,7 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
             <input
               type="number"
               value={order}
-              onChange={(e) => setOrder(parseInt(e.target.value))}
+              onChange={(e) => setOrder(parseInt(e.target.value) || 0)}
               className="w-32 px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
             />
           </div>

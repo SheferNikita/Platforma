@@ -157,7 +157,7 @@ function ContactForm({ contact, onSave, onClose }: { contact: Contact | null; on
         </div>
         <div>
           <label className="block text-sm font-medium text-[#3d3527] mb-1">Порядок</label>
-          <input type="number" value={order} onChange={(e) => setOrder(parseInt(e.target.value))} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
+          <input type="number" value={order} onChange={(e) => setOrder(parseInt(e.target.value) || 0)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
         </div>
       </div>
       <div className="flex justify-end gap-3">

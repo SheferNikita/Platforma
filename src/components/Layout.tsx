@@ -5,7 +5,7 @@ import { User, Calendar, Users } from 'lucide-react';
 import { Navigation } from './Navigation';
 import { SobrietyCounter } from './SobrietyCounter';
 import { NotificationBell } from './NotificationBell';
-import { Toaster } from 'sonner@2.0.3';
+import { Toaster } from 'sonner';
 
 export function Layout() {
   const location = useLocation();

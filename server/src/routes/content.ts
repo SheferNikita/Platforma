@@ -62,7 +62,7 @@ router.post('/modules', async (req: AuthRequest, res: Response) => {
     res.status(201).json(module);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0].message });
     }
     console.error('Create module error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -88,7 +88,7 @@ router.put('/modules/:id', async (req: AuthRequest, res: Response) => {
     res.json(module);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0].message });
     }
     console.error('Update module error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -166,7 +166,7 @@ router.post('/lessons', async (req: AuthRequest, res: Response) => {
     res.status(201).json(lesson);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0].message });
     }
     console.error('Create lesson error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -192,7 +192,7 @@ router.put('/lessons/:id', async (req: AuthRequest, res: Response) => {
     res.json(lesson);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0].message });
     }
     console.error('Update lesson error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

@@ -169,7 +169,7 @@ export function LibraryAdmin() {
                   <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center">
                     <Library className="w-5 h-5 text-white" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium text-[#3d3527]">{item.title}</p>
                     <p className="text-sm text-[#3d3527]/60">
                       {item.type === 'article' ? 'Статья' : 
@@ -177,6 +177,9 @@ export function LibraryAdmin() {
                        item.type === 'audio' ? 'Аудио' : 
                        item.type === 'book' ? 'Книга' : item.type}
                     </p>
+                    {item.description && (
+                      <p className="text-sm text-[#3d3527]/50 mt-1 line-clamp-2">{item.description}</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

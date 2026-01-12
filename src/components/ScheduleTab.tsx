@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, MapPin, Users, Loader2, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Loader2, ExternalLink } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface ScheduleEvent {
@@ -150,6 +150,12 @@ export function ScheduleTab() {
                     <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4 text-[var(--icon-lavender)]" />
                     <span className="leading-relaxed">{formatDate(event.date)}</span>
                   </div>
+                  {event.time && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-[var(--icon-lavender)]" />
+                      <span>{event.time}</span>
+                    </div>
+                  )}
                   {event.location && (
                     <div className="flex items-center gap-2">
                       <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4 text-[var(--icon-lavender)]" />

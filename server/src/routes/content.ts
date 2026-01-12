@@ -343,7 +343,7 @@ router.post('/schedule', async (req: AuthRequest, res: Response) => {
   try {
     const { date, ...rest } = req.body;
     const isoDate = date ? new Date(date).toISOString() : new Date().toISOString();
-    const event = await prisma.scheduleEvent.create({ data: { ...rest, date: isoDate } });
+    const event = await prisma.scheduleEvent.create({ data: { ...rest, date: isoDate, isPublished: true } });
     res.status(201).json(event);
   } catch (error) {
     console.error('Create schedule event error:', error);

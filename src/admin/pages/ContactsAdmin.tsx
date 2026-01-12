@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, Phone, Eye, EyeOff, User, ArrowUp, ArrowDown, Move, Check, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Phone, Eye, EyeOff, User, ArrowLeft, ArrowRight, Move, Check, X, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Contact {
@@ -10,8 +10,33 @@ interface Contact {
   phone: string;
   email: string;
   telegram: string;
+  photo: string | null;
   order: number;
   isPublished: boolean;
+}
+
+function normalizeTelegramForDisplay(input: string): string {
+  if (!input) return '';
+  let username = input.trim();
+  if (username.includes('t.me/')) {
+    username = username.split('t.me/').pop() || '';
+  } else if (username.includes('telegram.me/')) {
+    username = username.split('telegram.me/').pop() || '';
+  }
+  username = username.replace(/^@/, '');
+  username = username.split('?')[0];
+  return username;
+}
+
+function getTelegramLink(input: string): string {
+  if (!input) return '';
+  const username = normalizeTelegramForDisplay(input);
+  return `https://t.me/${username}`;
+}
+
+function getDisplayTelegram(input: string): string {
+  if (!input) return '';
+  return normalizeTelegramForDisplay(input);
 }
 
 export function ContactsAdmin() {
@@ -70,9 +95,9 @@ export function ContactsAdmin() {
     setReordering(true);
   }
 
-  function moveContactLocal(index: number, direction: 'up' | 'down') {
+  function moveContactLocal(index: number, direction: 'left' | 'right') {
     const newContacts = [...contacts];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    const targetIndex = direction === 'left' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newContacts.length) return;
     [newContacts[index], newContacts[targetIndex]] = [newContacts[targetIndex], newContacts[index]];
     setContacts(newContacts);
@@ -149,26 +174,30 @@ export function ContactsAdmin() {
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   {reordering && (
-                    <div className="flex flex-col gap-1">
+                    <div className="flex gap-1">
                       <button
-                        onClick={() => moveContactLocal(index, 'up')}
+                        onClick={() => moveContactLocal(index, 'left')}
                         disabled={index === 0}
                         className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                       >
-                        <ArrowUp className="w-4 h-4 text-[#a67c52]" />
+                        <ArrowLeft className="w-4 h-4 text-[#a67c52]" />
                       </button>
                       <button
-                        onClick={() => moveContactLocal(index, 'down')}
+                        onClick={() => moveContactLocal(index, 'right')}
                         disabled={index === contacts.length - 1}
                         className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                       >
-                        <ArrowDown className="w-4 h-4 text-[#a67c52]" />
+                        <ArrowRight className="w-4 h-4 text-[#a67c52]" />
                       </button>
                     </div>
                   )}
-                  <div className="w-12 h-12 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center">
-                    <User className="w-6 h-6 text-white" />
-                  </div>
+                  {contact.photo ? (
+                    <img src={contact.photo} alt={contact.name} className="w-12 h-12 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center">
+                      <User className="w-6 h-6 text-white" />
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-1">
                   <button onClick={() => togglePublish(contact.id, contact.isPublished)} className="p-2 hover:bg-[#f5f3ed] rounded-lg">
@@ -186,7 +215,11 @@ export function ContactsAdmin() {
               <p className="text-sm text-[#3d3527]/60 mb-2">{contact.role}</p>
               <div className="space-y-1 text-sm text-[#3d3527]/80">
                 {contact.phone && <p><Phone className="w-4 h-4 inline mr-2" />{contact.phone}</p>}
-                {contact.telegram && <p>@{contact.telegram}</p>}
+                {contact.telegram && (
+                  <a href={getTelegramLink(contact.telegram)} target="_blank" rel="noopener noreferrer" className="block hover:text-[#a67c52]">
+                    @{getDisplayTelegram(contact.telegram)}
+                  </a>
+                )}
               </div>
             </div>
           ))
@@ -211,9 +244,75 @@ function ContactForm({ contact, onSave, onClose }: { contact: Contact | null; on
   const [phone, setPhone] = useState(contact?.phone || '');
   const [email, setEmail] = useState(contact?.email || '');
   const [telegram, setTelegram] = useState(contact?.telegram || '');
+  const [photo, setPhoto] = useState(contact?.photo || '');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/uploads/avatar', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData
+      });
+      
+      if (!res.ok) throw new Error('Ошибка загрузки');
+      const data = await res.json();
+      setPhoto(data.url);
+    } catch (error) {
+      toast.error('Ошибка загрузки фото');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleSave() {
+    const normalizedTelegram = normalizeTelegramForDisplay(telegram);
+    onSave({ name, role, phone, email, telegram: normalizedTelegram, photo: photo || null });
+  }
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <div className="relative">
+          {photo ? (
+            <img src={photo} alt="Аватар" className="w-20 h-20 rounded-full object-cover" />
+          ) : (
+            <div className="w-20 h-20 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center">
+              <User className="w-10 h-10 text-white" />
+            </div>
+          )}
+          <input type="file" ref={fileInputRef} accept="image/*" onChange={handleFileUpload} className="hidden" />
+        </div>
+        <div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 px-4 py-2 bg-[#f5f3ed] border border-[#d4c9b0] rounded-xl hover:bg-[#ebe8dc] disabled:opacity-50"
+          >
+            <Upload className="w-4 h-4" />
+            {uploading ? 'Загрузка...' : 'Загрузить фото'}
+          </button>
+          {photo && (
+            <button
+              type="button"
+              onClick={() => setPhoto('')}
+              className="text-sm text-red-500 hover:text-red-700 mt-1"
+            >
+              Удалить фото
+            </button>
+          )}
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-[#3d3527] mb-1">Имя</label>
@@ -236,11 +335,11 @@ function ContactForm({ contact, onSave, onClose }: { contact: Contact | null; on
       </div>
       <div>
         <label className="block text-sm font-medium text-[#3d3527] mb-1">Telegram</label>
-        <input value={telegram} onChange={(e) => setTelegram(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="username" />
+        <input value={telegram} onChange={(e) => setTelegram(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="@username или ссылка" />
       </div>
       <div className="flex justify-end gap-3">
         <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
-        <button onClick={() => onSave({ name, role, phone, email, telegram })} className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl">Сохранить</button>
+        <button onClick={handleSave} className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl">Сохранить</button>
       </div>
     </div>
   );

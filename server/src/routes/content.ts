@@ -389,7 +389,7 @@ router.get('/contacts', async (req: AuthRequest, res: Response) => {
 
 router.post('/contacts', async (req: AuthRequest, res: Response) => {
   try {
-    const contact = await prisma.contact.create({ data: req.body });
+    const contact = await prisma.contact.create({ data: { ...req.body, isPublished: true } });
     res.status(201).json(contact);
   } catch (error) {
     console.error('Create contact error:', error);

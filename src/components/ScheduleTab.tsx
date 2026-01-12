@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Users, Loader2, ExternalLink } from 'lucide-react';
+import { Calendar, MapPin, Users, Loader2, ExternalLink } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface ScheduleEvent {
@@ -122,13 +122,18 @@ export function ScheduleTab() {
           >
             <div className="flex flex-col md:flex-row gap-4 md:gap-7">
               <div className="flex-shrink-0 text-center md:text-left">
-                <div className="inline-flex md:block p-4 md:p-5 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-[var(--button-lavender-dark)]/10 rounded-2xl shadow-inner min-w-[100px] md:min-w-[120px]">
+                <div className="inline-flex flex-col md:block p-4 md:p-5 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-[var(--button-lavender-dark)]/10 rounded-2xl shadow-inner min-w-[100px] md:min-w-[120px]">
                   <div className="text-3xl md:text-4xl bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] bg-clip-text text-transparent">
                     {new Date(event.date).getDate()}
                   </div>
                   <div className="text-xs md:text-sm opacity-60 mt-1 tracking-wide uppercase">
                     {new Date(event.date).toLocaleDateString('ru-RU', { month: 'short' })}
                   </div>
+                  {event.time && (
+                    <div className="text-sm md:text-base mt-2 text-[var(--button-lavender-dark)] font-medium">
+                      {event.time}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -140,17 +145,11 @@ export function ScheduleTab() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3 mb-4 md:mb-5 text-xs md:text-sm opacity-70">
+                <div className="flex flex-wrap gap-x-4 gap-y-2 mb-4 md:mb-5 text-xs md:text-sm opacity-70">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4 text-[var(--icon-lavender)]" />
-                    <span className="leading-relaxed truncate">{formatDate(event.date)}</span>
+                    <span className="leading-relaxed">{formatDate(event.date)}</span>
                   </div>
-                  {event.time && (
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-[var(--icon-lavender)]" />
-                      <span className="truncate">{event.time} {event.duration && `(${event.duration})`}</span>
-                    </div>
-                  )}
                   {event.location && (
                     <div className="flex items-center gap-2">
                       <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4 text-[var(--icon-lavender)]" />

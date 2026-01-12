@@ -171,7 +171,12 @@ export function LibraryAdmin() {
                   </div>
                   <div>
                     <p className="font-medium text-[#3d3527]">{item.title}</p>
-                    <p className="text-sm text-[#3d3527]/60">{item.type}</p>
+                    <p className="text-sm text-[#3d3527]/60">
+                      {item.type === 'article' ? 'Статья' : 
+                       item.type === 'video' ? 'Видео' : 
+                       item.type === 'audio' ? 'Аудио' : 
+                       item.type === 'book' ? 'Книга' : item.type}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

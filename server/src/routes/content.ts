@@ -433,7 +433,12 @@ router.get('/communities', async (req: AuthRequest, res: Response) => {
 
 router.post('/communities', async (req: AuthRequest, res: Response) => {
   try {
-    const community = await prisma.community.create({ data: req.body });
+    const community = await prisma.community.create({ 
+      data: { 
+        ...req.body,
+        isPublished: true 
+      } 
+    });
     res.status(201).json(community);
   } catch (error) {
     console.error('Create community error:', error);

@@ -93,17 +93,40 @@ model Lesson {
   title            String
   description      String?
   content          String?
-  videoUrl         String?
-  videoDescription String?
   duration         String?
   order            Int      @default(0)
   isPublished      Boolean  @default(false)
+  isTextOnly       Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   
   progress         LessonProgress[]
   diaries          Diary[]
   notes            StudentNote[]
+  videos           LessonVideo[]
+  attachments      LessonAttachment[]
+}
+
+model LessonVideo {
+  id          String   @id @default(uuid())
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  title       String?
+  url         String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model LessonAttachment {
+  id          String   @id @default(uuid())
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int
+  url         String
+  createdAt   DateTime @default(now())
 }
 
 model LessonProgress {

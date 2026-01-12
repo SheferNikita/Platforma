@@ -215,9 +215,7 @@ router.post('/lessons', async (req: AuthRequest, res: Response) => {
 router.put('/lessons/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
-    console.log('PUT /lessons/:id - id:', id, 'body:', JSON.stringify(req.body, null, 2));
     const data = lessonSchema.partial().parse(req.body);
-    console.log('Parsed data:', JSON.stringify(data, null, 2));
     const { videos, ...lessonData } = data;
     
     if (videos !== undefined) {
@@ -260,8 +258,6 @@ router.put('/lessons/:id', async (req: AuthRequest & Request<IdParams>, res: Res
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.issues[0].message });
     }
-    console.error('Update lesson error:', error?.message || error);
-    console.error('Stack:', error?.stack);
     res.status(500).json({ error: error?.message || 'Ошибка сервера' });
   }
 });

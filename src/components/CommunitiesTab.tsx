@@ -1,124 +1,82 @@
-import React from 'react';
-import { MapPin, Users, Calendar, Phone, Globe, Navigation } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { MapPin, Users, Calendar, Phone, Globe, Navigation, Loader2 } from 'lucide-react';
+import { api } from '../lib/api';
 
 interface Community {
-  id: number;
+  id: string;
   name: string;
-  city: string;
-  address: string;
-  description: string;
-  type: string;
-  schedule: string;
-  contact?: string;
-  website?: string;
-  members?: number;
+  city: string | null;
+  address: string | null;
+  description: string | null;
+  communityType: string | null;
+  schedule: string | null;
+  contact: string | null;
+  website: string | null;
+  membersCount: number | null;
 }
 
 export function CommunitiesTab() {
-  const communities: Community[] = [
-    {
-      id: 1,
-      name: 'Анонимные Алкаголики — Москва Центр',
-      city: 'Москва',
-      address: 'ул. Тверская, д. 12, каб. 301',
-      description: 'Группа АА с программой 12 шагов. Открытые и закрытые встречи для всех, кто хочет бросить пить.',
-      type: 'Анонимные Алкаголики',
-      schedule: 'Вт, Чт, Вс — 19:00',
-      contact: '+7 (495) 123-45-67',
-      website: 'https://aa-moscow.ru',
-      members: 45,
-    },
-    {
-      id: 2,
-      name: 'Клуб Трезвости',
-      city: 'Санкт-Петербург',
-      address: 'Невский проспект, д. 85',
-      description: 'Сообщество трезвенников, организующее совместные мероприятия, спортивные активности и культурные походы.',
-      type: 'Клуб',
-      schedule: 'Пн, Ср, Пт — 18:30',
-      contact: '+7 (812) 234-56-78',
-      website: 'https://trezvost-spb.ru',
-      members: 67,
-    },
-    {
-      id: 3,
-      name: 'Община Трезвости "Новый Путь"',
-      city: 'Казань',
-      address: 'ул. Баумана, д. 25',
-      description: 'Православная община, помогающая в преодолении зависимости через духовное развитие и взаимопомощь.',
-      type: 'Религиозная община',
-      schedule: 'Сб — 16:00, Вс — 11:00',
-      contact: '+7 (843) 345-67-89',
-      members: 32,
-    },
-    {
-      id: 4,
-      name: 'АА — Новосибирск',
-      city: 'Новосибирск',
-      address: 'Красный проспект, д. 50, оф. 15',
-      description: 'Группа поддержки по программе 12 шагов. Встречи для начинающих и опытных участников.',
-      type: 'Анонимные Алкаголики',
-      schedule: 'Ср, Пт — 19:00, Вс — 17:00',
-      contact: '+7 (383) 456-78-90',
-      website: 'https://aa-nsk.ru',
-      members: 28,
-    },
-    {
-      id: 5,
-      name: 'Трезвый Екатеринбург',
-      city: 'Екатеринбург',
-      address: 'ул. Ленина, д. 33',
-      description: 'Активное сообщество, организующее спортивные мероприятия, лекции и встречи для трезвенников.',
-      type: 'Общественная организация',
-      schedule: 'Пн, Чт — 18:00',
-      contact: '+7 (343) 567-89-01',
-      website: 'https://trezviy-ekb.ru',
-      members: 54,
-    },
-    {
-      id: 6,
-      name: 'Семейный Клуб Трезвости',
-      city: 'Москва',
-      address: 'Кутузовский проспект, д. 20',
-      description: 'Группа поддержки для семей, где есть проблемы с алкоголем. Работа с созависимостью.',
-      type: 'Семейная группа',
-      schedule: 'Вт — 19:30, Сб — 15:00',
-      contact: '+7 (495) 678-90-12',
-      members: 38,
-    },
-    {
-      id: 7,
-      name: 'АА — Краснодар',
-      city: 'Краснодар',
-      address: 'ул. Красная, д. 122',
-      description: 'Встречи Анонимных Алкаголиков в теплой и поддерживающей атмосфере.',
-      type: 'Анонимные Алкаголики',
-      schedule: 'Ежедневно — 19:00',
-      contact: '+7 (861) 789-01-23',
-      website: 'https://aa-krasnodar.ru',
-      members: 41,
-    },
-    {
-      id: 8,
-      name: 'Онлайн Община "Трезвая Россия"',
-      city: 'Онлайн',
-      address: 'Zoom / Telegram',
-      description: 'Виртуальная община для тех, кто не может посещать очные встречи. Ежедневные онлайн-встречи.',
-      type: 'Онлайн-сообщество',
-      schedule: 'Ежедневно — 20:00 (МСК)',
-      contact: '@trezvaya_russia',
-      website: 'https://trezvaya-russia.ru',
-      members: 156,
-    },
-  ];
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const getCommunityTypeColor = (type: string) => {
+  useEffect(() => {
+    loadCommunities();
+  }, []);
+
+  async function loadCommunities() {
+    try {
+      setLoading(true);
+      const data = await api.get<Community[]>('/public/communities');
+      setCommunities(data);
+      setError(null);
+    } catch (err) {
+      setError('Не удалось загрузить общины');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const getCommunityTypeColor = (type: string | null) => {
+    if (!type) return 'bg-gray-100 text-gray-800';
     if (type.includes('Анонимные')) return 'bg-gradient-to-r from-blue-500/10 to-blue-600/10 text-blue-700 border border-blue-200';
     if (type.includes('Клуб')) return 'bg-gradient-to-r from-green-500/10 to-green-600/10 text-green-700 border border-green-200';
     if (type.includes('Религиозная')) return 'bg-gradient-to-r from-purple-500/10 to-purple-600/10 text-purple-700 border border-purple-200';
     if (type.includes('Онлайн')) return 'bg-gradient-to-r from-orange-500/10 to-orange-600/10 text-orange-700 border border-orange-200';
     return 'bg-gray-100 text-gray-800';
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--button-lavender-dark)]" />
+        <span className="ml-3 text-lg">Загрузка общин...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-red-500 mb-4">{error}</p>
+        <button 
+          onClick={loadCommunities}
+          className="px-4 py-2 bg-[var(--button-lavender-dark)] text-white rounded-lg hover:opacity-90"
+        >
+          Попробовать снова
+        </button>
+      </div>
+    );
+  }
+
+  if (communities.length === 0) {
+    return (
+      <div className="text-center py-20">
+        <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+        <p className="text-gray-500">Общины пока не добавлены</p>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in">
@@ -143,33 +101,41 @@ export function CommunitiesTab() {
               <div className="flex items-start justify-between mb-3">
                 <h3 className="flex-1 leading-snug text-base md:text-lg">{community.name}</h3>
               </div>
-              <span className={`inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-full text-xs ${getCommunityTypeColor(community.type)}`}>
-                {community.type}
-              </span>
+              {community.communityType && (
+                <span className={`inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-full text-xs ${getCommunityTypeColor(community.communityType)}`}>
+                  {community.communityType}
+                </span>
+              )}
             </div>
 
-            <p className="text-xs md:text-sm mb-4 md:mb-5 opacity-80 leading-relaxed">
-              {community.description}
-            </p>
+            {community.description && (
+              <p className="text-xs md:text-sm mb-4 md:mb-5 opacity-80 leading-relaxed">
+                {community.description}
+              </p>
+            )}
 
             <div className="space-y-2 md:space-y-3 mb-5 md:mb-6 text-xs md:text-sm">
-              <div className="flex items-start gap-2 opacity-70">
-                <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 mt-0.5 text-[var(--icon-lavender)]" />
-                <div className="min-w-0">
-                  <div className="leading-relaxed">{community.city}</div>
-                  <div className="text-[10px] md:text-xs opacity-70 leading-relaxed break-words">{community.address}</div>
+              {(community.city || community.address) && (
+                <div className="flex items-start gap-2 opacity-70">
+                  <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 mt-0.5 text-[var(--icon-lavender)]" />
+                  <div className="min-w-0">
+                    {community.city && <div className="leading-relaxed">{community.city}</div>}
+                    {community.address && <div className="text-[10px] md:text-xs opacity-70 leading-relaxed break-words">{community.address}</div>}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex items-center gap-2 opacity-70">
-                <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 text-[var(--icon-lavender)]" />
-                <span className="leading-relaxed">{community.schedule}</span>
-              </div>
+              {community.schedule && (
+                <div className="flex items-center gap-2 opacity-70">
+                  <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 text-[var(--icon-lavender)]" />
+                  <span className="leading-relaxed">{community.schedule}</span>
+                </div>
+              )}
 
-              {community.members && (
+              {community.membersCount && (
                 <div className="flex items-center gap-2 opacity-70">
                   <Users className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 text-[var(--icon-lavender)]" />
-                  {community.members} участников
+                  {community.membersCount} участников
                 </div>
               )}
             </div>
@@ -177,7 +143,7 @@ export function CommunitiesTab() {
             <div className="flex flex-wrap gap-2">
               {community.contact && (
                 <a
-                  href={`tel:${community.contact}`}
+                  href={community.contact.startsWith('@') ? `https://t.me/${community.contact.replace('@', '')}` : `tel:${community.contact}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_6px_16px_rgba(139,149,188,0.4)] transition-all duration-300 text-xs md:text-sm transform hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group"
@@ -200,7 +166,7 @@ export function CommunitiesTab() {
                 </a>
               )}
 
-              {community.city !== 'Онлайн' && (
+              {community.city && community.city !== 'Онлайн' && (
                 <button className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 border-2 border-[var(--sky-light)]/50 rounded-xl hover:bg-gradient-to-r hover:from-[var(--book-bg)] hover:to-white transition-all duration-300 text-xs md:text-sm transform hover:scale-[1.02] active:scale-[0.98]">
                   <Navigation className="w-3.5 h-3.5 md:w-4 md:h-4" />
                   На карте

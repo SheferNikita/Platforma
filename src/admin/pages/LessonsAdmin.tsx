@@ -94,14 +94,10 @@ export function LessonsAdmin() {
 
   async function saveLesson(data: Partial<Lesson>) {
     try {
-      console.log('saveLesson called with:', JSON.stringify(data, null, 2));
-      console.log('editingLesson:', editingLesson);
       if (editingLesson?.lesson?.id) {
-        console.log('Updating lesson:', editingLesson.lesson.id);
         await api.put(`/content/lessons/${editingLesson.lesson.id}`, data);
         toast.success('Урок обновлен');
       } else {
-        console.log('Creating new lesson for module:', editingLesson?.moduleId);
         const { nextOrder } = await api.get<{ nextOrder: number }>(`/content/lessons/next-order/${editingLesson?.moduleId}`);
         await api.post('/content/lessons', { ...data, moduleId: editingLesson?.moduleId, order: nextOrder });
         toast.success('Урок создан');
@@ -110,8 +106,6 @@ export function LessonsAdmin() {
       setShowLessonModal(false);
       setEditingLesson(null);
     } catch (error: any) {
-      console.error('saveLesson error:', error);
-      console.error('Error message:', error?.message);
       toast.error('Ошибка сохранения');
     }
   }
@@ -436,6 +430,7 @@ export function LessonsAdmin() {
 function ModuleModal({ module, onSave, onClose }: { module: Module | null; onSave: (data: Partial<Module>) => void; onClose: () => void }) {
   const [title, setTitle] = useState(module?.title || '');
   const [description, setDescription] = useState(module?.description || '');
+  const [isPublished, setIsPublished] = useState(module?.isPublished ?? true);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -459,11 +454,25 @@ function ModuleModal({ module, onSave, onClose }: { module: Module | null; onSav
               rows={3}
             />
           </div>
+          <div className="flex items-center gap-3 py-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isPublished}
+                onChange={(e) => setIsPublished(e.target.checked)}
+                className="w-5 h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+              />
+              <span className="flex items-center gap-2 text-[#3d3527]">
+                <Eye className="w-4 h-4" />
+                Опубликован (виден ученикам)
+              </span>
+            </label>
+          </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
           <button
-            onClick={() => onSave({ title, description })}
+            onClick={() => onSave({ title, description, isPublished })}
             className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
           >
             Сохранить
@@ -480,6 +489,7 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
   const [content, setContent] = useState(lesson?.content || '');
   const [duration, setDuration] = useState(lesson?.duration || '');
   const [isTextOnly, setIsTextOnly] = useState(lesson?.isTextOnly || false);
+  const [isPublished, setIsPublished] = useState(lesson?.isPublished ?? true);
   const [videos, setVideos] = useState<LessonVideo[]>(lesson?.videos || []);
 
   const addVideo = () => {
@@ -509,7 +519,7 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
       ...v,
       order: i
     }));
-    onSave({ title, description, content, duration, isTextOnly, videos: videosToSave });
+    onSave({ title, description, content, duration, isTextOnly, isPublished, videos: videosToSave });
   };
 
   return (
@@ -542,7 +552,7 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
             />
           </div>
 
-          <div className="flex items-center gap-3 py-2">
+          <div className="flex flex-wrap items-center gap-6 py-2">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -553,6 +563,18 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
               <span className="flex items-center gap-2 text-[#3d3527]">
                 <FileText className="w-4 h-4" />
                 Текстовый урок (без видео)
+              </span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isPublished}
+                onChange={(e) => setIsPublished(e.target.checked)}
+                className="w-5 h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+              />
+              <span className="flex items-center gap-2 text-[#3d3527]">
+                <Eye className="w-4 h-4" />
+                Опубликован (виден ученикам)
               </span>
             </label>
           </div>

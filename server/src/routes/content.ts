@@ -441,4 +441,155 @@ router.delete('/mini-groups/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.post('/modules/reorder', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, direction } = req.body;
+    const currentModule = await prisma.module.findUnique({ where: { id } });
+    if (!currentModule) return res.status(404).json({ error: 'Модуль не найден' });
+    
+    const modules = await prisma.module.findMany({ orderBy: { order: 'asc' } });
+    const currentIndex = modules.findIndex(m => m.id === id);
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    
+    if (targetIndex < 0 || targetIndex >= modules.length) {
+      return res.status(400).json({ error: 'Невозможно переместить' });
+    }
+    
+    const targetModule = modules[targetIndex];
+    await prisma.$transaction([
+      prisma.module.update({ where: { id }, data: { order: targetModule.order } }),
+      prisma.module.update({ where: { id: targetModule.id }, data: { order: currentModule.order } })
+    ]);
+    
+    res.json({ message: 'Порядок изменен' });
+  } catch (error) {
+    console.error('Reorder modules error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/lessons/reorder', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, direction, moduleId } = req.body;
+    const currentLesson = await prisma.lesson.findUnique({ where: { id } });
+    if (!currentLesson) return res.status(404).json({ error: 'Урок не найден' });
+    
+    const lessons = await prisma.lesson.findMany({ 
+      where: { moduleId },
+      orderBy: { order: 'asc' } 
+    });
+    const currentIndex = lessons.findIndex(l => l.id === id);
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    
+    if (targetIndex < 0 || targetIndex >= lessons.length) {
+      return res.status(400).json({ error: 'Невозможно переместить' });
+    }
+    
+    const targetLesson = lessons[targetIndex];
+    await prisma.$transaction([
+      prisma.lesson.update({ where: { id }, data: { order: targetLesson.order } }),
+      prisma.lesson.update({ where: { id: targetLesson.id }, data: { order: currentLesson.order } })
+    ]);
+    
+    res.json({ message: 'Порядок изменен' });
+  } catch (error) {
+    console.error('Reorder lessons error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/library/reorder', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, direction } = req.body;
+    const currentItem = await prisma.libraryItem.findUnique({ where: { id } });
+    if (!currentItem) return res.status(404).json({ error: 'Элемент не найден' });
+    
+    const items = await prisma.libraryItem.findMany({ orderBy: { order: 'asc' } });
+    const currentIndex = items.findIndex(i => i.id === id);
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    
+    if (targetIndex < 0 || targetIndex >= items.length) {
+      return res.status(400).json({ error: 'Невозможно переместить' });
+    }
+    
+    const targetItem = items[targetIndex];
+    await prisma.$transaction([
+      prisma.libraryItem.update({ where: { id }, data: { order: targetItem.order } }),
+      prisma.libraryItem.update({ where: { id: targetItem.id }, data: { order: currentItem.order } })
+    ]);
+    
+    res.json({ message: 'Порядок изменен' });
+  } catch (error) {
+    console.error('Reorder library error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/contacts/reorder', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, direction } = req.body;
+    const currentContact = await prisma.contact.findUnique({ where: { id } });
+    if (!currentContact) return res.status(404).json({ error: 'Контакт не найден' });
+    
+    const contacts = await prisma.contact.findMany({ orderBy: { order: 'asc' } });
+    const currentIndex = contacts.findIndex(c => c.id === id);
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    
+    if (targetIndex < 0 || targetIndex >= contacts.length) {
+      return res.status(400).json({ error: 'Невозможно переместить' });
+    }
+    
+    const targetContact = contacts[targetIndex];
+    await prisma.$transaction([
+      prisma.contact.update({ where: { id }, data: { order: targetContact.order } }),
+      prisma.contact.update({ where: { id: targetContact.id }, data: { order: currentContact.order } })
+    ]);
+    
+    res.json({ message: 'Порядок изменен' });
+  } catch (error) {
+    console.error('Reorder contacts error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/modules/next-order', async (req: AuthRequest, res: Response) => {
+  try {
+    const maxModule = await prisma.module.findFirst({ orderBy: { order: 'desc' } });
+    res.json({ nextOrder: (maxModule?.order || 0) + 1 });
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/lessons/next-order/:moduleId', async (req: AuthRequest, res: Response) => {
+  try {
+    const { moduleId } = req.params;
+    const maxLesson = await prisma.lesson.findFirst({ 
+      where: { moduleId },
+      orderBy: { order: 'desc' } 
+    });
+    res.json({ nextOrder: (maxLesson?.order || 0) + 1 });
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/library/next-order', async (req: AuthRequest, res: Response) => {
+  try {
+    const maxItem = await prisma.libraryItem.findFirst({ orderBy: { order: 'desc' } });
+    res.json({ nextOrder: (maxItem?.order || 0) + 1 });
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/contacts/next-order', async (req: AuthRequest, res: Response) => {
+  try {
+    const maxContact = await prisma.contact.findFirst({ orderBy: { order: 'desc' } });
+    res.json({ nextOrder: (maxContact?.order || 0) + 1 });
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;

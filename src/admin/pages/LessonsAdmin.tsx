@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, BookOpen, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, ArrowUp, ArrowDown, Move } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Lesson {
@@ -31,6 +31,8 @@ export function LessonsAdmin() {
   const [editingLesson, setEditingLesson] = useState<{ lesson: Lesson | null; moduleId: string } | null>(null);
   const [showModuleModal, setShowModuleModal] = useState(false);
   const [showLessonModal, setShowLessonModal] = useState(false);
+  const [reorderingModules, setReorderingModules] = useState(false);
+  const [reorderingLessons, setReorderingLessons] = useState<string | null>(null);
 
   useEffect(() => {
     loadModules();
@@ -53,7 +55,8 @@ export function LessonsAdmin() {
         await api.put(`/content/modules/${editingModule.id}`, data);
         toast.success('Модуль обновлен');
       } else {
-        await api.post('/content/modules', data);
+        const { nextOrder } = await api.get<{ nextOrder: number }>('/content/modules/next-order');
+        await api.post('/content/modules', { ...data, order: nextOrder });
         toast.success('Модуль создан');
       }
       loadModules();
@@ -81,7 +84,8 @@ export function LessonsAdmin() {
         await api.put(`/content/lessons/${editingLesson.lesson.id}`, data);
         toast.success('Урок обновлен');
       } else {
-        await api.post('/content/lessons', { ...data, moduleId: editingLesson?.moduleId });
+        const { nextOrder } = await api.get<{ nextOrder: number }>(`/content/lessons/next-order/${editingLesson?.moduleId}`);
+        await api.post('/content/lessons', { ...data, moduleId: editingLesson?.moduleId, order: nextOrder });
         toast.success('Урок создан');
       }
       loadModules();
@@ -113,6 +117,24 @@ export function LessonsAdmin() {
     }
   }
 
+  async function moveModule(id: string, direction: 'up' | 'down') {
+    try {
+      await api.post('/content/modules/reorder', { id, direction });
+      loadModules();
+    } catch (error) {
+      toast.error('Ошибка перемещения');
+    }
+  }
+
+  async function moveLesson(id: string, moduleId: string, direction: 'up' | 'down') {
+    try {
+      await api.post('/content/lessons/reorder', { id, moduleId, direction });
+      loadModules();
+    } catch (error) {
+      toast.error('Ошибка перемещения');
+    }
+  }
+
   if (loading) {
     return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#a67c52]"></div></div>;
   }
@@ -124,22 +146,48 @@ export function LessonsAdmin() {
           <h1 className="text-3xl font-bold text-[#3d3527]">Уроки и модули</h1>
           <p className="text-[#3d3527]/60 mt-1">Управление содержанием курса</p>
         </div>
-        <button
-          onClick={() => { setEditingModule(null); setShowModuleModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow"
-        >
-          <Plus className="w-5 h-5" /> Добавить модуль
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setReorderingModules(!reorderingModules)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${reorderingModules ? 'bg-[#a67c52] text-white' : 'bg-white border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]'}`}
+          >
+            <Move className="w-5 h-5" /> Переместить
+          </button>
+          <button
+            onClick={() => { setEditingModule(null); setShowModuleModal(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow"
+          >
+            <Plus className="w-5 h-5" /> Добавить модуль
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4">
-        {modules.map((module) => (
+        {modules.map((module, moduleIndex) => (
           <div key={module.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 overflow-hidden">
             <div
               className="p-4 flex items-center justify-between cursor-pointer hover:bg-[#f5f3ed]/50"
-              onClick={() => setExpandedModule(expandedModule === module.id ? null : module.id)}
+              onClick={() => !reorderingModules && setExpandedModule(expandedModule === module.id ? null : module.id)}
             >
               <div className="flex items-center gap-4">
+                {reorderingModules && (
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); moveModule(module.id, 'up'); }}
+                      disabled={moduleIndex === 0}
+                      className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ArrowUp className="w-4 h-4 text-[#a67c52]" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); moveModule(module.id, 'down'); }}
+                      disabled={moduleIndex === modules.length - 1}
+                      className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <ArrowDown className="w-4 h-4 text-[#a67c52]" />
+                    </button>
+                  </div>
+                )}
                 <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center">
                   <BookOpen className="w-5 h-5 text-white" />
                 </div>
@@ -170,17 +218,45 @@ export function LessonsAdmin() {
                 >
                   <Trash2 className="w-5 h-5 text-red-500" />
                 </button>
-                {expandedModule === module.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                {!reorderingModules && (expandedModule === module.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />)}
               </div>
             </div>
 
             {expandedModule === module.id && (
               <div className="border-t border-[#d4c9b0]/30 p-4 space-y-3">
-                {module.lessons.map((lesson) => (
+                <div className="flex justify-end mb-2">
+                  <button
+                    onClick={() => setReorderingLessons(reorderingLessons === module.id ? null : module.id)}
+                    className={`flex items-center gap-1 px-3 py-1 text-sm rounded-lg transition-colors ${reorderingLessons === module.id ? 'bg-[#a67c52] text-white' : 'bg-[#f5f3ed] text-[#3d3527] hover:bg-[#e8e4d9]'}`}
+                  >
+                    <Move className="w-4 h-4" /> Переместить
+                  </button>
+                </div>
+                {module.lessons.map((lesson, lessonIndex) => (
                   <div key={lesson.id} className="flex items-center justify-between p-3 bg-[#f5f3ed]/50 rounded-xl">
-                    <div>
-                      <p className="font-medium text-[#3d3527]">{lesson.title}</p>
-                      <p className="text-sm text-[#3d3527]/60">{lesson.duration}</p>
+                    <div className="flex items-center gap-3">
+                      {reorderingLessons === module.id && (
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => moveLesson(lesson.id, module.id, 'up')}
+                            disabled={lessonIndex === 0}
+                            className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <ArrowUp className="w-3 h-3 text-[#a67c52]" />
+                          </button>
+                          <button
+                            onClick={() => moveLesson(lesson.id, module.id, 'down')}
+                            disabled={lessonIndex === module.lessons.length - 1}
+                            className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <ArrowDown className="w-3 h-3 text-[#a67c52]" />
+                          </button>
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium text-[#3d3527]">{lesson.title}</p>
+                        <p className="text-sm text-[#3d3527]/60">{lesson.duration}</p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -238,7 +314,6 @@ export function LessonsAdmin() {
 function ModuleModal({ module, onSave, onClose }: { module: Module | null; onSave: (data: Partial<Module>) => void; onClose: () => void }) {
   const [title, setTitle] = useState(module?.title || '');
   const [description, setDescription] = useState(module?.description || '');
-  const [order, setOrder] = useState(module?.order || 0);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -262,20 +337,11 @@ function ModuleModal({ module, onSave, onClose }: { module: Module | null; onSav
               rows={3}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[#3d3527] mb-1">Порядок</label>
-            <input
-              type="number"
-              value={order}
-              onChange={(e) => setOrder(parseInt(e.target.value) || 0)}
-              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-            />
-          </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
           <button
-            onClick={() => onSave({ title, description, order })}
+            onClick={() => onSave({ title, description })}
             className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
           >
             Сохранить
@@ -292,7 +358,6 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
   const [content, setContent] = useState(lesson?.content || '');
   const [videoUrl, setVideoUrl] = useState(lesson?.videoUrl || '');
   const [duration, setDuration] = useState(lesson?.duration || '');
-  const [order, setOrder] = useState(lesson?.order || 0);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -344,20 +409,11 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
               />
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[#3d3527] mb-1">Порядок</label>
-            <input
-              type="number"
-              value={order}
-              onChange={(e) => setOrder(parseInt(e.target.value) || 0)}
-              className="w-32 px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-            />
-          </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
           <button
-            onClick={() => onSave({ title, description, content, videoUrl, duration, order })}
+            onClick={() => onSave({ title, description, content, videoUrl, duration })}
             className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
           >
             Сохранить

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, Library, Eye, EyeOff } from 'lucide-react';
+import { Plus, Edit, Trash2, Library, Eye, EyeOff, ArrowUp, ArrowDown, Move } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface LibraryItem {
@@ -19,6 +19,7 @@ export function LibraryAdmin() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<LibraryItem | null>(null);
+  const [reordering, setReordering] = useState(false);
 
   useEffect(() => { loadItems(); }, []);
 
@@ -36,7 +37,8 @@ export function LibraryAdmin() {
         await api.put(`/content/library/${editingItem.id}`, data);
         toast.success('Элемент обновлен');
       } else {
-        await api.post('/content/library', data);
+        const { nextOrder } = await api.get<{ nextOrder: number }>('/content/library/next-order');
+        await api.post('/content/library', { ...data, order: nextOrder });
         toast.success('Элемент создан');
       }
       loadItems();
@@ -61,6 +63,13 @@ export function LibraryAdmin() {
     } catch (error) { toast.error('Ошибка'); }
   }
 
+  async function moveItem(id: string, direction: 'up' | 'down') {
+    try {
+      await api.post('/content/library/reorder', { id, direction });
+      loadItems();
+    } catch (error) { toast.error('Ошибка перемещения'); }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -68,9 +77,17 @@ export function LibraryAdmin() {
           <h1 className="text-3xl font-bold text-[#3d3527]">Библиотека</h1>
           <p className="text-[#3d3527]/60 mt-1">Управление материалами библиотеки</p>
         </div>
-        <button onClick={() => { setEditingItem(null); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg">
-          <Plus className="w-5 h-5" /> Добавить
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setReordering(!reordering)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${reordering ? 'bg-[#a67c52] text-white' : 'bg-white border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]'}`}
+          >
+            <Move className="w-5 h-5" /> Переместить
+          </button>
+          <button onClick={() => { setEditingItem(null); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg">
+            <Plus className="w-5 h-5" /> Добавить
+          </button>
+        </div>
       </div>
 
       <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 overflow-hidden">
@@ -80,9 +97,27 @@ export function LibraryAdmin() {
           <div className="text-center py-12 text-[#3d3527]/60">Библиотека пуста</div>
         ) : (
           <div className="divide-y divide-[#d4c9b0]/30">
-            {items.map((item) => (
+            {items.map((item, index) => (
               <div key={item.id} className="flex items-center justify-between p-4 hover:bg-[#f5f3ed]/50">
                 <div className="flex items-center gap-4">
+                  {reordering && (
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => moveItem(item.id, 'up')}
+                        disabled={index === 0}
+                        className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ArrowUp className="w-4 h-4 text-[#a67c52]" />
+                      </button>
+                      <button
+                        onClick={() => moveItem(item.id, 'down')}
+                        disabled={index === items.length - 1}
+                        className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ArrowDown className="w-4 h-4 text-[#a67c52]" />
+                      </button>
+                    </div>
+                  )}
                   <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center">
                     <Library className="w-5 h-5 text-white" />
                   </div>
@@ -129,7 +164,6 @@ function LibraryForm({ item, onSave, onClose }: { item: LibraryItem | null; onSa
   const [description, setDescription] = useState(item?.description || '');
   const [type, setType] = useState(item?.type || 'article');
   const [url, setUrl] = useState(item?.url || '');
-  const [order, setOrder] = useState(item?.order || 0);
 
   return (
     <div className="space-y-4">
@@ -141,20 +175,14 @@ function LibraryForm({ item, onSave, onClose }: { item: LibraryItem | null; onSa
         <label className="block text-sm font-medium text-[#3d3527] mb-1">Описание</label>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" rows={3} />
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-[#3d3527] mb-1">Тип</label>
-          <select value={type} onChange={(e) => setType(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl">
-            <option value="article">Статья</option>
-            <option value="video">Видео</option>
-            <option value="audio">Аудио</option>
-            <option value="book">Книга</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-[#3d3527] mb-1">Порядок</label>
-          <input type="number" value={order} onChange={(e) => setOrder(parseInt(e.target.value) || 0)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-[#3d3527] mb-1">Тип</label>
+        <select value={type} onChange={(e) => setType(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl">
+          <option value="article">Статья</option>
+          <option value="video">Видео</option>
+          <option value="audio">Аудио</option>
+          <option value="book">Книга</option>
+        </select>
       </div>
       <div>
         <label className="block text-sm font-medium text-[#3d3527] mb-1">Ссылка</label>
@@ -162,7 +190,7 @@ function LibraryForm({ item, onSave, onClose }: { item: LibraryItem | null; onSa
       </div>
       <div className="flex justify-end gap-3">
         <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
-        <button onClick={() => onSave({ title, description, type, url, order })} className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl">Сохранить</button>
+        <button onClick={() => onSave({ title, description, type, url })} className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl">Сохранить</button>
       </div>
     </div>
   );

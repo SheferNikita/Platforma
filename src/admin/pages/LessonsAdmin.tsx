@@ -94,10 +94,14 @@ export function LessonsAdmin() {
 
   async function saveLesson(data: Partial<Lesson>) {
     try {
+      console.log('saveLesson called with:', JSON.stringify(data, null, 2));
+      console.log('editingLesson:', editingLesson);
       if (editingLesson?.lesson?.id) {
+        console.log('Updating lesson:', editingLesson.lesson.id);
         await api.put(`/content/lessons/${editingLesson.lesson.id}`, data);
         toast.success('Урок обновлен');
       } else {
+        console.log('Creating new lesson for module:', editingLesson?.moduleId);
         const { nextOrder } = await api.get<{ nextOrder: number }>(`/content/lessons/next-order/${editingLesson?.moduleId}`);
         await api.post('/content/lessons', { ...data, moduleId: editingLesson?.moduleId, order: nextOrder });
         toast.success('Урок создан');
@@ -105,7 +109,9 @@ export function LessonsAdmin() {
       loadModules();
       setShowLessonModal(false);
       setEditingLesson(null);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('saveLesson error:', error);
+      console.error('Error message:', error?.message);
       toast.error('Ошибка сохранения');
     }
   }

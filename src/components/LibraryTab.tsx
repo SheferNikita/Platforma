@@ -10,6 +10,7 @@ interface LibraryItem {
   type: string;
   category: string | null;
   url: string | null;
+  downloadUrl: string | null;
   order: number;
 }
 
@@ -181,11 +182,16 @@ export function LibraryTab() {
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                 </a>
               )}
-              {(item.type.toLowerCase() === 'book' || item.type.toLowerCase() === 'article') && item.url && (
-                <button className="inline-flex items-center justify-center gap-2 px-4 md:px-5 py-2 md:py-2.5 border-2 border-[var(--sky-light)]/50 rounded-xl hover:bg-gradient-to-r hover:from-[var(--book-bg)] hover:to-white transition-all duration-300 text-xs md:text-sm transform hover:scale-[1.02] active:scale-[0.98]">
+              {item.downloadUrl && (
+                <a
+                  href={item.downloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-4 md:px-5 py-2 md:py-2.5 border-2 border-[var(--sky-light)]/50 rounded-xl hover:bg-gradient-to-r hover:from-[var(--book-bg)] hover:to-white transition-all duration-300 text-xs md:text-sm transform hover:scale-[1.02] active:scale-[0.98]"
+                >
                   <Download className="w-3.5 h-3.5 md:w-4 md:h-4" />
                   Скачать
-                </button>
+                </a>
               )}
             </div>
           </div>

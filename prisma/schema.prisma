@@ -171,6 +171,7 @@ model LibraryItem {
   description String?
   type        String
   url         String?
+  downloadUrl String?
   content     String?
   order       Int      @default(0)
   isPublished Boolean  @default(false)

@@ -4,24 +4,26 @@ interface KinescopePlayerProps {
 }
 
 function extractVideoId(url: string): string | null {
+  const trimmedUrl = url.trim();
+  
+  // Handle full URLs with various Kinescope formats
   const patterns = [
-    /kinescope\.io\/embed\/(\d+)/,
-    /kinescope\.io\/(\d+)/,
-    /kinescope\.io\/([a-zA-Z0-9_-]+)/,
+    /kinescope\.io\/embed\/([a-zA-Z0-9_-]+)/,
+    /kinescope\.io\/watch\/([a-zA-Z0-9_-]+)/,
+    /kinescope\.io\/([a-zA-Z0-9_-]+)(?:\?|$|\/)/,
+    /kinescope\.io\/([a-zA-Z0-9_-]+)$/,
   ];
 
   for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) {
+    const match = trimmedUrl.match(pattern);
+    if (match && match[1]) {
       return match[1];
     }
   }
 
-  if (url.match(/^\d+$/)) {
-    return url;
-  }
-  if (url.match(/^[a-zA-Z0-9_-]+$/)) {
-    return url;
+  // Handle bare video ID (alphanumeric, at least 10 chars)
+  if (trimmedUrl.match(/^[a-zA-Z0-9_-]{10,}$/)) {
+    return trimmedUrl;
   }
 
   return null;

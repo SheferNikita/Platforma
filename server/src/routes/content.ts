@@ -1,7 +1,11 @@
-import { Router, Response } from 'express';
+import { Router, Response, Request } from 'express';
 import { prisma } from '../index';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
+
+interface IdParams {
+  id: string;
+}
 
 const router = Router();
 
@@ -80,9 +84,9 @@ router.post('/modules', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/modules/:id', async (req: AuthRequest, res: Response) => {
+router.put('/modules/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const data = moduleSchema.partial().parse(req.body);
     const module = await prisma.module.update({ where: { id }, data });
     
@@ -106,9 +110,9 @@ router.put('/modules/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.delete('/modules/:id', async (req: AuthRequest, res: Response) => {
+router.delete('/modules/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     await prisma.module.delete({ where: { id } });
     
     await prisma.adminLog.create({
@@ -140,9 +144,9 @@ router.get('/lessons', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.get('/lessons/:id', async (req: AuthRequest, res: Response) => {
+router.get('/lessons/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const lesson = await prisma.lesson.findUnique({
       where: { id },
       include: { 
@@ -208,9 +212,9 @@ router.post('/lessons', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/lessons/:id', async (req: AuthRequest, res: Response) => {
+router.put('/lessons/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const data = lessonSchema.partial().parse(req.body);
     const { videos, ...lessonData } = data;
     
@@ -250,18 +254,19 @@ router.put('/lessons/:id', async (req: AuthRequest, res: Response) => {
     });
     
     res.json(lesson);
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.issues[0].message });
     }
-    console.error('Update lesson error:', error);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    console.error('Update lesson error:', error?.message || error);
+    console.error('Stack:', error?.stack);
+    res.status(500).json({ error: error?.message || 'Ошибка сервера' });
   }
 });
 
-router.delete('/lessons/:id', async (req: AuthRequest, res: Response) => {
+router.delete('/lessons/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     await prisma.lesson.delete({ where: { id } });
     
     await prisma.adminLog.create({
@@ -302,9 +307,9 @@ router.post('/library', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/library/:id', async (req: AuthRequest, res: Response) => {
+router.put('/library/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const item = await prisma.libraryItem.update({ where: { id }, data: req.body });
     res.json(item);
   } catch (error) {
@@ -313,9 +318,9 @@ router.put('/library/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.delete('/library/:id', async (req: AuthRequest, res: Response) => {
+router.delete('/library/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     await prisma.libraryItem.delete({ where: { id } });
     res.json({ message: 'Элемент удален' });
   } catch (error) {
@@ -346,9 +351,9 @@ router.post('/schedule', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/schedule/:id', async (req: AuthRequest, res: Response) => {
+router.put('/schedule/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const event = await prisma.scheduleEvent.update({ where: { id }, data: req.body });
     res.json(event);
   } catch (error) {
@@ -357,9 +362,9 @@ router.put('/schedule/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.delete('/schedule/:id', async (req: AuthRequest, res: Response) => {
+router.delete('/schedule/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     await prisma.scheduleEvent.delete({ where: { id } });
     res.json({ message: 'Событие удалено' });
   } catch (error) {
@@ -390,9 +395,9 @@ router.post('/contacts', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/contacts/:id', async (req: AuthRequest, res: Response) => {
+router.put('/contacts/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const contact = await prisma.contact.update({ where: { id }, data: req.body });
     res.json(contact);
   } catch (error) {
@@ -401,9 +406,9 @@ router.put('/contacts/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.delete('/contacts/:id', async (req: AuthRequest, res: Response) => {
+router.delete('/contacts/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     await prisma.contact.delete({ where: { id } });
     res.json({ message: 'Контакт удален' });
   } catch (error) {
@@ -434,9 +439,9 @@ router.post('/communities', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/communities/:id', async (req: AuthRequest, res: Response) => {
+router.put('/communities/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const community = await prisma.community.update({ where: { id }, data: req.body });
     res.json(community);
   } catch (error) {
@@ -445,9 +450,9 @@ router.put('/communities/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.delete('/communities/:id', async (req: AuthRequest, res: Response) => {
+router.delete('/communities/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     await prisma.community.delete({ where: { id } });
     res.json({ message: 'Община удалена' });
   } catch (error) {
@@ -478,9 +483,9 @@ router.post('/mini-groups', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/mini-groups/:id', async (req: AuthRequest, res: Response) => {
+router.put('/mini-groups/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     const group = await prisma.miniGroup.update({ where: { id }, data: req.body });
     res.json(group);
   } catch (error) {
@@ -489,9 +494,9 @@ router.put('/mini-groups/:id', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.delete('/mini-groups/:id', async (req: AuthRequest, res: Response) => {
+router.delete('/mini-groups/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id;
     await prisma.miniGroup.delete({ where: { id } });
     res.json({ message: 'Мини-группа удалена' });
   } catch (error) {
@@ -680,9 +685,9 @@ router.get('/modules/next-order', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.get('/lessons/next-order/:moduleId', async (req: AuthRequest, res: Response) => {
+router.get('/lessons/next-order/:moduleId', async (req: AuthRequest & Request<{ moduleId: string }>, res: Response) => {
   try {
-    const { moduleId } = req.params;
+    const moduleId = req.params.moduleId;
     const maxLesson = await prisma.lesson.findFirst({ 
       where: { moduleId },
       orderBy: { order: 'desc' } 

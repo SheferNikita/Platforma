@@ -49,7 +49,7 @@ router.get('/dashboard', async (req: AuthRequest, res: Response) => {
       })
     ]);
 
-    const revenueByDay = await prisma.$queryRaw`
+    const revenueByDayRaw = await prisma.$queryRaw<Array<{ date: Date; total: bigint | number | null }>>`
       SELECT 
         DATE("paidAt") as date,
         SUM(amount) as total
@@ -60,7 +60,12 @@ router.get('/dashboard', async (req: AuthRequest, res: Response) => {
       ORDER BY date ASC
     `;
 
-    const studentProgress = await prisma.$queryRaw`
+    const revenueByDay = revenueByDayRaw.map(row => ({
+      date: row.date,
+      total: row.total !== null ? Number(row.total) : 0
+    }));
+
+    const studentProgressRaw = await prisma.$queryRaw<Array<{ module_name: string; students_completed: bigint | number }>>`
       SELECT 
         m.title as module_name,
         COUNT(DISTINCT lp."studentId") as students_completed
@@ -71,6 +76,11 @@ router.get('/dashboard', async (req: AuthRequest, res: Response) => {
       GROUP BY m.id, m.title, m."order"
       ORDER BY m."order" ASC
     `;
+
+    const studentProgress = studentProgressRaw.map(row => ({
+      module_name: row.module_name,
+      students_completed: Number(row.students_completed)
+    }));
 
     const avgCompletionRate = totalStudents > 0 && totalLessons > 0
       ? (completedLessons / (totalStudents * totalLessons)) * 100

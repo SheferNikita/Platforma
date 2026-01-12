@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, ArrowUp, ArrowDown, Move } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, ArrowUp, ArrowDown, Move, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Lesson {
@@ -33,6 +33,10 @@ export function LessonsAdmin() {
   const [showLessonModal, setShowLessonModal] = useState(false);
   const [reorderingModules, setReorderingModules] = useState(false);
   const [reorderingLessons, setReorderingLessons] = useState<string | null>(null);
+  const [savingModules, setSavingModules] = useState(false);
+  const [savingLessons, setSavingLessons] = useState(false);
+  const originalModulesRef = useRef<Module[]>([]);
+  const originalLessonsRef = useRef<Record<string, Lesson[]>>({});
 
   useEffect(() => {
     loadModules();
@@ -117,22 +121,86 @@ export function LessonsAdmin() {
     }
   }
 
-  async function moveModule(id: string, direction: 'up' | 'down') {
+  function startReorderingModules() {
+    originalModulesRef.current = modules.map(m => ({ ...m, lessons: [...m.lessons] }));
+    setReorderingModules(true);
+  }
+
+  function moveModuleLocal(index: number, direction: 'up' | 'down') {
+    const newModules = [...modules];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newModules.length) return;
+    [newModules[index], newModules[targetIndex]] = [newModules[targetIndex], newModules[index]];
+    setModules(newModules);
+  }
+
+  async function saveModulesReorder() {
+    setSavingModules(true);
     try {
-      await api.post('/content/modules/reorder', { id, direction });
+      const reorderData = modules.map((module, index) => ({ id: module.id, order: index + 1 }));
+      await api.post('/content/modules/reorder-batch', { items: reorderData });
+      toast.success('Порядок модулей сохранен');
+      setReorderingModules(false);
       loadModules();
     } catch (error) {
-      toast.error('Ошибка перемещения');
+      toast.error('Ошибка сохранения порядка');
+    } finally {
+      setSavingModules(false);
     }
   }
 
-  async function moveLesson(id: string, moduleId: string, direction: 'up' | 'down') {
+  function cancelModulesReorder() {
+    setModules(originalModulesRef.current);
+    setReorderingModules(false);
+  }
+
+  function startReorderingLessons(moduleId: string) {
+    const module = modules.find(m => m.id === moduleId);
+    if (module) {
+      originalLessonsRef.current[moduleId] = [...module.lessons];
+    }
+    setReorderingLessons(moduleId);
+  }
+
+  function moveLessonLocal(moduleId: string, lessonIndex: number, direction: 'up' | 'down') {
+    const newModules = modules.map(m => {
+      if (m.id !== moduleId) return m;
+      const newLessons = [...m.lessons];
+      const targetIndex = direction === 'up' ? lessonIndex - 1 : lessonIndex + 1;
+      if (targetIndex < 0 || targetIndex >= newLessons.length) return m;
+      [newLessons[lessonIndex], newLessons[targetIndex]] = [newLessons[targetIndex], newLessons[lessonIndex]];
+      return { ...m, lessons: newLessons };
+    });
+    setModules(newModules);
+  }
+
+  async function saveLessonsReorder(moduleId: string) {
+    setSavingLessons(true);
     try {
-      await api.post('/content/lessons/reorder', { id, moduleId, direction });
+      const module = modules.find(m => m.id === moduleId);
+      if (!module) return;
+      const reorderData = module.lessons.map((lesson, index) => ({ id: lesson.id, order: index + 1 }));
+      await api.post('/content/lessons/reorder-batch', { moduleId, items: reorderData });
+      toast.success('Порядок уроков сохранен');
+      setReorderingLessons(null);
       loadModules();
     } catch (error) {
-      toast.error('Ошибка перемещения');
+      toast.error('Ошибка сохранения порядка');
+    } finally {
+      setSavingLessons(false);
     }
+  }
+
+  function cancelLessonsReorder(moduleId: string) {
+    const originalLessons = originalLessonsRef.current[moduleId];
+    if (originalLessons) {
+      const newModules = modules.map(m => {
+        if (m.id !== moduleId) return m;
+        return { ...m, lessons: originalLessons };
+      });
+      setModules(newModules);
+    }
+    setReorderingLessons(null);
   }
 
   if (loading) {
@@ -147,18 +215,38 @@ export function LessonsAdmin() {
           <p className="text-[#3d3527]/60 mt-1">Управление содержанием курса</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => setReorderingModules(!reorderingModules)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${reorderingModules ? 'bg-[#a67c52] text-white' : 'bg-white border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]'}`}
-          >
-            <Move className="w-5 h-5" /> Переместить
-          </button>
-          <button
-            onClick={() => { setEditingModule(null); setShowModuleModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow"
-          >
-            <Plus className="w-5 h-5" /> Добавить модуль
-          </button>
+          {reorderingModules ? (
+            <>
+              <button
+                onClick={cancelModulesReorder}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-[#d4c9b0] text-[#3d3527] rounded-xl hover:bg-[#f5f3ed]"
+              >
+                <X className="w-5 h-5" /> Отменить
+              </button>
+              <button
+                onClick={saveModulesReorder}
+                disabled={savingModules}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg disabled:opacity-50"
+              >
+                <Check className="w-5 h-5" /> {savingModules ? 'Сохранение...' : 'Сохранить'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={startReorderingModules}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]"
+              >
+                <Move className="w-5 h-5" /> Переместить
+              </button>
+              <button
+                onClick={() => { setEditingModule(null); setShowModuleModal(true); }}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow"
+              >
+                <Plus className="w-5 h-5" /> Добавить модуль
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -173,14 +261,14 @@ export function LessonsAdmin() {
                 {reorderingModules && (
                   <div className="flex flex-col gap-1">
                     <button
-                      onClick={(e) => { e.stopPropagation(); moveModule(module.id, 'up'); }}
+                      onClick={(e) => { e.stopPropagation(); moveModuleLocal(moduleIndex, 'up'); }}
                       disabled={moduleIndex === 0}
                       className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                     >
                       <ArrowUp className="w-4 h-4 text-[#a67c52]" />
                     </button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); moveModule(module.id, 'down'); }}
+                      onClick={(e) => { e.stopPropagation(); moveModuleLocal(moduleIndex, 'down'); }}
                       disabled={moduleIndex === modules.length - 1}
                       className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                     >
@@ -224,13 +312,31 @@ export function LessonsAdmin() {
 
             {expandedModule === module.id && (
               <div className="border-t border-[#d4c9b0]/30 p-4 space-y-3">
-                <div className="flex justify-end mb-2">
-                  <button
-                    onClick={() => setReorderingLessons(reorderingLessons === module.id ? null : module.id)}
-                    className={`flex items-center gap-1 px-3 py-1 text-sm rounded-lg transition-colors ${reorderingLessons === module.id ? 'bg-[#a67c52] text-white' : 'bg-[#f5f3ed] text-[#3d3527] hover:bg-[#e8e4d9]'}`}
-                  >
-                    <Move className="w-4 h-4" /> Переместить
-                  </button>
+                <div className="flex justify-end mb-2 gap-2">
+                  {reorderingLessons === module.id ? (
+                    <>
+                      <button
+                        onClick={() => cancelLessonsReorder(module.id)}
+                        className="flex items-center gap-1 px-3 py-1 text-sm rounded-lg bg-white border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]"
+                      >
+                        <X className="w-4 h-4" /> Отменить
+                      </button>
+                      <button
+                        onClick={() => saveLessonsReorder(module.id)}
+                        disabled={savingLessons}
+                        className="flex items-center gap-1 px-3 py-1 text-sm rounded-lg bg-[#a67c52] text-white hover:bg-[#8a6542] disabled:opacity-50"
+                      >
+                        <Check className="w-4 h-4" /> {savingLessons ? 'Сохранение...' : 'Сохранить'}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => startReorderingLessons(module.id)}
+                      className="flex items-center gap-1 px-3 py-1 text-sm rounded-lg bg-[#f5f3ed] text-[#3d3527] hover:bg-[#e8e4d9]"
+                    >
+                      <Move className="w-4 h-4" /> Переместить
+                    </button>
+                  )}
                 </div>
                 {module.lessons.map((lesson, lessonIndex) => (
                   <div key={lesson.id} className="flex items-center justify-between p-3 bg-[#f5f3ed]/50 rounded-xl">
@@ -238,14 +344,14 @@ export function LessonsAdmin() {
                       {reorderingLessons === module.id && (
                         <div className="flex flex-col gap-1">
                           <button
-                            onClick={() => moveLesson(lesson.id, module.id, 'up')}
+                            onClick={() => moveLessonLocal(module.id, lessonIndex, 'up')}
                             disabled={lessonIndex === 0}
                             className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             <ArrowUp className="w-3 h-3 text-[#a67c52]" />
                           </button>
                           <button
-                            onClick={() => moveLesson(lesson.id, module.id, 'down')}
+                            onClick={() => moveLessonLocal(module.id, lessonIndex, 'down')}
                             disabled={lessonIndex === module.lessons.length - 1}
                             className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                           >

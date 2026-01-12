@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, Phone, Eye, EyeOff, User, ArrowUp, ArrowDown, Move } from 'lucide-react';
+import { Plus, Edit, Trash2, Phone, Eye, EyeOff, User, ArrowUp, ArrowDown, Move, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Contact {
@@ -20,6 +20,8 @@ export function ContactsAdmin() {
   const [showModal, setShowModal] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [reordering, setReordering] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const originalContactsRef = useRef<Contact[]>([]);
 
   useEffect(() => { loadContacts(); }, []);
 
@@ -63,11 +65,37 @@ export function ContactsAdmin() {
     } catch (error) { toast.error('Ошибка'); }
   }
 
-  async function moveContact(id: string, direction: 'up' | 'down') {
+  function startReordering() {
+    originalContactsRef.current = [...contacts];
+    setReordering(true);
+  }
+
+  function moveContactLocal(index: number, direction: 'up' | 'down') {
+    const newContacts = [...contacts];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newContacts.length) return;
+    [newContacts[index], newContacts[targetIndex]] = [newContacts[targetIndex], newContacts[index]];
+    setContacts(newContacts);
+  }
+
+  async function saveReorder() {
+    setSaving(true);
     try {
-      await api.post('/content/contacts/reorder', { id, direction });
+      const reorderData = contacts.map((contact, index) => ({ id: contact.id, order: index + 1 }));
+      await api.post('/content/contacts/reorder-batch', { items: reorderData });
+      toast.success('Порядок сохранен');
+      setReordering(false);
       loadContacts();
-    } catch (error) { toast.error('Ошибка перемещения'); }
+    } catch (error) {
+      toast.error('Ошибка сохранения порядка');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function cancelReorder() {
+    setContacts(originalContactsRef.current);
+    setReordering(false);
   }
 
   return (
@@ -78,15 +106,35 @@ export function ContactsAdmin() {
           <p className="text-[#3d3527]/60 mt-1">Управление контактами кураторов</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => setReordering(!reordering)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${reordering ? 'bg-[#a67c52] text-white' : 'bg-white border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]'}`}
-          >
-            <Move className="w-5 h-5" /> Переместить
-          </button>
-          <button onClick={() => { setEditingContact(null); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg">
-            <Plus className="w-5 h-5" /> Добавить
-          </button>
+          {reordering ? (
+            <>
+              <button
+                onClick={cancelReorder}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-[#d4c9b0] text-[#3d3527] rounded-xl hover:bg-[#f5f3ed]"
+              >
+                <X className="w-5 h-5" /> Отменить
+              </button>
+              <button
+                onClick={saveReorder}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg disabled:opacity-50"
+              >
+                <Check className="w-5 h-5" /> {saving ? 'Сохранение...' : 'Сохранить'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={startReordering}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]"
+              >
+                <Move className="w-5 h-5" /> Переместить
+              </button>
+              <button onClick={() => { setEditingContact(null); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg">
+                <Plus className="w-5 h-5" /> Добавить
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -103,14 +151,14 @@ export function ContactsAdmin() {
                   {reordering && (
                     <div className="flex flex-col gap-1">
                       <button
-                        onClick={() => moveContact(contact.id, 'up')}
+                        onClick={() => moveContactLocal(index, 'up')}
                         disabled={index === 0}
                         className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         <ArrowUp className="w-4 h-4 text-[#a67c52]" />
                       </button>
                       <button
-                        onClick={() => moveContact(contact.id, 'down')}
+                        onClick={() => moveContactLocal(index, 'down')}
                         disabled={index === contacts.length - 1}
                         className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                       >

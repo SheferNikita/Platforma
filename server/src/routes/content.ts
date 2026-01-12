@@ -552,6 +552,66 @@ router.post('/contacts/reorder', async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.post('/modules/reorder-batch', async (req: AuthRequest, res: Response) => {
+  try {
+    const { items } = req.body;
+    await prisma.$transaction(
+      items.map((item: { id: string; order: number }) =>
+        prisma.module.update({ where: { id: item.id }, data: { order: item.order } })
+      )
+    );
+    res.json({ message: 'Порядок сохранен' });
+  } catch (error) {
+    console.error('Batch reorder modules error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/lessons/reorder-batch', async (req: AuthRequest, res: Response) => {
+  try {
+    const { items } = req.body;
+    await prisma.$transaction(
+      items.map((item: { id: string; order: number }) =>
+        prisma.lesson.update({ where: { id: item.id }, data: { order: item.order } })
+      )
+    );
+    res.json({ message: 'Порядок сохранен' });
+  } catch (error) {
+    console.error('Batch reorder lessons error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/library/reorder-batch', async (req: AuthRequest, res: Response) => {
+  try {
+    const { items } = req.body;
+    await prisma.$transaction(
+      items.map((item: { id: string; order: number }) =>
+        prisma.libraryItem.update({ where: { id: item.id }, data: { order: item.order } })
+      )
+    );
+    res.json({ message: 'Порядок сохранен' });
+  } catch (error) {
+    console.error('Batch reorder library error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/contacts/reorder-batch', async (req: AuthRequest, res: Response) => {
+  try {
+    const { items } = req.body;
+    await prisma.$transaction(
+      items.map((item: { id: string; order: number }) =>
+        prisma.contact.update({ where: { id: item.id }, data: { order: item.order } })
+      )
+    );
+    res.json({ message: 'Порядок сохранен' });
+  } catch (error) {
+    console.error('Batch reorder contacts error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 router.get('/modules/next-order', async (req: AuthRequest, res: Response) => {
   try {
     const maxModule = await prisma.module.findFirst({ orderBy: { order: 'desc' } });

@@ -17,7 +17,7 @@ export function LibraryTab() {
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedType, setSelectedType] = useState<string>('all');
 
   useEffect(() => {
     loadLibrary();
@@ -36,21 +36,41 @@ export function LibraryTab() {
     }
   }
 
-  const categories = ['all', ...Array.from(new Set(items.map(r => r.category).filter(Boolean)))];
+  const availableTypes = Array.from(new Set(items.map(r => r.type.toLowerCase())));
+  
+  const typeFilters = [
+    { value: 'all', label: 'Все материалы' },
+    { value: 'book', label: 'Книги' },
+    { value: 'article', label: 'Статьи' },
+    { value: 'video', label: 'Видео' },
+    { value: 'audio', label: 'Аудио' },
+  ].filter(f => f.value === 'all' || availableTypes.includes(f.value));
 
-  const filteredItems = selectedCategory === 'all' 
+  const filteredItems = selectedType === 'all' 
     ? items 
-    : items.filter(r => r.category === selectedCategory);
+    : items.filter(r => r.type.toLowerCase() === selectedType);
+
+  const typeLabels: Record<string, string> = {
+    book: 'Книга',
+    article: 'Статья',
+    video: 'Видео',
+    audio: 'Аудио',
+    BOOK: 'Книга',
+    ARTICLE: 'Статья',
+    VIDEO: 'Видео',
+    AUDIO: 'Аудио',
+  };
 
   const getIcon = (type: string) => {
-    switch (type) {
-      case 'BOOK':
+    const t = type.toLowerCase();
+    switch (t) {
+      case 'book':
         return <Book className="w-5 h-5" />;
-      case 'ARTICLE':
+      case 'article':
         return <FileText className="w-5 h-5" />;
-      case 'VIDEO':
+      case 'video':
         return <Video className="w-5 h-5" />;
-      case 'AUDIO':
+      case 'audio':
         return <Headphones className="w-5 h-5" />;
       default:
         return <FileText className="w-5 h-5" />;
@@ -58,13 +78,7 @@ export function LibraryTab() {
   };
 
   const getTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      BOOK: 'Книга',
-      ARTICLE: 'Статья',
-      VIDEO: 'Видео',
-      AUDIO: 'Аудио',
-    };
-    return labels[type] || type;
+    return typeLabels[type] || typeLabels[type.toLowerCase()] || type;
   };
 
   if (loading) {
@@ -111,17 +125,17 @@ export function LibraryTab() {
       </div>
 
       <div className="flex flex-wrap gap-2 md:gap-3 mb-8">
-        {categories.map((category) => (
+        {typeFilters.map((filter) => (
           <button
-            key={category || 'all'}
-            onClick={() => setSelectedCategory(category || 'all')}
+            key={filter.value}
+            onClick={() => setSelectedType(filter.value)}
             className={`px-4 md:px-5 py-2 md:py-2.5 rounded-xl border-2 transition-all duration-300 text-xs md:text-sm transform hover:scale-[1.02] active:scale-[0.98] overflow-hidden ${
-              selectedCategory === category
+              selectedType === filter.value
                 ? 'bg-[var(--button-lavender)] text-white border-transparent shadow-[0_4px_12px_rgba(139,149,188,0.35)]'
                 : 'bg-white/50 border-[var(--sky-light)]/50 hover:bg-white/80 hover:border-[var(--button-lavender-dark)]/50'
             }`}
           >
-            {category === 'all' ? 'Все материалы' : category}
+            {filter.label}
           </button>
         ))}
       </div>
@@ -167,7 +181,7 @@ export function LibraryTab() {
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                 </a>
               )}
-              {(item.type === 'BOOK' || item.type === 'ARTICLE') && item.url && (
+              {(item.type.toLowerCase() === 'book' || item.type.toLowerCase() === 'article') && item.url && (
                 <button className="inline-flex items-center justify-center gap-2 px-4 md:px-5 py-2 md:py-2.5 border-2 border-[var(--sky-light)]/50 rounded-xl hover:bg-gradient-to-r hover:from-[var(--book-bg)] hover:to-white transition-all duration-300 text-xs md:text-sm transform hover:scale-[1.02] active:scale-[0.98]">
                   <Download className="w-3.5 h-3.5 md:w-4 md:h-4" />
                   Скачать

@@ -212,6 +212,7 @@ function LibraryForm({ item, onSave, onClose }: { item: LibraryItem | null; onSa
   const [description, setDescription] = useState(item?.description || '');
   const [type, setType] = useState(item?.type || 'article');
   const [url, setUrl] = useState(item?.url || '');
+  const [isPublished, setIsPublished] = useState(item?.isPublished ?? true);
 
   return (
     <div className="space-y-4">
@@ -236,9 +237,23 @@ function LibraryForm({ item, onSave, onClose }: { item: LibraryItem | null; onSa
         <label className="block text-sm font-medium text-[#3d3527] mb-1">Ссылка</label>
         <input value={url} onChange={(e) => setUrl(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
       </div>
+      <div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isPublished}
+            onChange={(e) => setIsPublished(e.target.checked)}
+            className="w-5 h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+          />
+          <span className="flex items-center gap-2 text-[#3d3527]">
+            <Eye className="w-4 h-4" />
+            Опубликован (виден ученикам)
+          </span>
+        </label>
+      </div>
       <div className="flex justify-end gap-3">
         <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
-        <button onClick={() => onSave({ title, description, type, url })} className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl">Сохранить</button>
+        <button onClick={() => onSave({ title, description, type, url, isPublished })} className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl">Сохранить</button>
       </div>
     </div>
   );

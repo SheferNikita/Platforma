@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Users, Bell, Loader2, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, Loader2, ExternalLink } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface ScheduleEvent {
@@ -69,42 +69,6 @@ export function ScheduleTab() {
     return date.toLocaleDateString('ru-RU', options);
   };
 
-  const addToCalendar = (event: ScheduleEvent) => {
-    const startDate = new Date(event.date);
-    if (event.time) {
-      const [hours, minutes] = event.time.split(':').map(Number);
-      startDate.setHours(hours, minutes, 0, 0);
-    }
-    const endDate = new Date(startDate);
-    endDate.setHours(endDate.getHours() + 1);
-
-    const formatICSDate = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-    
-    const icsContent = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//Sobriety Platform//RU',
-      'BEGIN:VEVENT',
-      `DTSTART:${formatICSDate(startDate)}`,
-      `DTEND:${formatICSDate(endDate)}`,
-      `SUMMARY:${event.title}`,
-      `DESCRIPTION:${event.description || ''}`,
-      `LOCATION:${event.location || (event.isOnline ? 'Онлайн' : '')}`,
-      event.link ? `URL:${event.link}` : '',
-      'END:VEVENT',
-      'END:VCALENDAR'
-    ].filter(Boolean).join('\r\n');
-
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${event.title.replace(/[^a-zA-Zа-яА-Я0-9]/g, '_')}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
 
   if (loading) {
     return (
@@ -207,8 +171,8 @@ export function ScheduleTab() {
                   </p>
                 )}
 
-                <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
-                  {event.link && (
+                {event.link && (
+                  <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
                     <a
                       href={event.link}
                       target="_blank"
@@ -219,15 +183,8 @@ export function ScheduleTab() {
                       <span className="relative z-10">Перейти</span>
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                     </a>
-                  )}
-                  <button 
-                    onClick={() => addToCalendar(event)}
-                    className="px-4 md:px-5 py-2 md:py-2.5 border-2 border-[var(--sky-light)]/50 rounded-xl hover:bg-gradient-to-r hover:from-[var(--book-bg)] hover:to-white transition-all duration-300 text-xs md:text-sm flex items-center justify-center gap-2 transform hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    <Bell className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                    Напомнить
-                  </button>
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

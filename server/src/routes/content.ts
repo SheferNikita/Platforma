@@ -20,11 +20,16 @@ const lessonSchema = z.object({
   title: z.string().min(1, 'Название обязательно'),
   description: z.string().optional(),
   content: z.string().optional(),
-  videoUrl: z.string().optional(),
-  videoDescription: z.string().optional(),
   duration: z.string().optional(),
   order: z.number().optional(),
-  isPublished: z.boolean().optional()
+  isPublished: z.boolean().optional(),
+  isTextOnly: z.boolean().optional(),
+  videos: z.array(z.object({
+    id: z.string().optional(),
+    title: z.string().optional(),
+    url: z.string(),
+    order: z.number().optional()
+  })).optional()
 });
 
 router.get('/modules', async (req: AuthRequest, res: Response) => {
@@ -32,6 +37,11 @@ router.get('/modules', async (req: AuthRequest, res: Response) => {
     const modules = await prisma.module.findMany({
       include: {
         lessons: {
+          include: {
+            videos: {
+              orderBy: { order: 'asc' }
+            }
+          },
           orderBy: { order: 'asc' }
         }
       },
@@ -135,7 +145,13 @@ router.get('/lessons/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const lesson = await prisma.lesson.findUnique({
       where: { id },
-      include: { module: true }
+      include: { 
+        module: true,
+        videos: {
+          orderBy: { order: 'asc' }
+        },
+        attachments: true
+      }
     });
     
     if (!lesson) {
@@ -152,7 +168,25 @@ router.get('/lessons/:id', async (req: AuthRequest, res: Response) => {
 router.post('/lessons', async (req: AuthRequest, res: Response) => {
   try {
     const data = lessonSchema.parse(req.body);
-    const lesson = await prisma.lesson.create({ data });
+    const { videos, ...lessonData } = data;
+    
+    const lesson = await prisma.lesson.create({ 
+      data: {
+        ...lessonData,
+        videos: videos && videos.length > 0 ? {
+          create: videos.map((v, i) => ({
+            title: v.title || null,
+            url: v.url,
+            order: v.order ?? i
+          }))
+        } : undefined
+      },
+      include: {
+        videos: {
+          orderBy: { order: 'asc' }
+        }
+      }
+    });
     
     await prisma.adminLog.create({
       data: {
@@ -178,7 +212,32 @@ router.put('/lessons/:id', async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const data = lessonSchema.partial().parse(req.body);
-    const lesson = await prisma.lesson.update({ where: { id }, data });
+    const { videos, ...lessonData } = data;
+    
+    if (videos !== undefined) {
+      await prisma.lessonVideo.deleteMany({ where: { lessonId: id } });
+      
+      if (videos.length > 0) {
+        await prisma.lessonVideo.createMany({
+          data: videos.map((v, i) => ({
+            lessonId: id,
+            title: v.title || null,
+            url: v.url,
+            order: v.order ?? i
+          }))
+        });
+      }
+    }
+    
+    const lesson = await prisma.lesson.update({ 
+      where: { id }, 
+      data: lessonData,
+      include: {
+        videos: {
+          orderBy: { order: 'asc' }
+        }
+      }
+    });
     
     await prisma.adminLog.create({
       data: {

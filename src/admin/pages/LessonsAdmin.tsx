@@ -1,17 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, ArrowUp, ArrowDown, Move, Check, X } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, ArrowUp, ArrowDown, Move, Check, X, Video, FileText, Upload, File } from 'lucide-react';
 import { toast } from 'sonner';
+import { RichTextEditor } from '../../components/RichTextEditor';
+import { KinescopePlayer } from '../../components/KinescopePlayer';
+
+interface LessonVideo {
+  id?: string;
+  title?: string;
+  url: string;
+  order?: number;
+}
 
 interface Lesson {
   id: string;
   title: string;
   description: string;
   content: string;
-  videoUrl: string;
   duration: string;
   order: number;
   isPublished: boolean;
+  isTextOnly: boolean;
+  videos: LessonVideo[];
 }
 
 interface Module {
@@ -462,12 +472,43 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
   const [title, setTitle] = useState(lesson?.title || '');
   const [description, setDescription] = useState(lesson?.description || '');
   const [content, setContent] = useState(lesson?.content || '');
-  const [videoUrl, setVideoUrl] = useState(lesson?.videoUrl || '');
   const [duration, setDuration] = useState(lesson?.duration || '');
+  const [isTextOnly, setIsTextOnly] = useState(lesson?.isTextOnly || false);
+  const [videos, setVideos] = useState<LessonVideo[]>(lesson?.videos || []);
+
+  const addVideo = () => {
+    setVideos([...videos, { url: '', title: '', order: videos.length }]);
+  };
+
+  const updateVideo = (index: number, field: keyof LessonVideo, value: string) => {
+    const newVideos = [...videos];
+    newVideos[index] = { ...newVideos[index], [field]: value };
+    setVideos(newVideos);
+  };
+
+  const removeVideo = (index: number) => {
+    setVideos(videos.filter((_, i) => i !== index));
+  };
+
+  const moveVideo = (index: number, direction: 'up' | 'down') => {
+    const newVideos = [...videos];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newVideos.length) return;
+    [newVideos[index], newVideos[targetIndex]] = [newVideos[targetIndex], newVideos[index]];
+    setVideos(newVideos);
+  };
+
+  const handleSave = () => {
+    const videosToSave = isTextOnly ? [] : videos.filter(v => v.url.trim()).map((v, i) => ({
+      ...v,
+      order: i
+    }));
+    onSave({ title, description, content, duration, isTextOnly, videos: videosToSave });
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl my-8">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-4xl my-8 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold text-[#3d3527] mb-4">{lesson ? 'Редактировать урок' : 'Новый урок'}</h2>
         <div className="space-y-4">
           <div>
@@ -488,38 +529,125 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#3d3527] mb-1">Содержание (HTML)</label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] font-mono text-sm"
-              rows={6}
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Содержание урока</label>
+            <RichTextEditor
+              content={content}
+              onChange={setContent}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Ссылка на видео</label>
+
+          <div className="flex items-center gap-3 py-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                type="checkbox"
+                checked={isTextOnly}
+                onChange={(e) => setIsTextOnly(e.target.checked)}
+                className="w-5 h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
               />
+              <span className="flex items-center gap-2 text-[#3d3527]">
+                <FileText className="w-4 h-4" />
+                Текстовый урок (без видео)
+              </span>
+            </label>
+          </div>
+
+          {!isTextOnly && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm font-medium text-[#3d3527]">
+                  <Video className="w-4 h-4" />
+                  Видео Kinescope
+                </label>
+                <button
+                  type="button"
+                  onClick={addVideo}
+                  className="flex items-center gap-1 px-3 py-1 text-sm bg-[#a67c52]/10 text-[#a67c52] rounded-lg hover:bg-[#a67c52]/20"
+                >
+                  <Plus className="w-4 h-4" /> Добавить видео
+                </button>
+              </div>
+              
+              {videos.length === 0 && (
+                <div className="text-center py-6 bg-[#f5f3ed] rounded-xl text-[#3d3527]/60">
+                  Нет добавленных видео. Нажмите "Добавить видео" чтобы добавить.
+                </div>
+              )}
+
+              {videos.map((video, index) => (
+                <div key={index} className="p-4 bg-[#f5f3ed] rounded-xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-[#3d3527]">Видео {index + 1}</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => moveVideo(index, 'up')}
+                        disabled={index === 0}
+                        className="p-1 hover:bg-white rounded disabled:opacity-30"
+                      >
+                        <ArrowUp className="w-4 h-4 text-[#3d3527]" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveVideo(index, 'down')}
+                        disabled={index === videos.length - 1}
+                        className="p-1 hover:bg-white rounded disabled:opacity-30"
+                      >
+                        <ArrowDown className="w-4 h-4 text-[#3d3527]" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeVideo(index)}
+                        className="p-1 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[#3d3527]/60 mb-1">Название видео (опционально)</label>
+                    <input
+                      value={video.title || ''}
+                      onChange={(e) => updateVideo(index, 'title', e.target.value)}
+                      placeholder="Часть 1"
+                      className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg focus:outline-none focus:border-[#a67c52] text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[#3d3527]/60 mb-1">Ссылка на Kinescope видео</label>
+                    <input
+                      value={video.url}
+                      onChange={(e) => updateVideo(index, 'url', e.target.value)}
+                      placeholder="https://kinescope.io/embed/123456789 или ID видео"
+                      className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg focus:outline-none focus:border-[#a67c52] text-sm"
+                    />
+                  </div>
+                  {video.url && (
+                    <div className="mt-2">
+                      <p className="text-xs text-[#3d3527]/60 mb-2">Предпросмотр:</p>
+                      <div className="max-w-md">
+                        <KinescopePlayer url={video.url} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Длительность</label>
-              <input
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-                placeholder="30 минут"
-              />
-            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Длительность</label>
+            <input
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              placeholder="30 минут"
+            />
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
           <button
-            onClick={() => onSave({ title, description, content, videoUrl, duration })}
+            onClick={handleSave}
             className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
           >
             Сохранить

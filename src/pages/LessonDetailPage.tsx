@@ -2,18 +2,50 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { PageWrapper } from '../components/PageWrapper';
-import { ArrowLeft, ArrowRight, List, CheckCircle, ArrowUp, MessageCircle, HelpCircle, BookOpen, Mic, Paperclip, Image, Video, File, X, StopCircle, FileText, NotebookPen } from 'lucide-react';
+import { ArrowLeft, ArrowRight, List, CheckCircle, ArrowUp, MessageCircle, HelpCircle, BookOpen, Mic, Paperclip, Image, Video, File, X, StopCircle, FileText, NotebookPen, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { api } from '../lib/api';
+import { KinescopeMultiPlayer } from '../components/KinescopePlayer';
 
-interface Lesson {
-  id: number;
+interface LessonVideo {
+  id: string;
+  title?: string;
+  url: string;
+  order: number;
+}
+
+interface LessonAttachment {
+  id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+}
+
+interface LessonData {
+  id: string;
   title: string;
-  description: string;
-  duration: string;
-  videoUrl?: string;
-  videoDescription?: string;
-  isCompleted: boolean;
-  isLocked: boolean;
+  description?: string;
+  content?: string;
+  duration?: string;
+  isTextOnly: boolean;
+  videos: LessonVideo[];
+  attachments: LessonAttachment[];
+  module: {
+    id: string;
+    title: string;
+  };
+}
+
+interface ModuleWithLessons {
+  id: string;
+  title: string;
+  lessons: Array<{
+    id: string;
+    title: string;
+    order: number;
+  }>;
 }
 
 interface ChatMessage {
@@ -32,6 +64,12 @@ export function LessonDetailPage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [feedback, setFeedback] = useState('');
   
+  // Lesson data from API
+  const [lessonData, setLessonData] = useState<LessonData | null>(null);
+  const [moduleLessons, setModuleLessons] = useState<ModuleWithLessons | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   // States for diary and notes
   const [diary, setDiary] = useState('');
   const [notes, setNotes] = useState('');
@@ -43,26 +81,7 @@ export function LessonDetailPage() {
   const [recordingTime, setRecordingTime] = useState(0);
   
   // Chat history state
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
-    {
-      id: 1,
-      text: 'Здравствуйте! У меня вопрос по первому уроку. Как правильно формулировать цели?',
-      author: 'student',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    },
-    {
-      id: 2,
-      text: 'Здравствуйте! Отличный вопрос. Цели должны быть конкретными, измеримыми и достижимыми. Рекомендую использовать методику SMART: Specific (конкретная), Measurable (измеримая), Achievable (достижимая), Relevant (релевантная), Time-bound (ограниченная по времени). Начните с малого и постепенно усложняйте задачи.',
-      author: 'curator',
-      timestamp: new Date(Date.now() - 1.5 * 60 * 60 * 1000), // 1.5 hours ago
-    },
-    {
-      id: 3,
-      text: 'Спасибо за подробный ответ! Это очень помогло.',
-      author: 'student',
-      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-    },
-  ]);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   
   // Image modal state
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
@@ -88,94 +107,43 @@ export function LessonDetailPage() {
   const videoInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Данные уроков (те же что в LessonsTab)
-  const lessons: Lesson[] = [
-    {
-      id: 1,
-      title: 'Введение в курс трезвости',
-      description: 'Знакомство с программой, постановка целей и первые шаги на пути к трезвой жизни.',
-      duration: '30 минут',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      videoDescription: 'В этом уроке вы познакомитесь с основами программы трезвости, узнаете о важности постановки целей и сделаете первые шаги к новой жизни.',
-      isCompleted: false,
-      isLocked: false,
-    },
-    {
-      id: 2,
-      title: 'Физиология зависимости',
-      description: 'Как алкоголь влияет на мозг и тело. Понимание механизмов зависимости.',
-      duration: '45 минут',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      videoDescription: 'Углубленное изучение воздействия алкоголя на организм человека и понимание физиологических процессов зависимости.',
-      isCompleted: false,
-      isLocked: false,
-    },
-    {
-      id: 3,
-      title: 'Психология зависимости',
-      description: 'Эмоциональные триггеры, стресс и способы справляться с трудностями без алкоголя.',
-      duration: '40 минут',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      videoDescription: 'Разбор психологических аспектов зависимости, работа с эмоциями и стрессом.',
-      isCompleted: false,
-      isLocked: false,
-    },
-    {
-      id: 4,
-      title: 'Социальные аспекты трезвости',
-      description: 'Как выстраивать отношения, справляться с давлением окружения и находить поддержку.',
-      duration: '35 минут',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      videoDescription: 'Изучение социальных факторов и построение здоровых отношений в трезвости.',
-      isCompleted: false,
-      isLocked: false,
-    },
-    {
-      id: 5,
-      title: 'Работа с триггерами',
-      description: 'Идентификация личных триггеров и разработка стратегий их преодоления.',
-      duration: '50 минут',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      videoDescription: 'Практические техники для определения и управления личными триггерами.',
-      isCompleted: false,
-      isLocked: true,
-    },
-    {
-      id: 6,
-      title: 'Здоровый образ жизни',
-      description: 'Питание, спорт, сон и другие аспекты здоровой жизни в трезвости.',
-      duration: '40 минут',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      videoDescription: 'Комплексный подход к здоровому образу жизни в состоянии трезвости.',
-      isCompleted: false,
-      isLocked: true,
-    },
-    {
-      id: 7,
-      title: 'Профилактика срывов',
-      description: 'Разработка плана действий на случай рецидива и укрепление мотивации.',
-      duration: '45 минут',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      videoDescription: 'Создание личного плана профилактики и действи в критических ситуациях.',
-      isCompleted: false,
-      isLocked: true,
-    },
-    {
-      id: 8,
-      title: 'Долгосрочная трезвость',
-      description: 'Планирование будущего, новые цели и поддержание трезвого образа жизни.',
-      duration: '35 минут',
-      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      videoDescription: 'Стратегии долгосрочного поддержания трезвости и планирование будущего.',
-      isCompleted: false,
-      isLocked: true,
-    },
-  ];
+  // Fetch lesson data from API
+  useEffect(() => {
+    async function fetchLesson() {
+      if (!lessonId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const lesson = await api.get<LessonData>(`/public/lessons/${lessonId}`);
+        setLessonData(lesson);
+        
+        // Fetch module with all lessons for navigation
+        const modules = await api.get<ModuleWithLessons[]>('/public/modules');
+        const currentModule = modules.find(m => m.id === lesson.module.id);
+        if (currentModule) {
+          setModuleLessons(currentModule);
+        }
+      } catch (err) {
+        console.error('Error fetching lesson:', err);
+        setError('Урок не найден');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchLesson();
+  }, [lessonId]);
 
-  const currentLessonId = parseInt(lessonId || '1');
-  const currentLesson = lessons.find(l => l.id === currentLessonId);
-  const prevLesson = lessons.find(l => l.id === currentLessonId - 1);
-  const nextLesson = lessons.find(l => l.id === currentLessonId + 1);
+  // Navigation helpers
+  const currentLessonIndex = moduleLessons?.lessons.findIndex(l => l.id === lessonId) ?? -1;
+  const prevLesson = currentLessonIndex > 0 ? moduleLessons?.lessons[currentLessonIndex - 1] : null;
+  const nextLesson = currentLessonIndex < (moduleLessons?.lessons.length ?? 0) - 1 ? moduleLessons?.lessons[currentLessonIndex + 1] : null;
+
+  // Format file size
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} Б`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} КБ`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -359,11 +327,21 @@ export function LessonDetailPage() {
     return <File className="w-4 h-4" />;
   };
 
-  if (!currentLesson) {
+  if (loading) {
+    return (
+      <PageWrapper>
+        <div className="flex justify-center py-20">
+          <Loader2 className="w-10 h-10 animate-spin text-[var(--button-lavender-dark)]" />
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  if (error || !lessonData) {
     return (
       <PageWrapper>
         <div className="text-center py-20">
-          <h2 className="mb-4">Урок не найден</h2>
+          <h2 className="mb-4">{error || 'Урок не найден'}</h2>
           <button
             onClick={() => navigate('/')}
             className="px-6 py-3 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_6px_16px_rgba(139,149,188,0.4)] transition-all duration-300"
@@ -398,7 +376,7 @@ export function LessonDetailPage() {
                 <span>Предыдущий урок</span>
               </button>
             )}
-            {nextLesson && !nextLesson.isLocked && (
+            {nextLesson && (
               <button
                 onClick={() => navigate(`/lesson/${nextLesson.id}`)}
                 className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_8px_20px_rgba(139,149,188,0.45)] transition-all duration-300 text-sm font-medium transform hover:scale-[1.03] active:scale-[0.98] relative overflow-hidden group"
@@ -415,33 +393,81 @@ export function LessonDetailPage() {
         <div className="mb-10 border-b border-[var(--sky-blue)]/20 pb-8 relative">
           <div className="absolute -top-2 left-0 w-20 h-1 bg-gradient-to-r from-[var(--button-lavender-dark)] via-[var(--button-lavender-light)] to-transparent rounded-full"></div>
           <div className="flex items-start justify-between gap-4 mb-4">
-            <h1 className="text-[#3a3a3a]">Урок {currentLesson.id}: {currentLesson.title}</h1>
+            <h1 className="text-[#3a3a3a]">{lessonData.title}</h1>
           </div>
-          <p className="opacity-70 leading-relaxed mb-4">{currentLesson.description}</p>
-          <div className="flex items-center gap-2 text-sm opacity-60">
-            <BookOpen className="w-4 h-4" />
-            <span>Продолжительность: {currentLesson.duration}</span>
+          {lessonData.description && (
+            <p className="opacity-70 leading-relaxed mb-4">{lessonData.description}</p>
+          )}
+          <div className="flex items-center gap-3 text-sm opacity-60">
+            {lessonData.duration && (
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4" />
+                <span>Продолжительность: {lessonData.duration}</span>
+              </div>
+            )}
+            {lessonData.isTextOnly && (
+              <span className="px-2 py-0.5 bg-[var(--sky-light)]/30 rounded-lg text-xs">
+                Текстовый урок
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Видео блок */}
-        <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-3xl overflow-hidden shadow-[0_12px_32px_var(--ethereal-shadow),0_4px_16px_var(--book-shadow)] bg-gradient-to-br from-white/95 to-white/60 backdrop-blur-sm">
-          <div className="relative pt-[56.25%] bg-gradient-to-br from-gray-900 to-gray-800">
-            <iframe
-              className="absolute top-0 left-0 w-full h-full"
-              src={currentLesson.videoUrl}
-              title={currentLesson.title}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            ></iframe>
+        {/* Видео блок - только если не текстовый урок */}
+        {!lessonData.isTextOnly && lessonData.videos.length > 0 && (
+          <div className="mb-10">
+            <KinescopeMultiPlayer 
+              videos={lessonData.videos.map(v => ({
+                url: v.url,
+                title: v.title
+              }))} 
+            />
           </div>
-          <div className="p-6 md:p-8 bg-gradient-to-br from-white/90 to-[var(--sky-soft)]/30">
-            <p className="text-sm leading-relaxed opacity-80">
-              {currentLesson.videoDescription}
-            </p>
+        )}
+
+        {/* Контент урока (HTML) */}
+        {lessonData.content && (
+          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/95 to-white/60 backdrop-blur-sm shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)]">
+            <div 
+              className="prose prose-lg max-w-none prose-headings:text-[#3a3a3a] prose-p:text-[#3d3527] prose-a:text-[var(--button-lavender-dark)] prose-ul:text-[#3d3527] prose-ol:text-[#3d3527] prose-li:text-[#3d3527] prose-strong:text-[#3a3a3a] prose-blockquote:border-l-[var(--button-lavender-dark)] prose-blockquote:text-[#3d3527]/80"
+              dangerouslySetInnerHTML={{ __html: lessonData.content }}
+            />
           </div>
-        </div>
+        )}
+
+        {/* Прикрепленные файлы */}
+        {lessonData.attachments.length > 0 && (
+          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm">
+            <div className="flex items-start gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
+                <Paperclip className="w-5 h-5 text-[var(--icon-lavender)]" />
+              </div>
+              <div className="flex-1">
+                <h3 className="mb-2 text-lg">Материалы к уроку</h3>
+                <p className="text-sm opacity-70">Скачайте дополнительные материалы для изучения</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {lessonData.attachments.map((attachment) => (
+                <a
+                  key={attachment.id}
+                  href={attachment.url}
+                  download={attachment.originalName}
+                  className="flex items-center gap-3 p-3 border border-[var(--sky-light)]/40 rounded-xl hover:bg-white/60 hover:border-[var(--button-lavender-dark)]/30 transition-all group"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-[var(--sky-light)]/20 flex items-center justify-center">
+                    <File className="w-5 h-5 text-[var(--button-lavender-dark)]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{attachment.originalName}</p>
+                    <p className="text-xs opacity-60">{formatFileSize(attachment.size)}</p>
+                  </div>
+                  <Download className="w-5 h-5 opacity-40 group-hover:opacity-80 transition-opacity" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Кнопка отметить пройденным */}
         <div className="mb-10 flex justify-center">

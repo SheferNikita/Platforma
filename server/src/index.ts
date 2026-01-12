@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import path from 'path';
 import { PrismaClient } from '@prisma/client';
 import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
@@ -11,6 +12,7 @@ import productsRoutes from './routes/products';
 import metricsRoutes from './routes/metrics';
 import emailRoutes from './routes/email';
 import publicRoutes from './routes/public';
+import uploadsRoutes from './routes/uploads';
 
 export const prisma = new PrismaClient();
 
@@ -24,6 +26,8 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/content', contentRoutes);
@@ -33,6 +37,7 @@ app.use('/api/products', productsRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/uploads', uploadsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

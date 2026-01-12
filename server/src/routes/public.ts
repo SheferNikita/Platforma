@@ -32,12 +32,16 @@ router.get('/modules', async (req, res) => {
 router.get('/lessons/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const lesson = await prisma.lesson.findUnique({
+    const lesson = await prisma.lesson.findFirst({
       where: { id, isPublished: true },
       include: {
         module: {
           select: { id: true, title: true }
-        }
+        },
+        videos: {
+          orderBy: { order: 'asc' }
+        },
+        attachments: true
       }
     });
 

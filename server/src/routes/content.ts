@@ -60,12 +60,13 @@ router.post('/modules', async (req: AuthRequest, res: Response) => {
     });
     
     res.status(201).json(module);
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.issues[0].message });
     }
-    console.error('Create module error:', error);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    console.error('Create module error:', error?.message || error);
+    console.error('Stack:', error?.stack);
+    res.status(500).json({ error: error?.message || 'Ошибка сервера' });
   }
 });
 

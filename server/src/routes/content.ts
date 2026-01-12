@@ -341,7 +341,9 @@ router.get('/schedule', async (req: AuthRequest, res: Response) => {
 
 router.post('/schedule', async (req: AuthRequest, res: Response) => {
   try {
-    const event = await prisma.scheduleEvent.create({ data: req.body });
+    const { date, ...rest } = req.body;
+    const isoDate = date ? new Date(date).toISOString() : new Date().toISOString();
+    const event = await prisma.scheduleEvent.create({ data: { ...rest, date: isoDate } });
     res.status(201).json(event);
   } catch (error) {
     console.error('Create schedule event error:', error);
@@ -352,7 +354,9 @@ router.post('/schedule', async (req: AuthRequest, res: Response) => {
 router.put('/schedule/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
-    const event = await prisma.scheduleEvent.update({ where: { id }, data: req.body });
+    const { date, ...rest } = req.body;
+    const data = date ? { ...rest, date: new Date(date).toISOString() } : rest;
+    const event = await prisma.scheduleEvent.update({ where: { id }, data });
     res.json(event);
   } catch (error) {
     console.error('Update schedule event error:', error);

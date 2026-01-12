@@ -258,17 +258,27 @@ function ContactForm({ contact, onSave, onClose }: { contact: Contact | null; on
       formData.append('avatar', file);
       
       const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      
       const res = await fetch('/api/uploads/avatar', {
         method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers,
+        credentials: 'include',
         body: formData
       });
       
-      if (!res.ok) throw new Error('Ошибка загрузки');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Ошибка загрузки');
+      }
       const data = await res.json();
       setPhoto(data.url);
-    } catch (error) {
-      toast.error('Ошибка загрузки фото');
+      toast.success('Фото загружено');
+    } catch (error: any) {
+      toast.error(error.message || 'Ошибка загрузки фото');
     } finally {
       setUploading(false);
     }

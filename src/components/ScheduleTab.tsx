@@ -27,7 +27,7 @@ export function ScheduleTab() {
   async function loadEvents() {
     try {
       setLoading(true);
-      const data = await api.get<ScheduleEvent[]>('/public/events');
+      const data = await api.get<ScheduleEvent[]>('/public/schedule');
       setEvents(data);
       setError(null);
     } catch (err) {
@@ -94,8 +94,8 @@ export function ScheduleTab() {
   if (events.length === 0) {
     return (
       <div className="text-center py-20">
-        <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-        <p className="text-gray-500">Нет предстоящих мероприятий</p>
+        <Calendar className="w-16 h-16 mx-auto mb-4 text-[var(--button-lavender-dark)]/30" />
+        <p className="text-[#3d3527]/70 text-lg">Расписание появится чуть позже</p>
       </div>
     );
   }

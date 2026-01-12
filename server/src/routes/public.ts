@@ -91,7 +91,11 @@ router.get('/contacts', async (req, res) => {
       where: { isPublished: true },
       orderBy: { order: 'asc' }
     });
-    res.json(contacts);
+    const result = contacts.map(c => ({
+      ...c,
+      photoUrl: c.photo
+    }));
+    res.json(result);
   } catch (error) {
     console.error('Get public contacts error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

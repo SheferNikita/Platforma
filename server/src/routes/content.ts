@@ -20,7 +20,7 @@ const moduleSchema = z.object({
 });
 
 const lessonSchema = z.object({
-  moduleId: z.string().uuid(),
+  moduleId: z.string().min(1, 'ID модуля обязателен'),
   title: z.string().min(1, 'Название обязательно'),
   description: z.string().optional(),
   content: z.string().optional(),

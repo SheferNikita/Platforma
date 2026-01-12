@@ -215,7 +215,9 @@ router.post('/lessons', async (req: AuthRequest, res: Response) => {
 router.put('/lessons/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
+    console.log('PUT /lessons/:id - id:', id, 'body:', JSON.stringify(req.body, null, 2));
     const data = lessonSchema.partial().parse(req.body);
+    console.log('Parsed data:', JSON.stringify(data, null, 2));
     const { videos, ...lessonData } = data;
     
     if (videos !== undefined) {

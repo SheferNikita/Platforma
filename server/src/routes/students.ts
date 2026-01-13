@@ -178,7 +178,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     res.status(201).json(user);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0].message });
     }
     console.error('Create student error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -219,7 +219,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     res.json(user);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0].message });
     }
     console.error('Update student error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

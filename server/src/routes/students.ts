@@ -60,6 +60,9 @@ router.get('/', async (req: AuthRequest, res: Response) => {
               },
               enrollments: {
                 include: { product: true }
+              },
+              miniGroups: {
+                include: { miniGroup: true }
               }
             }
           }
@@ -246,6 +249,121 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
     res.json({ message: 'Ученик удален' });
   } catch (error) {
     console.error('Delete student error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/:userId/access', async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { student: true }
+    });
+    
+    if (!user?.student) {
+      return res.status(404).json({ error: 'Ученик не найден' });
+    }
+
+    const [modules, accessList] = await Promise.all([
+      prisma.module.findMany({ orderBy: { order: 'asc' } }),
+      prisma.moduleAccess.findMany({
+        where: { studentId: user.student.id },
+        include: { module: true }
+      })
+    ]);
+
+    const accessMap = new Map(accessList.map(a => [a.moduleId, a]));
+
+    const result = modules.map(m => {
+      const access = accessMap.get(m.id);
+      const isExpired = access?.expiresAt && new Date(access.expiresAt) < new Date();
+      const effectiveAccess = access?.isActive && !isExpired;
+      
+      return {
+        moduleId: m.id,
+        moduleTitle: m.title,
+        hasAccess: effectiveAccess ?? false,
+        isActive: access?.isActive ?? false,
+        isExpired: isExpired ?? false,
+        expiresAt: access?.expiresAt ?? null,
+        accessId: access?.id ?? null
+      };
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Get student access error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/:userId/access', async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { moduleId, expiresAt, isActive } = req.body;
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { student: true }
+    });
+    
+    if (!user?.student) {
+      return res.status(404).json({ error: 'Ученик не найден' });
+    }
+
+    const access = await prisma.moduleAccess.upsert({
+      where: {
+        studentId_moduleId: {
+          studentId: user.student.id,
+          moduleId
+        }
+      },
+      create: {
+        studentId: user.student.id,
+        moduleId,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        isActive: isActive ?? true
+      },
+      update: {
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        isActive: isActive ?? true
+      }
+    });
+
+    res.json(access);
+  } catch (error) {
+    console.error('Update student access error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/:userId/access/:moduleId', async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId, moduleId } = req.params;
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { student: true }
+    });
+    
+    if (!user?.student) {
+      return res.status(404).json({ error: 'Ученик не найден' });
+    }
+
+    await prisma.moduleAccess.delete({
+      where: {
+        studentId_moduleId: {
+          studentId: user.student.id,
+          moduleId
+        }
+      }
+    });
+
+    res.json({ message: 'Доступ удален' });
+  } catch (error) {
+    console.error('Delete student access error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

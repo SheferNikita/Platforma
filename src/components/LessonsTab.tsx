@@ -17,6 +17,8 @@ interface Module {
   description: string | null;
   order: number;
   lessons: Lesson[];
+  hasAccess?: boolean;
+  accessExpiresAt?: string | null;
 }
 
 export function LessonsTab() {
@@ -101,14 +103,26 @@ export function LessonsTab() {
       <div className="space-y-6">
         {modules.map((module, moduleIndex) => (
           <div key={module.id} className="animate-slide-up" style={{ animationDelay: `${moduleIndex * 0.05}s` }}>
-            <h3 className="text-[var(--book-text)] font-bold mb-4">{module.title}</h3>
+            <div className="flex items-center gap-3 mb-4">
+              <h3 className="text-[var(--book-text)] font-bold">{module.title}</h3>
+              {module.hasAccess === false && (
+                <span className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-500 rounded-lg text-xs">
+                  <Lock className="w-3 h-3" /> Нет доступа
+                </span>
+              )}
+              {module.hasAccess === true && module.accessExpiresAt && (
+                <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-xs">
+                  до {new Date(module.accessExpiresAt).toLocaleDateString('ru')}
+                </span>
+              )}
+            </div>
             {module.description && (
               <p className="text-sm opacity-70 mb-4">{module.description}</p>
             )}
             <div className="space-y-4">
               {module.lessons.map((lesson, lessonIndex) => {
                 const isCompleted = completedLessons.has(lesson.id);
-                const isLocked = false;
+                const isLocked = module.hasAccess === false;
 
                 return (
                   <div

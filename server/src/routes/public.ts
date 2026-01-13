@@ -1,10 +1,36 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { prisma } from '../index';
+import jwt from 'jsonwebtoken';
 
 const router = Router();
 
-router.get('/modules', async (req, res) => {
+interface DecodedToken {
+  userId: string;
+}
+
+async function getStudentFromToken(req: Request): Promise<{ studentId: string } | null> {
   try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '') || req.cookies?.token;
+    if (!token) return null;
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as DecodedToken;
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      include: { student: true }
+    });
+    
+    if (!user?.student) return null;
+    return { studentId: user.student.id };
+  } catch {
+    return null;
+  }
+}
+
+router.get('/modules', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    
     const modules = await prisma.module.findMany({
       where: { isPublished: true },
       include: {
@@ -22,14 +48,39 @@ router.get('/modules', async (req, res) => {
       },
       orderBy: { order: 'asc' }
     });
-    res.json(modules);
+
+    if (!student) {
+      const result = modules.map(m => ({
+        ...m,
+        hasAccess: false,
+        accessExpiresAt: null
+      }));
+      return res.json(result);
+    }
+
+    const accessList = await prisma.moduleAccess.findMany({
+      where: { studentId: student.studentId }
+    });
+    const accessMap = new Map(accessList.map(a => [a.moduleId, a]));
+
+    const result = modules.map(m => {
+      const access = accessMap.get(m.id);
+      const isExpired = access?.expiresAt && new Date(access.expiresAt) < new Date();
+      return {
+        ...m,
+        hasAccess: access?.isActive && !isExpired ? true : false,
+        accessExpiresAt: access?.expiresAt ?? null
+      };
+    });
+
+    res.json(result);
   } catch (error) {
     console.error('Get public modules error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 
-router.get('/lessons/:id', async (req, res) => {
+router.get('/lessons/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const lesson = await prisma.lesson.findFirst({
@@ -49,7 +100,25 @@ router.get('/lessons/:id', async (req, res) => {
       return res.status(404).json({ error: 'Урок не найден' });
     }
 
-    res.json(lesson);
+    const student = await getStudentFromToken(req);
+    
+    if (!student) {
+      return res.json({ ...lesson, hasAccess: false });
+    }
+
+    const access = await prisma.moduleAccess.findUnique({
+      where: {
+        studentId_moduleId: {
+          studentId: student.studentId,
+          moduleId: lesson.moduleId
+        }
+      }
+    });
+
+    const isExpired = access?.expiresAt && new Date(access.expiresAt) < new Date();
+    const hasAccess = access?.isActive && !isExpired;
+
+    res.json({ ...lesson, hasAccess });
   } catch (error) {
     console.error('Get public lesson error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

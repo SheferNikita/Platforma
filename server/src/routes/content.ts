@@ -581,9 +581,11 @@ router.get('/mini-groups/:groupId/events', async (req: AuthRequest & Request<Gro
 router.post('/mini-groups/:groupId/events', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
   try {
     const { groupId } = req.params;
+    const { date, ...rest } = req.body;
     const event = await prisma.scheduleEvent.create({
       data: {
-        ...req.body,
+        ...rest,
+        date: new Date(date),
         miniGroupId: groupId,
         isPublished: true
       }
@@ -598,9 +600,13 @@ router.post('/mini-groups/:groupId/events', async (req: AuthRequest & Request<Gr
 router.put('/mini-groups/:groupId/events/:eventId', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
   try {
     const { eventId } = req.params;
+    const { date, ...rest } = req.body;
     const event = await prisma.scheduleEvent.update({
       where: { id: eventId },
-      data: req.body
+      data: {
+        ...rest,
+        ...(date && { date: new Date(date) })
+      }
     });
     res.json(event);
   } catch (error) {

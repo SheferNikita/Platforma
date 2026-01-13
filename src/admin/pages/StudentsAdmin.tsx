@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Search, Edit, Trash2, User, Eye, Filter, Lock, Unlock, Calendar, Users2, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface MiniGroupMembership {
@@ -49,6 +49,7 @@ export function StudentsAdmin() {
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [initialTab, setInitialTab] = useState<'info' | 'access'>('info');
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [filterMiniGroup, setFilterMiniGroup] = useState<string>('');
@@ -265,21 +266,30 @@ export function StudentsAdmin() {
                   <td className="px-6 py-4">
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => setSelectedStudent(student)}
+                        onClick={() => { setInitialTab('info'); setSelectedStudent(student); }}
                         className="p-2 hover:bg-[#f5f3ed] rounded-lg"
-                        title="Просмотр и доступы"
+                        title="Информация об ученике"
                       >
-                        <Eye className="w-4 h-4 text-[#3d3527]" />
+                        <Info className="w-4 h-4 text-[#3d3527]" />
+                      </button>
+                      <button
+                        onClick={() => { setInitialTab('access'); setSelectedStudent(student); }}
+                        className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                        title="Настройка доступов к модулям"
+                      >
+                        <ListChecks className="w-4 h-4 text-[#3d3527]" />
                       </button>
                       <button
                         onClick={() => { setEditingStudent(student); setShowModal(true); }}
                         className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                        title="Редактировать"
                       >
                         <Edit className="w-4 h-4 text-[#3d3527]" />
                       </button>
                       <button
                         onClick={() => deleteStudent(student.id)}
                         className="p-2 hover:bg-red-50 rounded-lg"
+                        title="Удалить"
                       >
                         <Trash2 className="w-4 h-4 text-red-500" />
                       </button>
@@ -303,6 +313,7 @@ export function StudentsAdmin() {
       {selectedStudent && (
         <StudentDetailModal
           student={selectedStudent}
+          initialTab={initialTab}
           onClose={() => setSelectedStudent(null)}
         />
       )}
@@ -383,8 +394,8 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
   );
 }
 
-function StudentDetailModal({ student, onClose }: { student: Student; onClose: () => void }) {
-  const [tab, setTab] = useState<'info' | 'access'>('info');
+function StudentDetailModal({ student, initialTab, onClose }: { student: Student; initialTab: 'info' | 'access'; onClose: () => void }) {
+  const [tab, setTab] = useState<'info' | 'access'>(initialTab);
   const [accessList, setAccessList] = useState<ModuleAccess[]>([]);
   const [loadingAccess, setLoadingAccess] = useState(false);
 

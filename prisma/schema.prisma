@@ -180,31 +180,34 @@ model LibraryItem {
 }
 
 model ScheduleEvent {
-  id          String   @id @default(uuid())
+  id          String     @id @default(uuid())
   title       String
   description String?
   date        DateTime
   time        String?
   location    String?
-  isOnline    Boolean  @default(false)
+  isOnline    Boolean    @default(false)
   link        String?
-  isPublished Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  miniGroupId String?
+  miniGroup   MiniGroup? @relation(fields: [miniGroupId], references: [id], onDelete: SetNull)
+  isPublished Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model Contact {
-  id          String   @id @default(uuid())
+  id          String      @id @default(uuid())
   name        String
   role        String?
   phone       String?
   email       String?
   telegram    String?
   photo       String?
-  order       Int      @default(0)
-  isPublished Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  order       Int         @default(0)
+  isPublished Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  miniGroups  MiniGroup[]
 }
 
 model Community {
@@ -224,12 +227,13 @@ model MiniGroup {
   id          String   @id @default(uuid())
   title       String
   description String?
-  schedule    String?
-  curator     String?
-  maxMembers  Int      @default(10)
+  chatLink    String?
+  curatorId   String?
+  curator     Contact? @relation(fields: [curatorId], references: [id], onDelete: SetNull)
   isPublished Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  events      ScheduleEvent[]
 }
 
 model Product {

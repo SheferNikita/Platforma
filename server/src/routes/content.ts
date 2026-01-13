@@ -330,7 +330,8 @@ router.delete('/library/:id', async (req: AuthRequest & Request<IdParams>, res: 
 router.get('/schedule', async (req: AuthRequest, res: Response) => {
   try {
     const events = await prisma.scheduleEvent.findMany({
-      orderBy: { date: 'asc' }
+      orderBy: { date: 'asc' },
+      include: { miniGroup: true }
     });
     res.json(events);
   } catch (error) {
@@ -343,7 +344,10 @@ router.post('/schedule', async (req: AuthRequest, res: Response) => {
   try {
     const { date, ...rest } = req.body;
     const isoDate = date ? new Date(date).toISOString() : new Date().toISOString();
-    const event = await prisma.scheduleEvent.create({ data: { ...rest, date: isoDate, isPublished: true } });
+    const event = await prisma.scheduleEvent.create({ 
+      data: { ...rest, date: isoDate, isPublished: true },
+      include: { miniGroup: true }
+    });
     res.status(201).json(event);
   } catch (error) {
     console.error('Create schedule event error:', error);
@@ -356,7 +360,11 @@ router.put('/schedule/:id', async (req: AuthRequest & Request<IdParams>, res: Re
     const id = req.params.id;
     const { date, ...rest } = req.body;
     const data = date ? { ...rest, date: new Date(date).toISOString() } : rest;
-    const event = await prisma.scheduleEvent.update({ where: { id }, data });
+    const event = await prisma.scheduleEvent.update({ 
+      where: { id }, 
+      data,
+      include: { miniGroup: true }
+    });
     res.json(event);
   } catch (error) {
     console.error('Update schedule event error:', error);
@@ -471,7 +479,11 @@ router.delete('/communities/:id', async (req: AuthRequest & Request<IdParams>, r
 router.get('/mini-groups', async (req: AuthRequest, res: Response) => {
   try {
     const groups = await prisma.miniGroup.findMany({
-      orderBy: { title: 'asc' }
+      orderBy: { title: 'asc' },
+      include: { 
+        curator: true,
+        events: true
+      }
     });
     res.json(groups);
   } catch (error) {
@@ -482,7 +494,13 @@ router.get('/mini-groups', async (req: AuthRequest, res: Response) => {
 
 router.post('/mini-groups', async (req: AuthRequest, res: Response) => {
   try {
-    const group = await prisma.miniGroup.create({ data: req.body });
+    const group = await prisma.miniGroup.create({ 
+      data: {
+        ...req.body,
+        isPublished: true
+      },
+      include: { curator: true }
+    });
     res.status(201).json(group);
   } catch (error) {
     console.error('Create mini-group error:', error);
@@ -493,7 +511,11 @@ router.post('/mini-groups', async (req: AuthRequest, res: Response) => {
 router.put('/mini-groups/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
-    const group = await prisma.miniGroup.update({ where: { id }, data: req.body });
+    const group = await prisma.miniGroup.update({ 
+      where: { id }, 
+      data: req.body,
+      include: { curator: true, events: true }
+    });
     res.json(group);
   } catch (error) {
     console.error('Update mini-group error:', error);

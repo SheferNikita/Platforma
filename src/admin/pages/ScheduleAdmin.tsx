@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, Calendar, Eye, EyeOff, Video, MapPin } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, Eye, EyeOff, Video, MapPin, Users2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+interface MiniGroup {
+  id: string;
+  title: string;
+}
 
 interface ScheduleEvent {
   id: string;
@@ -12,16 +17,22 @@ interface ScheduleEvent {
   location: string;
   isOnline: boolean;
   link: string;
+  miniGroupId: string | null;
+  miniGroup?: MiniGroup | null;
   isPublished: boolean;
 }
 
 export function ScheduleAdmin() {
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
+  const [miniGroups, setMiniGroups] = useState<MiniGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
 
-  useEffect(() => { loadEvents(); }, []);
+  useEffect(() => { 
+    loadEvents(); 
+    loadMiniGroups();
+  }, []);
 
   async function loadEvents() {
     try {
@@ -29,6 +40,13 @@ export function ScheduleAdmin() {
       setEvents(data);
     } catch (error) { toast.error('Ошибка загрузки'); }
     finally { setLoading(false); }
+  }
+
+  async function loadMiniGroups() {
+    try {
+      const data = await api.get<MiniGroup[]>('/content/mini-groups');
+      setMiniGroups(data);
+    } catch (error) { }
   }
 
   async function saveEvent(data: Partial<ScheduleEvent>) {
@@ -93,6 +111,12 @@ export function ScheduleAdmin() {
                       <span>{new Date(event.date).toLocaleDateString('ru')}</span>
                       {event.time && <span>• {event.time}</span>}
                       {event.isOnline ? <Video className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                      {event.miniGroup && (
+                        <span className="flex items-center gap-1 text-[#a67c52]">
+                          <Users2 className="w-3.5 h-3.5" />
+                          {event.miniGroup.title}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -115,9 +139,14 @@ export function ScheduleAdmin() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-[#3d3527] mb-4">{editingEvent ? 'Редактировать' : 'Новое событие'}</h2>
-            <ScheduleForm event={editingEvent} onSave={saveEvent} onClose={() => { setShowModal(false); setEditingEvent(null); }} />
+            <ScheduleForm 
+              event={editingEvent} 
+              miniGroups={miniGroups}
+              onSave={saveEvent} 
+              onClose={() => { setShowModal(false); setEditingEvent(null); }} 
+            />
           </div>
         </div>
       )}
@@ -125,7 +154,12 @@ export function ScheduleAdmin() {
   );
 }
 
-function ScheduleForm({ event, onSave, onClose }: { event: ScheduleEvent | null; onSave: (data: any) => void; onClose: () => void }) {
+function ScheduleForm({ event, miniGroups, onSave, onClose }: { 
+  event: ScheduleEvent | null; 
+  miniGroups: MiniGroup[];
+  onSave: (data: any) => void; 
+  onClose: () => void 
+}) {
   const [title, setTitle] = useState(event?.title || '');
   const [description, setDescription] = useState(event?.description || '');
   const [date, setDate] = useState(event?.date?.split('T')[0] || '');
@@ -133,6 +167,7 @@ function ScheduleForm({ event, onSave, onClose }: { event: ScheduleEvent | null;
   const [location, setLocation] = useState(event?.location || '');
   const [isOnline, setIsOnline] = useState(event?.isOnline ?? false);
   const [link, setLink] = useState(event?.link || '');
+  const [miniGroupId, setMiniGroupId] = useState(event?.miniGroupId || '');
 
   return (
     <div className="space-y-4">
@@ -169,9 +204,37 @@ function ScheduleForm({ event, onSave, onClose }: { event: ScheduleEvent | null;
           <input value={location} onChange={(e) => setLocation(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
         </div>
       )}
+      <div>
+        <label className="block text-sm font-medium text-[#3d3527] mb-1">Мини-группа (опционально)</label>
+        <select 
+          value={miniGroupId} 
+          onChange={(e) => setMiniGroupId(e.target.value)} 
+          className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl bg-white"
+        >
+          <option value="">Не привязано к группе</option>
+          {miniGroups.map((group) => (
+            <option key={group.id} value={group.id}>{group.title}</option>
+          ))}
+        </select>
+        <p className="text-xs text-[#3d3527]/60 mt-1">Привяжите событие к мини-группе для отображения в её расписании</p>
+      </div>
       <div className="flex justify-end gap-3">
         <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
-        <button onClick={() => onSave({ title, description, date, time, location, isOnline, link })} className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl">Сохранить</button>
+        <button 
+          onClick={() => onSave({ 
+            title, 
+            description, 
+            date, 
+            time, 
+            location, 
+            isOnline, 
+            link,
+            miniGroupId: miniGroupId || null
+          })} 
+          className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
+        >
+          Сохранить
+        </button>
       </div>
     </div>
   );

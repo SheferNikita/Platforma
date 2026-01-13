@@ -119,7 +119,26 @@ router.get('/mini-groups', async (req, res) => {
   try {
     const groups = await prisma.miniGroup.findMany({
       where: { isPublished: true },
-      orderBy: { title: 'asc' }
+      orderBy: { title: 'asc' },
+      include: {
+        curator: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            phone: true,
+            telegram: true,
+            photo: true
+          }
+        },
+        events: {
+          where: {
+            isPublished: true,
+            date: { gte: new Date() }
+          },
+          orderBy: { date: 'asc' }
+        }
+      }
     });
     res.json(groups);
   } catch (error) {

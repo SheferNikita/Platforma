@@ -626,6 +626,88 @@ router.delete('/mini-groups/:groupId/events/:eventId', async (req: AuthRequest &
   }
 });
 
+// Mini-group members management
+router.get('/mini-groups/:groupId/members', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
+  try {
+    const { groupId } = req.params;
+    const members = await prisma.miniGroupMember.findMany({
+      where: { miniGroupId: groupId },
+      include: {
+        student: {
+          include: { user: { select: { id: true, name: true, email: true } } }
+        }
+      },
+      orderBy: { joinedAt: 'desc' }
+    });
+    res.json(members);
+  } catch (error) {
+    console.error('Get mini-group members error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/mini-groups/:groupId/members', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
+  try {
+    const { groupId } = req.params;
+    const { studentId } = req.body;
+    const member = await prisma.miniGroupMember.create({
+      data: { miniGroupId: groupId, studentId },
+      include: {
+        student: {
+          include: { user: { select: { id: true, name: true, email: true } } }
+        }
+      }
+    });
+    res.status(201).json(member);
+  } catch (error: any) {
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'Участник уже в группе' });
+    }
+    console.error('Add mini-group member error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/mini-groups/:groupId/members/:memberId', async (req: AuthRequest & Request<{groupId: string, memberId: string}>, res: Response) => {
+  try {
+    const { memberId } = req.params;
+    await prisma.miniGroupMember.delete({ where: { id: memberId } });
+    res.json({ message: 'Участник удален из группы' });
+  } catch (error) {
+    console.error('Remove mini-group member error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Search students for adding to mini-group
+router.get('/students/search', async (req: AuthRequest, res: Response) => {
+  try {
+    const { q, excludeGroupId } = req.query as { q?: string; excludeGroupId?: string };
+    const students = await prisma.student.findMany({
+      where: {
+        user: {
+          role: 'STUDENT',
+          ...(q && { 
+            OR: [
+              { name: { contains: q, mode: 'insensitive' } },
+              { email: { contains: q, mode: 'insensitive' } }
+            ]
+          })
+        },
+        ...(excludeGroupId && {
+          miniGroups: { none: { miniGroupId: excludeGroupId } }
+        })
+      },
+      include: { user: { select: { id: true, name: true, email: true } } },
+      take: 20
+    });
+    res.json(students);
+  } catch (error) {
+    console.error('Search students error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 router.post('/modules/reorder', async (req: AuthRequest, res: Response) => {
   try {
     const { id, direction } = req.body;

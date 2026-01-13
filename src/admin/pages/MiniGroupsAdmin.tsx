@@ -329,7 +329,7 @@ function MiniGroupSettings({ group, onSave, onClose, onRefresh }: {
         toast.success('Событие добавлено');
       }
       setShowEventForm(false);
-      loadEvents();
+      await loadEvents();
       onRefresh();
     } catch (error) {
       toast.error('Ошибка сохранения');
@@ -341,7 +341,7 @@ function MiniGroupSettings({ group, onSave, onClose, onRefresh }: {
     try {
       await api.delete(`/content/mini-groups/${group.id}/events/${eventId}`);
       toast.success('Событие удалено');
-      loadEvents();
+      await loadEvents();
       onRefresh();
     } catch (error) {
       toast.error('Ошибка удаления');

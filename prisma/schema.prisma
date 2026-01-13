@@ -61,6 +61,7 @@ model Student {
   diaries         Diary[]
   studentNotes    StudentNote[]
   enrollments     Enrollment[]
+  miniGroups      MiniGroupMember[]
 }
 
 model AdminLog {
@@ -234,6 +235,18 @@ model MiniGroup {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   events      ScheduleEvent[]
+  members     MiniGroupMember[]
+}
+
+model MiniGroupMember {
+  id          String    @id @default(uuid())
+  miniGroupId String
+  miniGroup   MiniGroup @relation(fields: [miniGroupId], references: [id], onDelete: Cascade)
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  joinedAt    DateTime  @default(now())
+
+  @@unique([miniGroupId, studentId])
 }
 
 model Product {

@@ -7,6 +7,30 @@ interface IdParams {
   id: string;
 }
 
+interface GroupEventParams {
+  groupId: string;
+  eventId?: string;
+}
+
+function normalizeTelegramLink(input: string): string {
+  if (!input) return '';
+  let value = input.trim();
+  
+  if (value.startsWith('https://') || value.startsWith('http://')) {
+    return value;
+  }
+  
+  if (value.includes('t.me/') || value.includes('telegram.me/')) {
+    let username = value.split('t.me/').pop() || value.split('telegram.me/').pop() || '';
+    username = username.split('?')[0];
+    return `https://t.me/${username}`;
+  }
+  
+  let username = value.replace(/^@/, '');
+  username = username.split('?')[0];
+  return `https://t.me/${username}`;
+}
+
 const router = Router();
 
 router.use(authenticate);
@@ -494,12 +518,14 @@ router.get('/mini-groups', async (req: AuthRequest, res: Response) => {
 
 router.post('/mini-groups', async (req: AuthRequest, res: Response) => {
   try {
+    const { chatLink, ...rest } = req.body;
     const group = await prisma.miniGroup.create({ 
       data: {
-        ...req.body,
+        ...rest,
+        chatLink: chatLink ? normalizeTelegramLink(chatLink) : null,
         isPublished: true
       },
-      include: { curator: true }
+      include: { curator: true, events: true }
     });
     res.status(201).json(group);
   } catch (error) {
@@ -511,9 +537,13 @@ router.post('/mini-groups', async (req: AuthRequest, res: Response) => {
 router.put('/mini-groups/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
+    const { chatLink, ...rest } = req.body;
+    const data = chatLink !== undefined 
+      ? { ...rest, chatLink: chatLink ? normalizeTelegramLink(chatLink) : null }
+      : rest;
     const group = await prisma.miniGroup.update({ 
       where: { id }, 
-      data: req.body,
+      data,
       include: { curator: true, events: true }
     });
     res.json(group);
@@ -530,6 +560,62 @@ router.delete('/mini-groups/:id', async (req: AuthRequest & Request<IdParams>, r
     res.json({ message: 'Мини-группа удалена' });
   } catch (error) {
     console.error('Delete mini-group error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/mini-groups/:groupId/events', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
+  try {
+    const { groupId } = req.params;
+    const events = await prisma.scheduleEvent.findMany({
+      where: { miniGroupId: groupId },
+      orderBy: { date: 'asc' }
+    });
+    res.json(events);
+  } catch (error) {
+    console.error('Get mini-group events error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/mini-groups/:groupId/events', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
+  try {
+    const { groupId } = req.params;
+    const event = await prisma.scheduleEvent.create({
+      data: {
+        ...req.body,
+        miniGroupId: groupId,
+        isPublished: true
+      }
+    });
+    res.status(201).json(event);
+  } catch (error) {
+    console.error('Create mini-group event error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/mini-groups/:groupId/events/:eventId', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const event = await prisma.scheduleEvent.update({
+      where: { id: eventId },
+      data: req.body
+    });
+    res.json(event);
+  } catch (error) {
+    console.error('Update mini-group event error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/mini-groups/:groupId/events/:eventId', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    await prisma.scheduleEvent.delete({ where: { id: eventId } });
+    res.json({ message: 'Событие удалено' });
+  } catch (error) {
+    console.error('Delete mini-group event error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

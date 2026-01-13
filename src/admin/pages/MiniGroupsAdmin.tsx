@@ -15,8 +15,12 @@ interface Contact {
 interface ScheduleEvent {
   id: string;
   title: string;
+  description: string | null;
   date: string;
   time: string | null;
+  location: string | null;
+  link: string | null;
+  isOnline: boolean;
 }
 
 interface MiniGroup {
@@ -198,7 +202,8 @@ export function MiniGroupsAdmin() {
             <MiniGroupSettings 
               group={settingsGroup} 
               onSave={saveSettings} 
-              onClose={() => { setShowSettingsModal(false); setSettingsGroup(null); }} 
+              onClose={() => { setShowSettingsModal(false); setSettingsGroup(null); }}
+              onRefresh={loadGroups}
             />
           </div>
         </div>
@@ -259,15 +264,92 @@ function MiniGroupForm({ group, contacts, onSave, onClose }: {
   );
 }
 
-function MiniGroupSettings({ group, onSave, onClose }: { 
+interface EventFormData {
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  location: string;
+  link: string;
+  isOnline: boolean;
+}
+
+function MiniGroupSettings({ group, onSave, onClose, onRefresh }: { 
   group: MiniGroup; 
   onSave: (data: { chatLink: string }) => void; 
-  onClose: () => void 
+  onClose: () => void;
+  onRefresh: () => void;
 }) {
   const [chatLink, setChatLink] = useState(group.chatLink || '');
+  const [events, setEvents] = useState<ScheduleEvent[]>([]);
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
+  const [eventForm, setEventForm] = useState<EventFormData>({
+    title: '', description: '', date: '', time: '', location: '', link: '', isOnline: true
+  });
+
+  useEffect(() => {
+    loadEvents();
+  }, [group.id]);
+
+  async function loadEvents() {
+    try {
+      const data = await api.get<ScheduleEvent[]>(`/content/mini-groups/${group.id}/events`);
+      setEvents(data);
+    } catch (error) {}
+  }
+
+  function openAddEvent() {
+    setEditingEvent(null);
+    setEventForm({ title: '', description: '', date: '', time: '', location: '', link: '', isOnline: true });
+    setShowEventForm(true);
+  }
+
+  function openEditEvent(event: ScheduleEvent) {
+    setEditingEvent(event);
+    setEventForm({
+      title: event.title,
+      description: event.description || '',
+      date: event.date.split('T')[0],
+      time: event.time || '',
+      location: event.location || '',
+      link: event.link || '',
+      isOnline: event.isOnline
+    });
+    setShowEventForm(true);
+  }
+
+  async function saveEvent() {
+    try {
+      if (editingEvent) {
+        await api.put(`/content/mini-groups/${group.id}/events/${editingEvent.id}`, eventForm);
+        toast.success('Событие обновлено');
+      } else {
+        await api.post(`/content/mini-groups/${group.id}/events`, eventForm);
+        toast.success('Событие добавлено');
+      }
+      setShowEventForm(false);
+      loadEvents();
+      onRefresh();
+    } catch (error) {
+      toast.error('Ошибка сохранения');
+    }
+  }
+
+  async function deleteEvent(eventId: string) {
+    if (!confirm('Удалить событие?')) return;
+    try {
+      await api.delete(`/content/mini-groups/${group.id}/events/${eventId}`);
+      toast.success('Событие удалено');
+      loadEvents();
+      onRefresh();
+    } catch (error) {
+      toast.error('Ошибка удаления');
+    }
+  }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-h-[70vh] overflow-y-auto">
       <div className="p-4 bg-[#f5f3ed] rounded-xl">
         <h3 className="font-medium text-[#3d3527] mb-2">Информация о группе</h3>
         <div className="space-y-2 text-sm text-[#3d3527]/80">
@@ -285,47 +367,148 @@ function MiniGroupSettings({ group, onSave, onClose }: {
           value={chatLink} 
           onChange={(e) => setChatLink(e.target.value)} 
           className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" 
-          placeholder="https://t.me/+..."
+          placeholder="@username, username или https://t.me/..."
         />
-        <p className="text-xs text-[#3d3527]/60 mt-1">Ссылка на Telegram-чат или другой мессенджер</p>
+        <p className="text-xs text-[#3d3527]/60 mt-1">Можно указать @username, username без @ или полную ссылку</p>
       </div>
 
       <div className="p-4 bg-blue-50 rounded-xl">
-        <h3 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
-          <Calendar className="w-4 h-4" />
-          Расписание мини-группы
-        </h3>
-        <p className="text-sm text-blue-700 mb-3">
-          Расписание мини-группы управляется через раздел "Расписание". 
-          События, привязанные к этой группе, автоматически отобразятся здесь.
-        </p>
-        {group.events && group.events.length > 0 ? (
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium text-blue-800 flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Расписание мини-группы
+          </h3>
+          <button 
+            onClick={openAddEvent}
+            className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            Добавить
+          </button>
+        </div>
+        
+        {showEventForm && (
+          <div className="bg-white p-4 rounded-lg mb-3 space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Название</label>
+              <input 
+                value={eventForm.title}
+                onChange={(e) => setEventForm({...eventForm, title: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Дата</label>
+                <input 
+                  type="date"
+                  value={eventForm.date}
+                  onChange={(e) => setEventForm({...eventForm, date: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Время</label>
+                <input 
+                  type="time"
+                  value={eventForm.time}
+                  onChange={(e) => setEventForm({...eventForm, time: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Описание</label>
+              <textarea 
+                value={eventForm.description}
+                onChange={(e) => setEventForm({...eventForm, description: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2">
+                <input 
+                  type="checkbox"
+                  checked={eventForm.isOnline}
+                  onChange={(e) => setEventForm({...eventForm, isOnline: e.target.checked})}
+                  className="rounded"
+                />
+                <span className="text-sm text-gray-700">Онлайн</span>
+              </label>
+              {eventForm.isOnline ? (
+                <input 
+                  value={eventForm.link}
+                  onChange={(e) => setEventForm({...eventForm, link: e.target.value})}
+                  placeholder="Ссылка на онлайн-встречу"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              ) : (
+                <input 
+                  value={eventForm.location}
+                  onChange={(e) => setEventForm({...eventForm, location: e.target.value})}
+                  placeholder="Адрес"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button 
+                onClick={() => setShowEventForm(false)}
+                className="px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded-lg text-sm"
+              >
+                Отмена
+              </button>
+              <button 
+                onClick={saveEvent}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+              >
+                {editingEvent ? 'Сохранить' : 'Добавить'}
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {events.length > 0 ? (
           <div className="space-y-2">
-            {group.events.slice(0, 3).map((event) => (
-              <div key={event.id} className="text-sm bg-white p-2 rounded-lg">
-                <span className="font-medium">{event.title}</span>
-                <span className="text-blue-600 ml-2">
-                  {new Date(event.date).toLocaleDateString('ru-RU')}
-                  {event.time && ` в ${event.time}`}
-                </span>
+            {events.map((event) => (
+              <div key={event.id} className="flex items-center justify-between bg-white p-3 rounded-lg">
+                <div>
+                  <span className="font-medium text-gray-800">{event.title}</span>
+                  <span className="text-blue-600 ml-2 text-sm">
+                    {new Date(event.date).toLocaleDateString('ru-RU')}
+                    {event.time && ` в ${event.time}`}
+                  </span>
+                </div>
+                <div className="flex gap-1">
+                  <button 
+                    onClick={() => openEditEvent(event)}
+                    className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => deleteEvent(event.id)}
+                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ))}
-            {group.events.length > 3 && (
-              <p className="text-sm text-blue-600">...и еще {group.events.length - 3} событий</p>
-            )}
           </div>
         ) : (
-          <p className="text-sm text-blue-600">Нет привязанных событий</p>
+          <p className="text-sm text-blue-600">Нет событий. Нажмите "Добавить" чтобы создать.</p>
         )}
       </div>
 
-      <div className="flex justify-end gap-3">
-        <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
+      <div className="flex justify-end gap-3 sticky bottom-0 bg-white pt-3">
+        <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Закрыть</button>
         <button 
           onClick={() => onSave({ chatLink })} 
           className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
         >
-          Сохранить
+          Сохранить ссылку
         </button>
       </div>
     </div>

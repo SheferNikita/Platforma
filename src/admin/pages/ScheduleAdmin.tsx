@@ -167,7 +167,6 @@ function ScheduleForm({ event, miniGroups, onSave, onClose }: {
   const [location, setLocation] = useState(event?.location || '');
   const [isOnline, setIsOnline] = useState(event?.isOnline ?? false);
   const [link, setLink] = useState(event?.link || '');
-  const [miniGroupId, setMiniGroupId] = useState(event?.miniGroupId || '');
 
   return (
     <div className="space-y-4">
@@ -204,20 +203,17 @@ function ScheduleForm({ event, miniGroups, onSave, onClose }: {
           <input value={location} onChange={(e) => setLocation(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
         </div>
       )}
-      <div>
-        <label className="block text-sm font-medium text-[#3d3527] mb-1">Мини-группа (опционально)</label>
-        <select 
-          value={miniGroupId} 
-          onChange={(e) => setMiniGroupId(e.target.value)} 
-          className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl bg-white"
-        >
-          <option value="">Не привязано к группе</option>
-          {miniGroups.map((group) => (
-            <option key={group.id} value={group.id}>{group.title}</option>
-          ))}
-        </select>
-        <p className="text-xs text-[#3d3527]/60 mt-1">Привяжите событие к мини-группе для отображения в её расписании</p>
-      </div>
+      {event?.miniGroupId && (
+        <div className="p-3 bg-blue-50 rounded-xl">
+          <p className="text-sm text-blue-800">
+            <span className="font-medium">Привязано к мини-группе:</span>{' '}
+            {miniGroups.find(g => g.id === event.miniGroupId)?.title || 'Группа'}
+          </p>
+          <p className="text-xs text-blue-600 mt-1">
+            Управление событиями мини-групп доступно в разделе "Мини-группы" → Настройки группы
+          </p>
+        </div>
+      )}
       <div className="flex justify-end gap-3">
         <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
         <button 
@@ -228,8 +224,7 @@ function ScheduleForm({ event, miniGroups, onSave, onClose }: {
             time, 
             location, 
             isOnline, 
-            link,
-            miniGroupId: miniGroupId || null
+            link
           })} 
           className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
         >

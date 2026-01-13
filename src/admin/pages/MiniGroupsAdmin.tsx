@@ -23,6 +23,18 @@ interface ScheduleEvent {
   isOnline: boolean;
 }
 
+interface Student {
+  id: string;
+  user: { id: string; name: string; email: string };
+}
+
+interface MiniGroupMember {
+  id: string;
+  studentId: string;
+  student: Student;
+  joinedAt: string;
+}
+
 interface MiniGroup {
   id: string;
   title: string;
@@ -32,6 +44,7 @@ interface MiniGroup {
   curator: Contact | null;
   isPublished: boolean;
   events: ScheduleEvent[];
+  _count?: { members: number };
 }
 
 export function MiniGroupsAdmin() {
@@ -175,6 +188,10 @@ export function MiniGroupsAdmin() {
                     <span>{group.events.length} событий в расписании</span>
                   </div>
                 )}
+                <div className="flex items-center gap-2">
+                  <Users2 className="w-3.5 h-3.5 text-[#a67c52]" />
+                  <span>{group._count?.members || 0} участников</span>
+                </div>
               </div>
             </div>
           ))
@@ -287,9 +304,14 @@ function MiniGroupSettings({ group, onSave, onClose, onRefresh }: {
   const [eventForm, setEventForm] = useState<EventFormData>({
     title: '', description: '', date: '', time: '', location: '', link: '', isOnline: true
   });
+  const [members, setMembers] = useState<MiniGroupMember[]>([]);
+  const [searchStudents, setSearchStudents] = useState<Student[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAddMember, setShowAddMember] = useState(false);
 
   useEffect(() => {
     loadEvents();
+    loadMembers();
   }, [group.id]);
 
   async function loadEvents() {
@@ -297,6 +319,51 @@ function MiniGroupSettings({ group, onSave, onClose, onRefresh }: {
       const data = await api.get<ScheduleEvent[]>(`/content/mini-groups/${group.id}/events`);
       setEvents(data);
     } catch (error) {}
+  }
+
+  async function loadMembers() {
+    try {
+      const data = await api.get<MiniGroupMember[]>(`/content/mini-groups/${group.id}/members`);
+      setMembers(data);
+    } catch (error) {}
+  }
+
+  async function searchForStudents(query: string) {
+    setSearchQuery(query);
+    if (query.length < 2) {
+      setSearchStudents([]);
+      return;
+    }
+    try {
+      const data = await api.get<Student[]>(`/content/students/search?q=${encodeURIComponent(query)}&excludeGroupId=${group.id}`);
+      setSearchStudents(data);
+    } catch (error) {}
+  }
+
+  async function addMember(studentId: string) {
+    try {
+      await api.post(`/content/mini-groups/${group.id}/members`, { studentId });
+      toast.success('Участник добавлен');
+      await loadMembers();
+      setSearchQuery('');
+      setSearchStudents([]);
+      setShowAddMember(false);
+      onRefresh();
+    } catch (error) {
+      toast.error('Ошибка добавления');
+    }
+  }
+
+  async function removeMember(memberId: string) {
+    if (!confirm('Удалить участника из группы?')) return;
+    try {
+      await api.delete(`/content/mini-groups/${group.id}/members/${memberId}`);
+      toast.success('Участник удален');
+      await loadMembers();
+      onRefresh();
+    } catch (error) {
+      toast.error('Ошибка удаления');
+    }
   }
 
   function openAddEvent() {
@@ -502,13 +569,85 @@ function MiniGroupSettings({ group, onSave, onClose, onRefresh }: {
         )}
       </div>
 
+      <div className="p-4 bg-green-50 rounded-xl">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium text-green-800 flex items-center gap-2">
+            <Users2 className="w-4 h-4" />
+            Участники группы ({members.length})
+          </h3>
+          <button 
+            onClick={() => setShowAddMember(!showAddMember)}
+            className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
+          >
+            <Plus className="w-4 h-4" />
+            Добавить
+          </button>
+        </div>
+
+        {showAddMember && (
+          <div className="bg-white p-4 rounded-lg mb-3 space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Поиск ученика</label>
+              <input 
+                value={searchQuery}
+                onChange={(e) => searchForStudents(e.target.value)}
+                placeholder="Введите имя или email (минимум 2 символа)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              />
+            </div>
+            {searchStudents.length > 0 && (
+              <div className="max-h-40 overflow-y-auto space-y-1">
+                {searchStudents.map((student) => (
+                  <div 
+                    key={student.id} 
+                    className="flex items-center justify-between p-2 bg-gray-50 rounded hover:bg-gray-100 cursor-pointer"
+                    onClick={() => addMember(student.id)}
+                  >
+                    <div>
+                      <span className="font-medium text-gray-800">{student.user.name}</span>
+                      <span className="text-gray-500 text-sm ml-2">{student.user.email}</span>
+                    </div>
+                    <Plus className="w-4 h-4 text-green-600" />
+                  </div>
+                ))}
+              </div>
+            )}
+            {searchQuery.length >= 2 && searchStudents.length === 0 && (
+              <p className="text-sm text-gray-500">Ученики не найдены</p>
+            )}
+          </div>
+        )}
+
+        {members.length > 0 ? (
+          <div className="space-y-2">
+            {members.map((member) => (
+              <div key={member.id} className="flex items-center justify-between bg-white p-3 rounded-lg">
+                <div>
+                  <span className="font-medium text-gray-800">{member.student.user.name}</span>
+                  <span className="text-gray-500 text-sm ml-2">{member.student.user.email}</span>
+                </div>
+                <button 
+                  onClick={() => removeMember(member.id)}
+                  className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded"
+                  title="Удалить из группы"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-green-600">Нет участников. Нажмите "Добавить" чтобы добавить ученика.</p>
+        )}
+      </div>
+
       <div className="flex justify-end gap-3 sticky bottom-0 bg-white pt-3">
         <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Закрыть</button>
         <button 
           onClick={() => onSave({ chatLink })} 
           className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
         >
-          Сохранить ссылку
+          Сохранить
         </button>
       </div>
     </div>

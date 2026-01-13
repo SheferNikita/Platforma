@@ -506,7 +506,8 @@ router.get('/mini-groups', async (req: AuthRequest, res: Response) => {
       orderBy: { title: 'asc' },
       include: { 
         curator: true,
-        events: true
+        events: true,
+        _count: { select: { members: true } }
       }
     });
     res.json(groups);

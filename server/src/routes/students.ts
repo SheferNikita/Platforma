@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../index';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
+import { sendEmail } from '../services/email';
+import { getWelcomeEmailTemplate } from '../templates/welcomeEmail';
 
 const router = Router();
 
@@ -15,7 +17,8 @@ const createStudentSchema = z.object({
   name: z.string().min(2, 'Имя должно содержать минимум 2 символа'),
   phone: z.string().optional(),
   sobrietyDate: z.string().optional(),
-  notes: z.string().optional()
+  notes: z.string().optional(),
+  sendCredentials: z.boolean().optional()
 });
 
 const updateStudentSchema = z.object({
@@ -177,6 +180,28 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         details: { email: user.email, name: user.name }
       }
     });
+
+    if (data.sendCredentials) {
+      try {
+        const appUrl = process.env.APP_URL || 'https://your-platform.com';
+        const loginUrl = `${appUrl}/login`;
+        
+        const emailHtml = getWelcomeEmailTemplate({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          loginUrl
+        });
+        
+        await sendEmail(
+          data.email,
+          'Добро пожаловать на платформу обучения трезвости',
+          emailHtml
+        );
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+      }
+    }
 
     res.status(201).json(user);
   } catch (error) {

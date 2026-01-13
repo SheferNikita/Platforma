@@ -45,3 +45,8 @@ externalPort = 3000
 deploymentTarget = "static"
 build = ["npm", "run", "build"]
 publicDir = "build"
+
+[userenv]
+
+[userenv.shared]
+APP_URL = "https://your-platform.com"

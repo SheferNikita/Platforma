@@ -1,218 +1,46 @@
 # Обучающая платформа по трезвости
 
-## Обзор
+## Overview
 
-Полнофункциональная обучающая платформа по трезвости с русскоязычным интерфейсом, включающая:
-- Публичную часть для учеников (уроки, библиотека, расписание, общины)
-- Полноценную админ-панель для управления контентом и пользователями
-- Интеграцию с Robokassa для приема платежей
-- Систему автоматической записи на курсы после оплаты
-- Email-уведомления с кастомными шаблонами для каждого продукта
+A full-featured educational platform focused on sobriety with a Russian-language interface. It provides a public-facing section for students (lessons, library, schedule, communities) and a comprehensive admin panel for content and user management. Key features include Robokassa payment integration, automatic course enrollment post-payment, and customizable email notifications for different products. The project aims to provide a robust and user-friendly platform for sobriety education.
 
-## Технологический стек
+## User Preferences
 
-### Frontend
-- React 18 с TypeScript
-- Vite для сборки
-- TailwindCSS 4.0 для стилей
-- React Router для навигации
-- Recharts для графиков в дашборде
-- Lucide React для иконок
-- Sonner для уведомлений
+- I prefer clear and concise communication.
+- I expect the agent to prioritize critical tasks and system stability.
+- All changes should be communicated and approved before implementation.
+- I prefer detailed explanations for complex technical decisions.
+- Do not make changes to the folder `prisma/`.
+- Do not make changes to the file `server/src/index.ts`.
 
-### Backend
-- Express.js (Node.js)
-- Prisma ORM 5.22.0 с PostgreSQL
-- JWT для аутентификации
-- Nodemailer для email
+## System Architecture
 
-## Структура проекта
+The platform is built with a modern web stack. The frontend uses **React 18 with TypeScript**, **Vite** for fast builds, and **TailwindCSS 4.0** for styling. Navigation is handled by **React Router**, while **Recharts** is used for data visualization in the dashboard. **Lucide React** provides icons, and **Sonner** manages notifications.
 
-```
-├── prisma/
-│   ├── schema.prisma     # Схема базы данных
-│   └── seed.ts           # Начальные данные
-├── server/
-│   └── src/
-│       ├── index.ts      # Точка входа сервера
-│       ├── middleware/   # Auth middleware
-│       ├── routes/       # API маршруты
-│       └── services/     # Email сервис
-├── src/
-│   ├── admin/           # Админ-панель
-│   │   ├── components/  # AdminLayout
-│   │   └── pages/       # Страницы админки
-│   ├── components/      # Общие компоненты
-│   ├── lib/             # API client, Auth context
-│   └── pages/           # Публичные страницы
-```
+The backend is powered by **Express.js (Node.js)**, utilizing **Prisma ORM 5.22.0** with a **PostgreSQL** database. **JWT** is implemented for authentication, and **Nodemailer** handles email services.
 
-## Доступ к админ-панели
+The project is structured into `prisma/` (schema, seed), `server/` (entry point, middleware, routes, services), and `src/` (admin panel, shared components, utilities, public pages).
 
-- **URL:** `/admin`
-- **Email:** admin@sobriety.ru
-- **Пароль:** admin123
+**Key Features and Design Decisions:**
 
-## Роли пользователей
+-   **Admin Panel:** Comprehensive control over content, users, finances, and emails.
+    -   **Dashboard:** Displays key metrics, revenue graphs, and recent payments.
+    -   **Content Management:** CRUD operations for lessons (with drafts), library materials, schedule events, contacts, communities, and mini-groups.
+    -   **User Management:** Student and administrator management with role-based access control.
+    -   **Financials:** Product creation with pricing and email templates, payment CRM with history and statuses.
+    -   **Email System:** Individual and mass email sending with customizable templates.
+    -   **Rich Text Editor:** Lessons support rich text content via TipTap, Kinescope video integration, and file attachments.
+    -   **Content Reordering:** Manual reordering functionality for modules, lessons, library items, and contacts.
+-   **User Roles:** Granular access control with roles: `SUPER_ADMIN`, `CONTENT_MANAGER`, `SUPPORT`, `FINANCE`, and `STUDENT`.
+-   **Module Access Control:** System for managing student access to specific modules, including expiration dates.
+-   **Mini-Groups:** Enhanced management of mini-groups, including curator assignment, chat links, and dedicated scheduling within group settings.
+-   **Authentication:** Dual mechanism supporting both HttpOnly cookies (`sameSite: 'none'`, `secure: true`) and a fallback to `localStorage` with `Authorization` headers for iframe compatibility.
+-   **UI/UX:** The admin panel features a warm, beige color scheme, rounded corners, and a glassmorphism effect, aligning with the platform's overall aesthetic.
 
-- **SUPER_ADMIN** - Полный доступ ко всем функциям
-- **CONTENT_MANAGER** - Управление контентом (уроки, библиотека, расписание)
-- **SUPPORT** - Управление учениками
-- **FINANCE** - Управление продуктами и платежами
-- **STUDENT** - Обычный ученик
+## External Dependencies
 
-## Функции админ-панели
-
-### Дашборд
-- Ключевые метрики: количество учеников, выручка, прогресс
-- График выручки за 30 дней
-- Последние платежи
-
-### Управление контентом
-- **Уроки** - Модули и уроки с поддержкой черновиков (isPublished)
-- **Библиотека** - Материалы (статьи, видео, книги)
-- **Расписание** - События (онлайн/оффлайн)
-- **Контакты** - Кураторы и их контакты
-- **Общины** - Список общин с адресами
-- **Мини-группы** - Группы с кураторами
-
-### Управление пользователями
-- **Ученики** - Просмотр, создание, редактирование
-- **Администраторы** - Управление админами и ролями
-
-### Финансы
-- **Продукты** - Создание продуктов с ценами и email-шаблонами
-- **Платежи** - CRM с историей платежей и статусами
-
-### Email
-- Отправка писем отдельным адресам
-- Массовая рассылка всем ученикам
-- Шаблоны писем
-
-## Интеграция Robokassa
-
-### Настройка
-Необходимо задать переменные окружения:
-- `ROBOKASSA_MERCHANT_LOGIN`
-- `ROBOKASSA_PASSWORD1`
-- `ROBOKASSA_PASSWORD2`
-- `ROBOKASSA_TEST_MODE` (true/false)
-
-### Webhook endpoints
-- `POST /api/payments/result` - Result URL для Robokassa
-- `GET /api/payments/success` - Success URL
-- `GET /api/payments/fail` - Fail URL
-
-### Процесс оплаты
-1. Создание платежа через `POST /api/payments/create`
-2. Перенаправление на Robokassa
-3. После успешной оплаты:
-   - Обновление статуса платежа на COMPLETED
-   - Автоматическая запись ученика на курс (Enrollment)
-   - Отправка email с кастомным шаблоном продукта
-
-### Переменные в email-шаблонах
-- `{{name}}` - Имя ученика
-- `{{productName}}` - Название продукта
-- `{{amount}}` - Сумма платежа
-
-## Скрипты
-
-```bash
-npm run dev           # Запуск frontend + backend
-npm run dev:client    # Только frontend (Vite)
-npm run dev:server    # Только backend (tsx)
-npm run db:seed       # Заполнение базы начальными данными
-```
-
-## Порты
-
-- Frontend: 5000 (Vite dev server)
-- Backend: 3001 (Express API)
-- API проксируется через Vite на `/api`
-
-## Аутентификация
-
-Система использует двойной механизм аутентификации для совместимости с iframe-средой Replit:
-- **Cookies** - HttpOnly cookies с `sameSite: 'none'`, `secure: true`
-- **localStorage + Authorization header** - Fallback для случаев, когда third-party cookies блокируются браузером
-
-Токен сохраняется в localStorage при логине и отправляется через `Authorization: Bearer` header.
-
-## Последние изменения
-
-- 13.01.2026: Система управления доступом к модулям для учеников
-  - Новая модель ModuleAccess (studentId, moduleId, expiresAt, isActive)
-  - API endpoints: GET/POST/DELETE /students/:userId/access
-  - UI в карточке ученика: вкладка "Доступы к модулям" с таблицей ВСЕХ модулей
-  - Открытие/закрытие доступа, установка даты окончания (или бессрочно)
-  - Кнопки "Открыть все" / "Закрыть все"
-  - Индикатор истёкшего доступа (красный)
-  - Синхронизация с публичной частью: /public/modules и /public/lessons возвращают hasAccess
-  - Публичная страница уроков показывает замок для недоступных модулей и дату окончания
-  - Новые модули автоматически появляются в настройках доступа всех учеников
-- 13.01.2026: Улучшения раздела "Ученики"
-  - Убрано поле "Дата трезвости" из формы создания ученика
-  - Заменена колонка "Подписки" на мини-группы в таблице
-  - Добавлены расширенные фильтры (по статусу, мини-группе)
-- 13.01.2026: Управление участниками мини-групп
-  - Новая модель MiniGroupMember (many-to-many Student↔MiniGroup)
-  - API endpoints: GET/POST/DELETE /content/mini-groups/:groupId/members
-  - Поиск учеников: GET /content/students/search?q=...&excludeGroupId=...
-  - Настройки группы: список участников, поиск и добавление (мин. 2 символа), удаление
-  - Количество участников отображается в карточках мини-групп (через Prisma _count)
-- 13.01.2026: Полная переработка мини-групп
-  - Куратор выбирается из выпадающего списка контактов (связь MiniGroup → Contact через curatorId)
-  - Ссылка на чат (chatLink) с адаптивной нормализацией (@username, username, t.me/...)
-  - Автопубликация мини-групп при создании (isPublished: true)
-  - Полноценное управление расписанием внутри настроек мини-группы (CRUD для событий)
-  - События мини-групп создаются/редактируются в настройках группы, а не в общем расписании
-  - Общее расписание показывает только события без привязки к мини-группам
-  - Публичный API: /schedule исключает события мини-групп, /mini-groups включает их
-- 13.01.2026: Улучшения раздела "Общины"
-  - Автопубликация общин при создании (isPublished: true)
-- 12.01.2026: Улучшения раздела "Контакты"
-  - Контакты автоматически публикуются при создании (isPublished: true)
-  - Добавлена загрузка аватарки в форму контакта (POST /api/uploads/avatar)
-  - Нормализация Telegram: поддержка @username, username, полных ссылок t.me/
-  - Горизонтальные стрелки (влево/вправо) для переупорядочивания карточек
-- 12.01.2026: Улучшения расписания
-  - Время события отображается под датой в левом блоке карточки
-  - Время дублируется справа с иконкой часов
-- 12.01.2026: Синхронизация публичных компонентов с API
-  - Все публичные вкладки (Уроки, Библиотека, Расписание, Контакты, Общины) теперь загружают данные из API
-  - Добавлены состояния загрузки (спиннер), ошибки (с кнопкой повтора) и пустые состояния
-  - Чекбокс "Опубликован" добавлен в формы модуля и урока (по умолчанию включен)
-  - Удалены отладочные console.log из frontend и backend
-  - API endpoints: /public/modules, /public/library, /public/events, /public/contacts, /public/communities
-- 12.01.2026: Добавлена расширенная система редактирования уроков
-  - RichTextEditor на базе TipTap с полной панелью инструментов (заголовки, форматирование, ссылки, списки, цитаты)
-  - Поддержка множественных видео Kinescope на урок (добавление/удаление/переупорядочивание)
-  - Файловые вложения к урокам (PDF, документы, изображения, аудио, видео, архивы)
-  - Чекбокс "Текстовый урок" для уроков без видео
-  - Публичная страница урока теперь загружает данные из API и отображает форматированный контент
-  - Новые модели: LessonVideo, LessonAttachment
-  - Новое поле: Lesson.isTextOnly
-- 12.01.2026: Добавлена система переупорядочивания контента (модули, уроки, библиотека, контакты)
-  - Убрано поле "Порядок" из форм создания/редактирования
-  - Новые элементы автоматически добавляются в конец списка
-  - Кнопка "Переместить" со стрелками вверх/вниз для ручного изменения порядка
-  - Кнопки "Сохранить" и "Отменить" в режиме переупорядочивания
-  - Изменения применяются локально, сохраняются на сервер по нажатию "Сохранить"
-  - API endpoints: POST /content/X/reorder-batch, GET /content/X/next-order
-- 12.01.2026: Исправлена аутентификация для работы в iframe (localStorage fallback)
-- 12.01.2026: Исправлены ошибки валидации Zod (.errors → .issues)
-- 11.01.2026: Создана полная админ-панель с 12 страницами
-- 11.01.2026: Интегрирована оплата через Robokassa
-- 11.01.2026: Добавлена система ролей и прав доступа
-- 11.01.2026: Реализованы кастомные email-шаблоны для продуктов
-
-## Дизайн
-
-Админ-панель выполнена в теплых бежевых тонах, соответствующих основной платформе:
-- Основной фон: градиент от #f5f3ed через #ebe8dc к #f0ede3
-- Акцентный цвет: градиент от #a67c52 к #c4a57b
-- Текст: #3d3527
-- Границы: #d4c9b0
-- Скругленные углы: rounded-xl, rounded-2xl
-- Стеклянный эффект: backdrop-blur-md
+-   **PostgreSQL:** Primary database managed by Prisma ORM.
+-   **Robokassa:** Payment gateway integrated for processing payments.
+    -   Endpoints: `POST /api/payments/result`, `GET /api/payments/success`, `GET /api/payments/fail`.
+    -   Automated enrollment and email notification upon successful payment.
+-   **Kinescope:** Video hosting service integrated for lesson content.

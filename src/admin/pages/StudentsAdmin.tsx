@@ -327,6 +327,7 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState(student?.student?.phone || '');
   const [notes, setNotes] = useState(student?.student?.notes || '');
+  const [sendCredentials, setSendCredentials] = useState(true);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -379,11 +380,25 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
               rows={3}
             />
           </div>
+          {!student && (
+            <label className="flex items-center gap-3 p-3 bg-[#f5f3ed] rounded-xl cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sendCredentials}
+                onChange={(e) => setSendCredentials(e.target.checked)}
+                className="w-5 h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+              />
+              <div>
+                <p className="font-medium text-[#3d3527]">Отправить данные для входа на почту</p>
+                <p className="text-sm text-[#3d3527]/60">Ученик получит письмо с логином и паролем</p>
+              </div>
+            </label>
+          )}
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
           <button
-            onClick={() => onSave({ name, email, password, phone, notes })}
+            onClick={() => onSave({ name, email, password, phone, notes, sendCredentials: !student && sendCredentials })}
             className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
           >
             Сохранить

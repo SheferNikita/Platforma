@@ -75,7 +75,7 @@ router.post('/create', authenticate, async (req: AuthRequest, res: Response) => 
 
 router.post('/result', async (req, res) => {
   try {
-    const { OutSum, InvId, SignatureValue, Shp_paymentId } = req.body;
+    const { OutSum, InvId, SignatureValue } = req.body;
 
     const signatureParams = [OutSum, InvId, ROBOKASSA_PASSWORD2];
     const expectedSignature = generateSignature(signatureParams, ROBOKASSA_PASSWORD2);
@@ -85,8 +85,27 @@ router.post('/result', async (req, res) => {
       return res.status(400).send('bad sign');
     }
 
+    const invIdNum = parseInt(InvId);
+
+    const order = await prisma.order.findUnique({
+      where: { robokassaInvId: invIdNum }
+    });
+
+    if (order) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: 'PAID', paidAt: new Date() }
+      });
+
+      const { processSuccessfulPayment } = await import('./orders');
+      await processSuccessfulPayment(order.id);
+
+      res.send(`OK${InvId}`);
+      return;
+    }
+
     const payment = await prisma.payment.findUnique({
-      where: { robokassaInvId: parseInt(InvId) },
+      where: { robokassaInvId: invIdNum },
       include: {
         product: true,
         student: {
@@ -96,7 +115,7 @@ router.post('/result', async (req, res) => {
     });
 
     if (!payment) {
-      console.error('Payment not found:', InvId);
+      console.error('Payment/Order not found:', InvId);
       return res.status(404).send('not found');
     }
 

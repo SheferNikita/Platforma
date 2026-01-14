@@ -22,6 +22,12 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum OrderStatus {
+  NEW
+  PAID
+  CANCELLED
+}
+
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
@@ -101,6 +107,7 @@ model Module {
   
   lessons     Lesson[]
   access      ModuleAccess[]
+  products    ProductModule[]
 }
 
 model Lesson {
@@ -271,8 +278,9 @@ model Product {
   description         String?
   price               Float
   currency            String   @default("RUB")
-  accessType          String
+  accessDurationType  String   @default("unlimited")
   accessDuration      Int?
+  accessExpiresAt     DateTime?
   emailSubject        String?
   emailTemplate       String?
   isActive            Boolean  @default(true)
@@ -281,6 +289,35 @@ model Product {
   
   payments            Payment[]
   enrollments         Enrollment[]
+  modules             ProductModule[]
+  orders              Order[]
+}
+
+model ProductModule {
+  id          String   @id @default(uuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  moduleId    String
+  module      Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([productId, moduleId])
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  firstName   String
+  lastName    String
+  phone       String
+  email       String
+  productId   String
+  product     Product     @relation(fields: [productId], references: [id])
+  status      OrderStatus @default(NEW)
+  amount      Float
+  robokassaInvId Int?     @unique
+  paidAt      DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 model Enrollment {

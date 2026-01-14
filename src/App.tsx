@@ -28,6 +28,8 @@ import { ProductsAdmin } from './admin/pages/ProductsAdmin';
 import { PaymentsAdmin } from './admin/pages/PaymentsAdmin';
 import { EmailAdmin } from './admin/pages/EmailAdmin';
 import { AdminsAdmin } from './admin/pages/AdminsAdmin';
+import { CRMAdmin } from './admin/pages/CRMAdmin';
+import { PaymentPage } from './pages/PaymentPage';
 import { Toaster } from 'sonner';
 
 function LessonsRedirect() {
@@ -60,6 +62,7 @@ export default function App() {
         <Toaster position="top-right" richColors />
         <Routes>
           <Route path="/sos" element={<SOSPage />} />
+          <Route path="/pay/:productId" element={<PaymentPage />} />
           
           <Route path="/admin/login" element={<AdminLogin />} />
           
@@ -80,6 +83,7 @@ export default function App() {
             <Route path="mini-groups" element={<MiniGroupsAdmin />} />
             <Route path="students" element={<StudentsAdmin />} />
             <Route path="products" element={<ProductsAdmin />} />
+            <Route path="crm" element={<CRMAdmin />} />
             <Route path="payments" element={<PaymentsAdmin />} />
             <Route path="email" element={<EmailAdmin />} />
             <Route path="admins" element={<AdminsAdmin />} />

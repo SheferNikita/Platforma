@@ -11,21 +11,26 @@ router.use(requireRole('SUPER_ADMIN', 'FINANCE'));
 const productSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
   description: z.string().optional(),
-  price: z.number().positive('Цена должна быть положительной'),
+  price: z.number().min(0, 'Цена должна быть неотрицательной'),
   currency: z.string().default('RUB'),
-  accessType: z.string(),
-  accessDuration: z.number().optional(),
+  accessDurationType: z.enum(['unlimited', 'days', 'date']).default('unlimited'),
+  accessDuration: z.number().optional().nullable(),
+  accessExpiresAt: z.string().optional().nullable(),
   emailSubject: z.string().optional(),
   emailTemplate: z.string().optional(),
-  isActive: z.boolean().optional()
+  isActive: z.boolean().optional(),
+  moduleIds: z.array(z.string()).optional()
 });
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const products = await prisma.product.findMany({
       include: {
+        modules: {
+          include: { module: { select: { id: true, title: true } } }
+        },
         _count: {
-          select: { payments: true, enrollments: true }
+          select: { payments: true, enrollments: true, orders: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -39,11 +44,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const product = await prisma.product.findUnique({
       where: { id },
       include: {
+        modules: {
+          include: { module: { select: { id: true, title: true } } }
+        },
         payments: {
           include: {
             student: {
@@ -54,7 +62,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
           take: 10
         },
         _count: {
-          select: { payments: true, enrollments: true }
+          select: { payments: true, enrollments: true, orders: true }
         }
       }
     });
@@ -72,9 +80,20 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
-    const data = productSchema.parse(req.body);
+    const { moduleIds, accessExpiresAt, ...data } = productSchema.parse(req.body);
 
-    const product = await prisma.product.create({ data });
+    const product = await prisma.product.create({ 
+      data: {
+        ...data,
+        accessExpiresAt: accessExpiresAt ? new Date(accessExpiresAt) : null,
+        modules: moduleIds?.length ? {
+          create: moduleIds.map(moduleId => ({ moduleId }))
+        } : undefined
+      },
+      include: {
+        modules: { include: { module: { select: { id: true, title: true } } } }
+      }
+    });
 
     await prisma.adminLog.create({
       data: {
@@ -98,12 +117,27 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 
 router.put('/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
-    const data = productSchema.partial().parse(req.body);
+    const id = req.params.id as string;
+    const { moduleIds, accessExpiresAt, ...data } = productSchema.partial().parse(req.body);
+
+    if (moduleIds !== undefined) {
+      await prisma.productModule.deleteMany({ where: { productId: id } });
+      if (moduleIds.length > 0) {
+        await prisma.productModule.createMany({
+          data: moduleIds.map(moduleId => ({ productId: id, moduleId }))
+        });
+      }
+    }
 
     const product = await prisma.product.update({
       where: { id },
-      data
+      data: {
+        ...data,
+        accessExpiresAt: accessExpiresAt ? new Date(accessExpiresAt) : accessExpiresAt === null ? null : undefined
+      },
+      include: {
+        modules: { include: { module: { select: { id: true, title: true } } } }
+      }
     });
 
     await prisma.adminLog.create({
@@ -128,7 +162,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
 
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     await prisma.product.delete({
       where: { id }

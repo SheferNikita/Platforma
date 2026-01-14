@@ -15,7 +15,8 @@ import {
   Library,
   Building,
   Users2,
-  Phone
+  Phone,
+  ClipboardList
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 
@@ -29,6 +30,7 @@ const navItems = [
   { path: '/admin/mini-groups', label: 'Мини-группы', icon: Users2 },
   { path: '/admin/students', label: 'Ученики', icon: Users },
   { path: '/admin/products', label: 'Продукты', icon: ShoppingBag },
+  { path: '/admin/crm', label: 'CRM', icon: ClipboardList },
   { path: '/admin/payments', label: 'Платежи', icon: CreditCard },
   { path: '/admin/email', label: 'Email', icon: Mail },
   { path: '/admin/admins', label: 'Администраторы', icon: Shield },

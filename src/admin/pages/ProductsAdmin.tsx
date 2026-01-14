@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, ShoppingBag, Mail } from 'lucide-react';
+import { Plus, Edit, Trash2, ShoppingBag, Mail, Link as LinkIcon, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { RichTextEditor } from '../../components/RichTextEditor';
+
+interface Module {
+  id: string;
+  title: string;
+}
+
+interface ProductModule {
+  module: Module;
+}
 
 interface Product {
   id: string;
@@ -9,12 +19,14 @@ interface Product {
   description: string;
   price: number;
   currency: string;
-  accessType: string;
-  accessDuration: number;
+  accessDurationType: 'unlimited' | 'days' | 'date';
+  accessDuration: number | null;
+  accessExpiresAt: string | null;
   emailSubject: string;
   emailTemplate: string;
   isActive: boolean;
-  _count: { payments: number; enrollments: number };
+  modules: ProductModule[];
+  _count: { payments: number; enrollments: number; orders: number };
 }
 
 export function ProductsAdmin() {
@@ -119,15 +131,21 @@ export function ProductsAdmin() {
                 </span>
               </div>
               <div className="flex items-center gap-4 mt-4 pt-4 border-t border-[#d4c9b0]/30 text-sm text-[#3d3527]/60">
+                <span>{product._count.orders} заявок</span>
                 <span>{product._count.payments} платежей</span>
-                <span>{product._count.enrollments} подписок</span>
               </div>
+              {product.modules?.length > 0 && (
+                <div className="mt-3 text-xs text-[#3d3527]/60">
+                  Модули: {product.modules.map(m => m.module.title).join(', ')}
+                </div>
+              )}
               {product.emailTemplate && (
                 <div className="flex items-center gap-2 mt-3 text-sm text-green-600">
                   <Mail className="w-4 h-4" />
                   <span>Email настроен</span>
                 </div>
               )}
+              <PaymentLinkButton productId={product.id} />
             </div>
           ))
         )}
@@ -144,19 +162,82 @@ export function ProductsAdmin() {
   );
 }
 
-function ProductModal({ product, onSave, onClose }: { product: Product | null; onSave: (data: Partial<Product>) => void; onClose: () => void }) {
+function PaymentLinkButton({ productId }: { productId: string }) {
+  const [copied, setCopied] = useState(false);
+  const paymentUrl = `${window.location.origin}/pay/${productId}`;
+  
+  const copyLink = () => {
+    navigator.clipboard.writeText(paymentUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success('Ссылка скопирована');
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-[#d4c9b0]/30">
+      <div className="flex items-center gap-2">
+        <LinkIcon className="w-4 h-4 text-[#a67c52]" />
+        <span className="text-xs text-[#3d3527]/60 truncate flex-1">{paymentUrl}</span>
+        <button
+          onClick={copyLink}
+          className="p-1.5 hover:bg-[#f5f3ed] rounded-lg transition-colors"
+          title="Копировать ссылку"
+        >
+          {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-[#3d3527]" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProductModal({ product, onSave, onClose }: { product: Product | null; onSave: (data: any) => void; onClose: () => void }) {
   const [name, setName] = useState(product?.name || '');
   const [description, setDescription] = useState(product?.description || '');
-  const [price, setPrice] = useState(product?.price || 0);
-  const [accessType, setAccessType] = useState(product?.accessType || 'course');
-  const [accessDuration, setAccessDuration] = useState(product?.accessDuration || 365);
+  const [priceValue, setPriceValue] = useState(product?.price?.toString() || '');
+  const [accessDurationType, setAccessDurationType] = useState<'unlimited' | 'days' | 'date'>(product?.accessDurationType || 'unlimited');
+  const [accessDuration, setAccessDuration] = useState(product?.accessDuration || 30);
+  const [accessExpiresAt, setAccessExpiresAt] = useState(product?.accessExpiresAt?.split('T')[0] || '');
   const [emailSubject, setEmailSubject] = useState(product?.emailSubject || '');
   const [emailTemplate, setEmailTemplate] = useState(product?.emailTemplate || '');
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
+  const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>(
+    product?.modules?.map(m => m.module.id) || []
+  );
+  const [allModules, setAllModules] = useState<Module[]>([]);
+  const [loadingModules, setLoadingModules] = useState(true);
+
+  useEffect(() => {
+    api.get<any[]>('/content/modules').then(modules => {
+      setAllModules(modules.map(m => ({ id: m.id, title: m.title })));
+      setLoadingModules(false);
+    }).catch(() => setLoadingModules(false));
+  }, []);
+
+  const toggleModule = (moduleId: string) => {
+    setSelectedModuleIds(prev =>
+      prev.includes(moduleId) ? prev.filter(id => id !== moduleId) : [...prev, moduleId]
+    );
+  };
+
+  const handleSave = () => {
+    const price = parseFloat(priceValue) || 0;
+    onSave({
+      name,
+      description,
+      price,
+      accessDurationType,
+      accessDuration: accessDurationType === 'days' ? accessDuration : null,
+      accessExpiresAt: accessDurationType === 'date' ? accessExpiresAt : null,
+      emailSubject,
+      emailTemplate,
+      isActive,
+      moduleIds: selectedModuleIds
+    });
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl my-8">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-3xl my-8 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold text-[#3d3527] mb-4">{product ? 'Редактировать продукт' : 'Новый продукт'}</h2>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -172,46 +253,92 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
               <label className="block text-sm font-medium text-[#3d3527] mb-1">Цена (₽)</label>
               <input
                 type="number"
-                value={price}
-                onChange={(e) => setPrice(parseInt(e.target.value) || 0)}
+                value={priceValue}
+                onFocus={(e) => { if (e.target.value === '0') setPriceValue(''); }}
+                onChange={(e) => setPriceValue(e.target.value)}
                 className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[#3d3527] mb-1">Описание</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-              rows={3}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Тип доступа</label>
-              <select
-                value={accessType}
-                onChange={(e) => setAccessType(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-              >
-                <option value="course">Курс</option>
-                <option value="subscription">Подписка</option>
-                <option value="consultation">Консультация</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Срок доступа (дней)</label>
-              <input
-                type="number"
-                value={accessDuration}
-                onChange={(e) => setAccessDuration(parseInt(e.target.value) || 365)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                placeholder="0"
               />
             </div>
           </div>
 
-          <div className="border-t border-[#d4c9b0]/30 pt-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Описание</label>
+            <RichTextEditor
+              content={description}
+              onChange={setDescription}
+              placeholder="Описание продукта..."
+            />
+          </div>
+
+          <div className="border-t border-[#d4c9b0]/30 pt-4">
+            <label className="block text-sm font-medium text-[#3d3527] mb-2">Доступ к модулям</label>
+            {loadingModules ? (
+              <div className="text-sm text-[#3d3527]/60">Загрузка...</div>
+            ) : allModules.length === 0 ? (
+              <div className="text-sm text-[#3d3527]/60">Модули не найдены</div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 bg-[#f5f3ed] rounded-xl">
+                {allModules.map(module => (
+                  <label key={module.id} className="flex items-center gap-2 p-2 hover:bg-white rounded-lg cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedModuleIds.includes(module.id)}
+                      onChange={() => toggleModule(module.id)}
+                      className="w-4 h-4 rounded border-[#d4c9b0]"
+                    />
+                    <span className="text-sm text-[#3d3527]">{module.title}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-[#d4c9b0]/30 pt-4">
+            <label className="block text-sm font-medium text-[#3d3527] mb-2">Срок доступа</label>
+            <div className="flex gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => setAccessDurationType('unlimited')}
+                className={`px-4 py-2 rounded-xl text-sm transition-colors ${accessDurationType === 'unlimited' ? 'bg-[#a67c52] text-white' : 'bg-[#f5f3ed] text-[#3d3527] hover:bg-[#ebe8dc]'}`}
+              >
+                Бессрочно
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccessDurationType('days')}
+                className={`px-4 py-2 rounded-xl text-sm transition-colors ${accessDurationType === 'days' ? 'bg-[#a67c52] text-white' : 'bg-[#f5f3ed] text-[#3d3527] hover:bg-[#ebe8dc]'}`}
+              >
+                Количество дней
+              </button>
+              <button
+                type="button"
+                onClick={() => setAccessDurationType('date')}
+                className={`px-4 py-2 rounded-xl text-sm transition-colors ${accessDurationType === 'date' ? 'bg-[#a67c52] text-white' : 'bg-[#f5f3ed] text-[#3d3527] hover:bg-[#ebe8dc]'}`}
+              >
+                До даты
+              </button>
+            </div>
+            {accessDurationType === 'days' && (
+              <input
+                type="number"
+                value={accessDuration}
+                onChange={(e) => setAccessDuration(parseInt(e.target.value) || 30)}
+                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                placeholder="Количество дней"
+              />
+            )}
+            {accessDurationType === 'date' && (
+              <input
+                type="date"
+                value={accessExpiresAt}
+                onChange={(e) => setAccessExpiresAt(e.target.value)}
+                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              />
+            )}
+          </div>
+
+          <div className="border-t border-[#d4c9b0]/30 pt-4">
             <h3 className="font-semibold text-[#3d3527] mb-3 flex items-center gap-2">
               <Mail className="w-5 h-5" /> Email после оплаты
             </h3>
@@ -253,7 +380,7 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
         <div className="flex justify-end gap-3 mt-6">
           <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
           <button
-            onClick={() => onSave({ name, description, price, accessType, accessDuration, emailSubject, emailTemplate, isActive })}
+            onClick={handleSave}
             className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
           >
             Сохранить

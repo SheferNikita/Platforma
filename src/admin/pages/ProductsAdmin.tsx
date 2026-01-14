@@ -24,6 +24,7 @@ interface Product {
   accessExpiresAt: string | null;
   emailSubject: string;
   emailTemplate: string;
+  offerUrl: string | null;
   isActive: boolean;
   modules: ProductModule[];
   _count: { payments: number; enrollments: number; orders: number };
@@ -199,6 +200,7 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
   const [accessExpiresAt, setAccessExpiresAt] = useState(product?.accessExpiresAt?.split('T')[0] || '');
   const [emailSubject, setEmailSubject] = useState(product?.emailSubject || '');
   const [emailTemplate, setEmailTemplate] = useState(product?.emailTemplate || '');
+  const [offerUrl, setOfferUrl] = useState(product?.offerUrl || '');
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
   const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>(
     product?.modules?.map(m => m.module.id) || []
@@ -230,6 +232,7 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
       accessExpiresAt: accessDurationType === 'date' ? accessExpiresAt : null,
       emailSubject,
       emailTemplate,
+      offerUrl: offerUrl || null,
       isActive,
       moduleIds: selectedModuleIds
     });
@@ -336,6 +339,16 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
                 className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
               />
             )}
+          </div>
+
+          <div className="border-t border-[#d4c9b0]/30 pt-4">
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Ссылка на оферту</label>
+            <input
+              value={offerUrl}
+              onChange={(e) => setOfferUrl(e.target.value)}
+              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              placeholder="https://example.com/offer"
+            />
           </div>
 
           <div className="border-t border-[#d4c9b0]/30 pt-4">

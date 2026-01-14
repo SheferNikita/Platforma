@@ -18,6 +18,7 @@ const productSchema = z.object({
   accessExpiresAt: z.string().optional().nullable(),
   emailSubject: z.string().optional(),
   emailTemplate: z.string().optional(),
+  offerUrl: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   moduleIds: z.array(z.string()).optional()
 });

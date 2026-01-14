@@ -64,7 +64,8 @@ router.get('/product/:productId', async (req: Request, res: Response) => {
         name: true,
         description: true,
         price: true,
-        currency: true
+        currency: true,
+        offerUrl: true
       }
     });
 

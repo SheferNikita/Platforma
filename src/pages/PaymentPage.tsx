@@ -10,6 +10,7 @@ interface Product {
   description: string;
   price: number;
   currency: string;
+  offerUrl?: string | null;
 }
 
 export function PaymentPage() {
@@ -196,7 +197,19 @@ export function PaymentPage() {
         </form>
 
         <p className="text-xs text-center text-[#3d3527]/50 mt-4">
-          Нажимая кнопку, вы соглашаетесь с условиями оферты
+          Нажимая кнопку, вы соглашаетесь с{' '}
+          {product.offerUrl ? (
+            <a 
+              href={product.offerUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-[#a67c52] underline hover:text-[#8b6a47]"
+            >
+              условиями оферты
+            </a>
+          ) : (
+            'условиями оферты'
+          )}
         </p>
       </div>
     </div>

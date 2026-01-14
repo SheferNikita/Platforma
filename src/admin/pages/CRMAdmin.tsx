@@ -145,6 +145,7 @@ export function CRMAdmin() {
                   <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Дата оплаты</th>
                   <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Контакт</th>
                   <th className="text-left p-3 text-sm font-medium text-[#3d3527]">E-mail</th>
+                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Продукт</th>
                   <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Сумма</th>
                   <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Способ оплаты</th>
                   <th className="p-3"></th>
@@ -169,6 +170,7 @@ export function CRMAdmin() {
                       </td>
                       <td className="p-3 text-sm text-[#3d3527]">{order.firstName} {order.lastName}</td>
                       <td className="p-3 text-sm text-[#3d3527]">{order.email}</td>
+                      <td className="p-3 text-sm text-[#3d3527]">{order.product.name}</td>
                       <td className="p-3 text-sm font-medium text-[#3d3527]">{order.amount.toLocaleString()}</td>
                       <td className="p-3 text-sm text-[#3d3527]">ROBOKASSA</td>
                       <td className="p-3">

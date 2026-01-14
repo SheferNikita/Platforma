@@ -51,7 +51,7 @@ export function PaymentPage() {
     setSubmitting(true);
 
     try {
-      const order = await api.post<{ id: string }>('/public/orders', {
+      const order = await api.post<{ id: string }>('/public/orders/create', {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: phone.trim(),

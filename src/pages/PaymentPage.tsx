@@ -28,7 +28,7 @@ export function PaymentPage() {
   useEffect(() => {
     if (!productId) return;
 
-    api.get<Product>(`/orders/product/${productId}`)
+    api.get<Product>(`/public/orders/product/${productId}`)
       .then(setProduct)
       .catch(() => setError('Продукт не найден'))
       .finally(() => setLoading(false));
@@ -50,7 +50,7 @@ export function PaymentPage() {
     setSubmitting(true);
 
     try {
-      const order = await api.post<{ id: string }>('/orders/create', {
+      const order = await api.post<{ id: string }>('/public/orders', {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: phone.trim(),
@@ -58,7 +58,7 @@ export function PaymentPage() {
         productId
       });
 
-      const { paymentUrl } = await api.get<{ paymentUrl: string | null }>(`/orders/${order.id}/payment-url`);
+      const { paymentUrl } = await api.get<{ paymentUrl: string | null }>(`/public/orders/${order.id}/payment-url`);
 
       if (paymentUrl) {
         window.location.href = paymentUrl;

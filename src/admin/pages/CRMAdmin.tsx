@@ -41,7 +41,7 @@ export function CRMAdmin() {
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (search) params.append('search', search);
 
-      const data = await api.get<Order[]>(`/orders/admin/list?${params.toString()}`);
+      const data = await api.get<Order[]>(`/public/orders/admin/list?${params.toString()}`);
       setOrders(data);
     } catch (error) {
       toast.error('Ошибка загрузки');
@@ -52,7 +52,7 @@ export function CRMAdmin() {
 
   async function updateStatus(orderId: string, status: string) {
     try {
-      await api.put(`/orders/admin/${orderId}/status`, { status });
+      await api.put(`/public/orders/admin/${orderId}/status`, { status });
       toast.success('Статус обновлен');
       loadOrders();
       setSelectedOrder(null);

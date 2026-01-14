@@ -135,53 +135,57 @@ export function CRMAdmin() {
             <p>Заявки не найдены</p>
           </div>
         ) : (
-          <table className="w-full">
-            <thead className="bg-[#f5f3ed]">
-              <tr>
-                <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Клиент</th>
-                <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Продукт</th>
-                <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Сумма</th>
-                <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Статус</th>
-                <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Дата</th>
-                <th className="p-4"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((order) => {
-                const StatusIcon = statusConfig[order.status].icon;
-                return (
-                  <tr key={order.id} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
-                    <td className="p-4">
-                      <div>
-                        <p className="font-medium text-[#3d3527]">{order.firstName} {order.lastName}</p>
-                        <p className="text-sm text-[#3d3527]/60">{order.email}</p>
-                      </div>
-                    </td>
-                    <td className="p-4 text-[#3d3527]">{order.product.name}</td>
-                    <td className="p-4 font-medium text-[#3d3527]">{order.amount.toLocaleString()} ₽</td>
-                    <td className="p-4">
-                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${statusConfig[order.status].color}`}>
-                        <StatusIcon className="w-3 h-3" />
-                        {statusConfig[order.status].label}
-                      </span>
-                    </td>
-                    <td className="p-4 text-sm text-[#3d3527]/60">
-                      {format(new Date(order.createdAt), 'd MMM yyyy, HH:mm', { locale: ru })}
-                    </td>
-                    <td className="p-4">
-                      <button
-                        onClick={() => setSelectedOrder(order)}
-                        className="p-2 hover:bg-[#f5f3ed] rounded-lg"
-                        title="Подробнее"
-                      >
-                        <Eye className="w-4 h-4 text-[#3d3527]" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[#f5f3ed]">
+                <tr>
+                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">№</th>
+                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Статус</th>
+                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Дата заказа</th>
+                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Дата оплаты</th>
+                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Контакт</th>
+                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">E-mail</th>
+                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Сумма</th>
+                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Способ оплаты</th>
+                  <th className="p-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((order, index) => {
+                  const StatusIcon = statusConfig[order.status].icon;
+                  return (
+                    <tr key={order.id} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
+                      <td className="p-3 text-sm text-[#3d3527]">{orders.length - index}</td>
+                      <td className="p-3">
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${statusConfig[order.status].color}`}>
+                          {statusConfig[order.status].label}
+                        </span>
+                      </td>
+                      <td className="p-3 text-sm text-[#3d3527]">
+                        {format(new Date(order.createdAt), 'yyyy-MM-dd HH:mm:ss', { locale: ru })}
+                      </td>
+                      <td className="p-3 text-sm text-[#3d3527]">
+                        {order.paidAt ? format(new Date(order.paidAt), 'yyyy-MM-dd HH:mm:ss', { locale: ru }) : '—'}
+                      </td>
+                      <td className="p-3 text-sm text-[#3d3527]">{order.firstName} {order.lastName}</td>
+                      <td className="p-3 text-sm text-[#3d3527]">{order.email}</td>
+                      <td className="p-3 text-sm font-medium text-[#3d3527]">{order.amount.toLocaleString()}</td>
+                      <td className="p-3 text-sm text-[#3d3527]">ROBOKASSA</td>
+                      <td className="p-3">
+                        <button
+                          onClick={() => setSelectedOrder(order)}
+                          className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                          title="Подробнее"
+                        >
+                          <Eye className="w-4 h-4 text-[#3d3527]" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

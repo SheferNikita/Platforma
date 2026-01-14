@@ -139,12 +139,26 @@ router.use('/admin', requireRole('SUPER_ADMIN', 'FINANCE'));
 
 router.get('/admin/list', async (req: AuthRequest, res: Response) => {
   try {
-    const { status, search } = req.query;
+    const { 
+      status, 
+      search,
+      orderId,
+      transactionId,
+      productId,
+      amountMin,
+      amountMax,
+      orderDateFrom,
+      orderDateTo,
+      paidDateFrom,
+      paidDateTo
+    } = req.query;
 
     const where: any = {};
+    
     if (status && status !== 'all') {
       where.status = status;
     }
+    
     if (search) {
       where.OR = [
         { email: { contains: search as string, mode: 'insensitive' } },
@@ -153,11 +167,49 @@ router.get('/admin/list', async (req: AuthRequest, res: Response) => {
         { phone: { contains: search as string } }
       ];
     }
+    
+    if (orderId) {
+      where.id = { contains: orderId as string, mode: 'insensitive' };
+    }
+    
+    if (transactionId) {
+      where.robokassaInvId = parseInt(transactionId as string) || undefined;
+    }
+    
+    if (productId) {
+      where.productId = productId as string;
+    }
+    
+    if (amountMin || amountMax) {
+      where.amount = {};
+      if (amountMin) where.amount.gte = parseFloat(amountMin as string);
+      if (amountMax) where.amount.lte = parseFloat(amountMax as string);
+    }
+    
+    if (orderDateFrom || orderDateTo) {
+      where.createdAt = {};
+      if (orderDateFrom) where.createdAt.gte = new Date(orderDateFrom as string);
+      if (orderDateTo) {
+        const endDate = new Date(orderDateTo as string);
+        endDate.setHours(23, 59, 59, 999);
+        where.createdAt.lte = endDate;
+      }
+    }
+    
+    if (paidDateFrom || paidDateTo) {
+      where.paidAt = {};
+      if (paidDateFrom) where.paidAt.gte = new Date(paidDateFrom as string);
+      if (paidDateTo) {
+        const endDate = new Date(paidDateTo as string);
+        endDate.setHours(23, 59, 59, 999);
+        where.paidAt.lte = endDate;
+      }
+    }
 
     const orders = await prisma.order.findMany({
       where,
       include: {
-        product: { select: { name: true } }
+        product: { select: { id: true, name: true } }
       },
       orderBy: { createdAt: 'desc' }
     });

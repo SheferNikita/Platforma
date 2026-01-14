@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { ClipboardList, Search, Eye, CheckCircle, XCircle, Clock, User, Phone, Mail, ShoppingBag } from 'lucide-react';
+import { ClipboardList, Search, Eye, CheckCircle, XCircle, Clock, User, Phone, Mail, ShoppingBag, Filter, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -15,8 +15,40 @@ interface Order {
   status: 'NEW' | 'PAID' | 'CANCELLED';
   paidAt: string | null;
   createdAt: string;
-  product: { name: string };
+  robokassaInvId: number | null;
+  product: { id: string; name: string };
 }
+
+interface Product {
+  id: string;
+  name: string;
+}
+
+interface Filters {
+  orderId: string;
+  transactionId: string;
+  status: string;
+  productId: string;
+  amountMin: string;
+  amountMax: string;
+  orderDateFrom: string;
+  orderDateTo: string;
+  paidDateFrom: string;
+  paidDateTo: string;
+}
+
+const initialFilters: Filters = {
+  orderId: '',
+  transactionId: '',
+  status: 'all',
+  productId: '',
+  amountMin: '',
+  amountMax: '',
+  orderDateFrom: '',
+  orderDateTo: '',
+  paidDateFrom: '',
+  paidDateTo: ''
+};
 
 const statusConfig = {
   NEW: { label: 'Новая', color: 'bg-blue-100 text-blue-700', icon: Clock },
@@ -26,20 +58,44 @@ const statusConfig = {
 
 export function CRMAdmin() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [filters, setFilters] = useState<Filters>(initialFilters);
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
+    loadProducts();
+  }, []);
+
+  useEffect(() => {
     loadOrders();
-  }, [statusFilter, search]);
+  }, [search, filters]);
+
+  async function loadProducts() {
+    try {
+      const data = await api.get<Product[]>('/products');
+      setProducts(data);
+    } catch (error) {
+      console.error('Error loading products');
+    }
+  }
 
   async function loadOrders() {
     try {
       const params = new URLSearchParams();
-      if (statusFilter !== 'all') params.append('status', statusFilter);
       if (search) params.append('search', search);
+      if (filters.status !== 'all') params.append('status', filters.status);
+      if (filters.orderId) params.append('orderId', filters.orderId);
+      if (filters.transactionId) params.append('transactionId', filters.transactionId);
+      if (filters.productId) params.append('productId', filters.productId);
+      if (filters.amountMin) params.append('amountMin', filters.amountMin);
+      if (filters.amountMax) params.append('amountMax', filters.amountMax);
+      if (filters.orderDateFrom) params.append('orderDateFrom', filters.orderDateFrom);
+      if (filters.orderDateTo) params.append('orderDateTo', filters.orderDateTo);
+      if (filters.paidDateFrom) params.append('paidDateFrom', filters.paidDateFrom);
+      if (filters.paidDateTo) params.append('paidDateTo', filters.paidDateTo);
 
       const data = await api.get<Order[]>(`/public/orders/admin/list?${params.toString()}`);
       setOrders(data);
@@ -49,6 +105,16 @@ export function CRMAdmin() {
       setLoading(false);
     }
   }
+
+  function resetFilters() {
+    setFilters(initialFilters);
+    setSearch('');
+  }
+
+  const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
+    if (key === 'status') return value !== 'all';
+    return value !== '';
+  });
 
   async function updateStatus(orderId: string, status: string) {
     try {
@@ -101,27 +167,150 @@ export function CRMAdmin() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#3d3527]/40" />
-          <input
-            type="text"
-            placeholder="Поиск по имени, email, телефону..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-          />
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#3d3527]/40" />
+            <input
+              type="text"
+              placeholder="Поиск по имени, email, телефону..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-2 px-4 py-2 border rounded-xl transition-colors ${
+              hasActiveFilters || showFilters 
+                ? 'bg-[#a67c52] text-white border-[#a67c52]' 
+                : 'border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]'
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+            Фильтры
+            {hasActiveFilters && <span className="bg-white text-[#a67c52] text-xs px-1.5 rounded-full">{Object.entries(filters).filter(([k, v]) => k === 'status' ? v !== 'all' : v !== '').length}</span>}
+            {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+          {hasActiveFilters && (
+            <button
+              onClick={resetFilters}
+              className="flex items-center gap-1 px-3 py-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+            >
+              <X className="w-4 h-4" />
+              Сбросить
+            </button>
+          )}
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-        >
-          <option value="all">Все статусы</option>
-          <option value="NEW">Новые</option>
-          <option value="PAID">Оплачено</option>
-          <option value="CANCELLED">Отменено</option>
-        </select>
+
+        {showFilters && (
+          <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Номер заказа</label>
+                <input
+                  type="text"
+                  value={filters.orderId}
+                  onChange={(e) => setFilters({ ...filters, orderId: e.target.value })}
+                  placeholder="ID заказа..."
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">ID транзакции</label>
+                <input
+                  type="text"
+                  value={filters.transactionId}
+                  onChange={(e) => setFilters({ ...filters, transactionId: e.target.value })}
+                  placeholder="InvId..."
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Статус</label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                >
+                  <option value="all">Все статусы</option>
+                  <option value="NEW">Новая</option>
+                  <option value="PAID">Оплачено</option>
+                  <option value="CANCELLED">Отменена</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Товар</label>
+                <select
+                  value={filters.productId}
+                  onChange={(e) => setFilters({ ...filters, productId: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                >
+                  <option value="">Все товары</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Сумма от</label>
+                <input
+                  type="number"
+                  value={filters.amountMin}
+                  onChange={(e) => setFilters({ ...filters, amountMin: e.target.value })}
+                  placeholder="От"
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Сумма до</label>
+                <input
+                  type="number"
+                  value={filters.amountMax}
+                  onChange={(e) => setFilters({ ...filters, amountMax: e.target.value })}
+                  placeholder="До"
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Дата заказа от</label>
+                <input
+                  type="date"
+                  value={filters.orderDateFrom}
+                  onChange={(e) => setFilters({ ...filters, orderDateFrom: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Дата заказа до</label>
+                <input
+                  type="date"
+                  value={filters.orderDateTo}
+                  onChange={(e) => setFilters({ ...filters, orderDateTo: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Дата оплаты от</label>
+                <input
+                  type="date"
+                  value={filters.paidDateFrom}
+                  onChange={(e) => setFilters({ ...filters, paidDateFrom: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Дата оплаты до</label>
+                <input
+                  type="date"
+                  value={filters.paidDateTo}
+                  onChange={(e) => setFilters({ ...filters, paidDateTo: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 overflow-hidden">

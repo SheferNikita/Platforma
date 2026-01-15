@@ -75,7 +75,7 @@ export function CRMAdmin() {
 
   async function loadProducts() {
     try {
-      const data = await api.get<Product[]>('/products/admin/list');
+      const data = await api.get<Product[]>('/products');
       setProducts(data);
     } catch (error) {
       console.error('Error loading products');

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User } from 'lucide-react';
+import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -71,6 +71,27 @@ export function ModerationAdmin() {
       loadItems();
     } catch (error) {
       toast.error('Ошибка отправки');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function markAsViewed() {
+    if (!selectedItem) return;
+    
+    setSubmitting(true);
+    try {
+      const endpoint = selectedItem.type === 'diary' 
+        ? `/public/moderation/diary/${selectedItem.id}/view`
+        : `/public/moderation/note/${selectedItem.id}/view`;
+      
+      await api.post(endpoint, {});
+      toast.success('Отмечено как просмотренное');
+      setSelectedItem(null);
+      setReplyText('');
+      loadItems();
+    } catch (error) {
+      toast.error('Ошибка');
     } finally {
       setSubmitting(false);
     }
@@ -278,6 +299,16 @@ export function ModerationAdmin() {
               >
                 Закрыть
               </button>
+              {!selectedItem.reply && (
+                <button
+                  onClick={markAsViewed}
+                  disabled={submitting}
+                  className="flex items-center gap-2 px-4 py-2 border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed] rounded-xl disabled:opacity-50"
+                >
+                  <Eye className="w-4 h-4" />
+                  {submitting ? 'Отметка...' : 'Отметить просмотренным'}
+                </button>
+              )}
               <button
                 onClick={submitReply}
                 disabled={!replyText.trim() || submitting}

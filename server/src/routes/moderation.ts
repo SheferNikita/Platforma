@@ -224,4 +224,46 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Mark diary as viewed (without reply)
+router.post('/diary/:id/view', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const diary = await prisma.diary.update({
+      where: { id },
+      data: {
+        reply: '[Просмотрено]',
+        repliedAt: new Date(),
+        repliedById: req.user!.id
+      }
+    });
+
+    res.json(diary);
+  } catch (error) {
+    console.error('Mark diary as viewed error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Mark note as viewed (without reply)
+router.post('/note/:id/view', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const note = await prisma.studentNote.update({
+      where: { id },
+      data: {
+        reply: '[Просмотрено]',
+        repliedAt: new Date(),
+        repliedById: req.user!.id
+      }
+    });
+
+    res.json(note);
+  } catch (error) {
+    console.error('Mark note as viewed error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;

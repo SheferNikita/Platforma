@@ -318,6 +318,157 @@ router.get('/my-mini-group', async (req: Request, res: Response) => {
   }
 });
 
+// Get student's diary for a lesson
+router.get('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const lessonId = req.params.lessonId as string;
+
+    const diary = await prisma.diary.findFirst({
+      where: {
+        lessonId,
+        studentId: student.studentId
+      },
+      include: {
+        repliedBy: { select: { name: true } }
+      }
+    });
+
+    res.json(diary);
+  } catch (error) {
+    console.error('Get diary error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Save student's diary for a lesson
+router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const lessonId = req.params.lessonId as string;
+    const { content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: 'Текст дневника обязателен' });
+    }
+
+    // Verify lesson exists
+    const lesson = await prisma.lesson.findUnique({ where: { id: lessonId } });
+    if (!lesson) {
+      return res.status(404).json({ error: 'Урок не найден' });
+    }
+
+    // Upsert diary (create or update)
+    const existingDiary = await prisma.diary.findFirst({
+      where: { lessonId, studentId: student.studentId }
+    });
+
+    let diary;
+    if (existingDiary) {
+      diary = await prisma.diary.update({
+        where: { id: existingDiary.id },
+        data: { content: content.trim() }
+      });
+    } else {
+      diary = await prisma.diary.create({
+        data: {
+          content: content.trim(),
+          studentId: student.studentId,
+          lessonId
+        }
+      });
+    }
+
+    res.json(diary);
+  } catch (error) {
+    console.error('Save diary error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Get student's personal notes (конспект) for a lesson
+router.get('/lessons/:lessonId/personal-notes', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const lessonId = req.params.lessonId as string;
+
+    const note = await prisma.studentNote.findFirst({
+      where: {
+        lessonId,
+        studentId: student.studentId,
+        noteType: 'personal'
+      }
+    });
+
+    res.json(note);
+  } catch (error) {
+    console.error('Get personal notes error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Save student's personal notes (конспект) for a lesson
+router.post('/lessons/:lessonId/personal-notes', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const lessonId = req.params.lessonId as string;
+    const { content } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: 'Текст конспекта обязателен' });
+    }
+
+    // Verify lesson exists
+    const lesson = await prisma.lesson.findUnique({ where: { id: lessonId } });
+    if (!lesson) {
+      return res.status(404).json({ error: 'Урок не найден' });
+    }
+
+    // Upsert note (create or update)
+    const existingNote = await prisma.studentNote.findFirst({
+      where: { lessonId, studentId: student.studentId, noteType: 'personal' }
+    });
+
+    let note;
+    if (existingNote) {
+      note = await prisma.studentNote.update({
+        where: { id: existingNote.id },
+        data: { content: content.trim() }
+      });
+    } else {
+      note = await prisma.studentNote.create({
+        data: {
+          content: content.trim(),
+          noteType: 'personal',
+          studentId: student.studentId,
+          lessonId
+        }
+      });
+    }
+
+    res.json(note);
+  } catch (error) {
+    console.error('Save personal notes error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // Get student's notes/questions for a lesson with replies
 router.get('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
   try {
@@ -326,12 +477,13 @@ router.get('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Требуется авторизация' });
     }
 
-    const { lessonId } = req.params;
+    const lessonId = req.params.lessonId as string;
 
     const notes = await prisma.studentNote.findMany({
       where: {
-        lessonId: lessonId,
-        studentId: student.studentId
+        lessonId,
+        studentId: student.studentId,
+        noteType: { not: 'personal' }
       },
       include: {
         repliedBy: {
@@ -356,7 +508,7 @@ router.post('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Требуется авторизация' });
     }
 
-    const { lessonId } = req.params;
+    const lessonId = req.params.lessonId as string;
     const { content, noteType } = req.body;
 
     if (!content || !content.trim()) {
@@ -377,7 +529,7 @@ router.post('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
         content: content.trim(),
         noteType: noteType || 'question',
         studentId: student.studentId,
-        lessonId: lessonId
+        lessonId
       }
     });
 

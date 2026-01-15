@@ -164,7 +164,26 @@ export function LessonDetailPage() {
           setChatHistory(messages);
         } catch (notesErr) {
           console.error('Error fetching notes:', notesErr);
-          // Don't fail the whole page if notes fail to load
+        }
+
+        // Fetch diary
+        try {
+          const diaryData = await api.get<{ content: string } | null>(`/public/lessons/${lessonId}/diary`);
+          if (diaryData?.content) {
+            setDiary(diaryData.content);
+          }
+        } catch (diaryErr) {
+          console.error('Error fetching diary:', diaryErr);
+        }
+
+        // Fetch personal notes (конспект)
+        try {
+          const notesData = await api.get<{ content: string } | null>(`/public/lessons/${lessonId}/personal-notes`);
+          if (notesData?.content) {
+            setNotes(notesData.content);
+          }
+        } catch (notesErr) {
+          console.error('Error fetching personal notes:', notesErr);
         }
       } catch (err) {
         console.error('Error fetching lesson:', err);
@@ -206,21 +225,35 @@ export function LessonDetailPage() {
     toast.success('Урок отмечен как пройденный!');
   };
 
-  const handleSaveDiary = () => {
-    if (diary.trim()) {
-      // Здесь должна быть логика для сохранения дневника
-      toast.success('Дневник сохранен!');
-    } else {
+  const handleSaveDiary = async () => {
+    if (!diary.trim()) {
       toast.error('Пожалуйста, напишите что-нибудь в дневнике');
+      return;
+    }
+    if (!lessonId) return;
+
+    try {
+      await api.post(`/public/lessons/${lessonId}/diary`, { content: diary.trim() });
+      toast.success('Дневник сохранен!');
+    } catch (error: any) {
+      console.error('Save diary error:', error);
+      toast.error(error.response?.data?.error || 'Ошибка при сохранении дневника');
     }
   };
 
-  const handleSaveNotes = () => {
-    if (notes.trim()) {
-      // Здесь должна быть логика для сохранения конспекта
-      toast.success('Конспект сохранен!');
-    } else {
+  const handleSaveNotes = async () => {
+    if (!notes.trim()) {
       toast.error('Пожалуйста, напишите что-нибудь в конспекте');
+      return;
+    }
+    if (!lessonId) return;
+
+    try {
+      await api.post(`/public/lessons/${lessonId}/personal-notes`, { content: notes.trim() });
+      toast.success('Конспект сохранен!');
+    } catch (error: any) {
+      console.error('Save notes error:', error);
+      toast.error(error.response?.data?.error || 'Ошибка при сохранении конспекта');
     }
   };
 

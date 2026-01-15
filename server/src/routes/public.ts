@@ -318,4 +318,44 @@ router.get('/my-mini-group', async (req: Request, res: Response) => {
   }
 });
 
+// Submit student question or report for a lesson
+router.post('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const { lessonId } = req.params;
+    const { content, noteType } = req.body;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ error: 'Текст сообщения обязателен' });
+    }
+
+    // Verify lesson exists
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId }
+    });
+
+    if (!lesson) {
+      return res.status(404).json({ error: 'Урок не найден' });
+    }
+
+    const note = await prisma.studentNote.create({
+      data: {
+        content: content.trim(),
+        noteType: noteType || 'question',
+        studentId: student.studentId,
+        lessonId: lessonId
+      }
+    });
+
+    res.status(201).json(note);
+  } catch (error) {
+    console.error('Submit student note error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;

@@ -181,9 +181,24 @@ export function LessonDetailPage() {
     }
   };
 
-  const handleSubmitFeedback = () => {
-    if (feedback.trim() || attachedFiles.length > 0 || audioBlob) {
-      // Add message to chat history
+  const handleSubmitFeedback = async () => {
+    if (!feedback.trim()) {
+      toast.error('Пожалуйста, напишите вопрос');
+      return;
+    }
+
+    if (!lessonId) {
+      toast.error('Урок не найден');
+      return;
+    }
+
+    try {
+      await api.post(`/public/lessons/${lessonId}/notes`, {
+        content: feedback.trim(),
+        noteType: 'question'
+      });
+
+      // Add message to chat history for UI
       const newMessage: ChatMessage = {
         id: chatHistory.length + 1,
         text: feedback,
@@ -209,8 +224,9 @@ export function LessonDetailPage() {
       setTimeout(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 100);
-    } else {
-      toast.error('Пожалуйста, напишите вопрос или прикрепите файл');
+    } catch (error: any) {
+      console.error('Submit question error:', error);
+      toast.error(error.response?.data?.error || 'Ошибка при отправке вопроса');
     }
   };
 

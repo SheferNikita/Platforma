@@ -318,7 +318,7 @@ router.get('/my-mini-group', async (req: Request, res: Response) => {
   }
 });
 
-// Get student's diary for a lesson
+// Get student's diary entries for a lesson (chat format)
 router.get('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
   try {
     const student = await getStudentFromToken(req);
@@ -328,24 +328,25 @@ router.get('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
 
     const lessonId = req.params.lessonId as string;
 
-    const diary = await prisma.diary.findFirst({
+    const diaries = await prisma.diary.findMany({
       where: {
         lessonId,
         studentId: student.studentId
       },
       include: {
         repliedBy: { select: { name: true } }
-      }
+      },
+      orderBy: { createdAt: 'asc' }
     });
 
-    res.json(diary);
+    res.json(diaries);
   } catch (error) {
     console.error('Get diary error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 
-// Save student's diary for a lesson
+// Save new student diary entry for a lesson
 router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
   try {
     const student = await getStudentFromToken(req);
@@ -366,35 +367,23 @@ router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Урок не найден' });
     }
 
-    // Upsert diary (create or update)
-    const existingDiary = await prisma.diary.findFirst({
-      where: { lessonId, studentId: student.studentId }
+    // Create new diary entry (chat style)
+    const diary = await prisma.diary.create({
+      data: {
+        content: content.trim(),
+        studentId: student.studentId,
+        lessonId
+      }
     });
 
-    let diary;
-    if (existingDiary) {
-      diary = await prisma.diary.update({
-        where: { id: existingDiary.id },
-        data: { content: content.trim() }
-      });
-    } else {
-      diary = await prisma.diary.create({
-        data: {
-          content: content.trim(),
-          studentId: student.studentId,
-          lessonId
-        }
-      });
-    }
-
-    res.json(diary);
+    res.status(201).json(diary);
   } catch (error) {
     console.error('Save diary error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 
-// Get student's personal notes (конспект) for a lesson
+// Get student's personal notes (конспект) entries for a lesson (chat format)
 router.get('/lessons/:lessonId/personal-notes', async (req: Request, res: Response) => {
   try {
     const student = await getStudentFromToken(req);
@@ -404,22 +393,26 @@ router.get('/lessons/:lessonId/personal-notes', async (req: Request, res: Respon
 
     const lessonId = req.params.lessonId as string;
 
-    const note = await prisma.studentNote.findFirst({
+    const notes = await prisma.studentNote.findMany({
       where: {
         lessonId,
         studentId: student.studentId,
         noteType: 'personal'
-      }
+      },
+      include: {
+        repliedBy: { select: { name: true } }
+      },
+      orderBy: { createdAt: 'asc' }
     });
 
-    res.json(note);
+    res.json(notes);
   } catch (error) {
     console.error('Get personal notes error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 
-// Save student's personal notes (конспект) for a lesson
+// Save new student personal note (конспект) for a lesson
 router.post('/lessons/:lessonId/personal-notes', async (req: Request, res: Response) => {
   try {
     const student = await getStudentFromToken(req);
@@ -440,29 +433,17 @@ router.post('/lessons/:lessonId/personal-notes', async (req: Request, res: Respo
       return res.status(404).json({ error: 'Урок не найден' });
     }
 
-    // Upsert note (create or update)
-    const existingNote = await prisma.studentNote.findFirst({
-      where: { lessonId, studentId: student.studentId, noteType: 'personal' }
+    // Create new note entry (chat style)
+    const note = await prisma.studentNote.create({
+      data: {
+        content: content.trim(),
+        noteType: 'personal',
+        studentId: student.studentId,
+        lessonId
+      }
     });
 
-    let note;
-    if (existingNote) {
-      note = await prisma.studentNote.update({
-        where: { id: existingNote.id },
-        data: { content: content.trim() }
-      });
-    } else {
-      note = await prisma.studentNote.create({
-        data: {
-          content: content.trim(),
-          noteType: 'personal',
-          studentId: student.studentId,
-          lessonId
-        }
-      });
-    }
-
-    res.json(note);
+    res.status(201).json(note);
   } catch (error) {
     console.error('Save personal notes error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

@@ -81,9 +81,13 @@ export function LessonDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // States for diary and notes
+  // States for diary and notes (input fields)
   const [diary, setDiary] = useState('');
   const [notes, setNotes] = useState('');
+  
+  // Chat history for diary and notes
+  const [diaryHistory, setDiaryHistory] = useState<ChatMessage[]>([]);
+  const [notesHistory, setNotesHistory] = useState<ChatMessage[]>([]);
   
   // States for attachments
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
@@ -169,22 +173,54 @@ export function LessonDetailPage() {
           console.error('Error fetching notes:', notesErr);
         }
 
-        // Fetch diary
+        // Fetch diary history
         try {
-          const diaryData = await api.get<{ content: string } | null>(`/public/lessons/${lessonId}/diary`);
-          if (diaryData?.content) {
-            setDiary(diaryData.content);
-          }
+          const diaryEntries = await api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/diary`);
+          const diaryMessages: ChatMessage[] = [];
+          diaryEntries.forEach(entry => {
+            diaryMessages.push({
+              id: entry.id,
+              text: entry.content,
+              author: 'student',
+              timestamp: new Date(entry.createdAt)
+            });
+            if (entry.reply && entry.repliedAt) {
+              diaryMessages.push({
+                id: `${entry.id}-reply`,
+                text: entry.reply,
+                author: 'curator',
+                timestamp: new Date(entry.repliedAt),
+                curatorName: entry.repliedBy?.name
+              });
+            }
+          });
+          setDiaryHistory(diaryMessages);
         } catch (diaryErr) {
           console.error('Error fetching diary:', diaryErr);
         }
 
-        // Fetch personal notes (конспект)
+        // Fetch personal notes history (конспект)
         try {
-          const notesData = await api.get<{ content: string } | null>(`/public/lessons/${lessonId}/personal-notes`);
-          if (notesData?.content) {
-            setNotes(notesData.content);
-          }
+          const notesEntries = await api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/personal-notes`);
+          const notesMessages: ChatMessage[] = [];
+          notesEntries.forEach(entry => {
+            notesMessages.push({
+              id: entry.id,
+              text: entry.content,
+              author: 'student',
+              timestamp: new Date(entry.createdAt)
+            });
+            if (entry.reply && entry.repliedAt) {
+              notesMessages.push({
+                id: `${entry.id}-reply`,
+                text: entry.reply,
+                author: 'curator',
+                timestamp: new Date(entry.repliedAt),
+                curatorName: entry.repliedBy?.name
+              });
+            }
+          });
+          setNotesHistory(notesMessages);
         } catch (notesErr) {
           console.error('Error fetching personal notes:', notesErr);
         }
@@ -236,8 +272,17 @@ export function LessonDetailPage() {
     if (!lessonId) return;
 
     try {
-      await api.post(`/public/lessons/${lessonId}/diary`, { content: diary.trim() });
-      toast.success('Дневник сохранен!');
+      const newEntry = await api.post<{ id: string }>(`/public/lessons/${lessonId}/diary`, { content: diary.trim() });
+      
+      const newMessage: ChatMessage = {
+        id: newEntry.id,
+        text: diary.trim(),
+        author: 'student',
+        timestamp: new Date()
+      };
+      setDiaryHistory(prev => [...prev, newMessage]);
+      setDiary('');
+      toast.success('Запись в дневнике сохранена!');
     } catch (error: any) {
       console.error('Save diary error:', error);
       toast.error(error.response?.data?.error || 'Ошибка при сохранении дневника');
@@ -252,7 +297,16 @@ export function LessonDetailPage() {
     if (!lessonId) return;
 
     try {
-      await api.post(`/public/lessons/${lessonId}/personal-notes`, { content: notes.trim() });
+      const newEntry = await api.post<{ id: string }>(`/public/lessons/${lessonId}/personal-notes`, { content: notes.trim() });
+      
+      const newMessage: ChatMessage = {
+        id: newEntry.id,
+        text: notes.trim(),
+        author: 'student',
+        timestamp: new Date()
+      };
+      setNotesHistory(prev => [...prev, newMessage]);
+      setNotes('');
       toast.success('Конспект сохранен!');
     } catch (error: any) {
       console.error('Save notes error:', error);
@@ -576,7 +630,7 @@ export function LessonDetailPage() {
           </button>
         </div>
 
-        {/* Форма дневника */}
+        {/* Форма дневника с чатом */}
         <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
           <div className="flex items-start gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
@@ -590,12 +644,43 @@ export function LessonDetailPage() {
             </div>
           </div>
 
+          {/* Diary chat history */}
+          {diaryHistory.length > 0 && (
+            <div className="mb-4 bg-gradient-to-br from-[var(--sky-soft)]/20 to-white/40 rounded-xl p-2 md:p-3 space-y-1.5 md:space-y-2 border border-[var(--sky-light)]/30">
+              {diaryHistory.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.author === 'student' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+                >
+                  <div
+                    className={`max-w-[85%] md:max-w-[70%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 ${
+                      message.author === 'student'
+                        ? 'bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-br-md'
+                        : 'bg-white/90 border border-[var(--sky-light)]/40 rounded-bl-md'
+                    } shadow-sm`}
+                  >
+                    <p className={`text-xs md:text-sm leading-snug ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
+                      {message.text}
+                    </p>
+                    <p
+                      className={`text-[8px] md:text-[9px] mt-0.5 md:mt-1 ${
+                        message.author === 'student' ? 'text-white/60 text-right' : 'text-gray-400'
+                      }`}
+                    >
+                      {message.curatorName && `${message.curatorName} • `}{formatMessageTime(message.timestamp)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="relative">
             <textarea
               value={diary}
               onChange={(e) => setDiary(e.target.value)}
               placeholder="Опишите, что вы узнали сегодня, какие мысли вызвал урок, что вы чувствуете..."
-              className="w-full px-4 py-3 border-2 border-[var(--sky-light)]/40 rounded-xl focus:outline-none focus:border-[var(--button-lavender-dark)]/50 focus:bg-white transition-all resize-none min-h-[150px] text-sm leading-relaxed backdrop-blur-sm bg-white/80 placeholder:text-xs md:placeholder:text-sm"
+              className="w-full px-4 py-3 border-2 border-[var(--sky-light)]/40 rounded-xl focus:outline-none focus:border-[var(--button-lavender-dark)]/50 focus:bg-white transition-all resize-none min-h-[100px] text-sm leading-relaxed backdrop-blur-sm bg-white/80 placeholder:text-xs md:placeholder:text-sm"
             />
           </div>
 
@@ -603,12 +688,12 @@ export function LessonDetailPage() {
             onClick={handleSaveDiary}
             className="mt-4 inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_8px_20px_rgba(139,149,188,0.45)] transition-all duration-300 text-sm font-medium transform hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden group"
           >
-            <span className="relative z-10">Сохранить дневник</span>
+            <span className="relative z-10">Отправить запись</span>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
           </button>
         </div>
 
-        {/* Форма конспекта */}
+        {/* Форма конспекта с чатом */}
         <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
           <div className="flex items-start gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
@@ -622,12 +707,43 @@ export function LessonDetailPage() {
             </div>
           </div>
 
+          {/* Notes chat history */}
+          {notesHistory.length > 0 && (
+            <div className="mb-4 bg-gradient-to-br from-[var(--sky-soft)]/20 to-white/40 rounded-xl p-2 md:p-3 space-y-1.5 md:space-y-2 border border-[var(--sky-light)]/30">
+              {notesHistory.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.author === 'student' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+                >
+                  <div
+                    className={`max-w-[85%] md:max-w-[70%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 ${
+                      message.author === 'student'
+                        ? 'bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-br-md'
+                        : 'bg-white/90 border border-[var(--sky-light)]/40 rounded-bl-md'
+                    } shadow-sm`}
+                  >
+                    <p className={`text-xs md:text-sm leading-snug ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
+                      {message.text}
+                    </p>
+                    <p
+                      className={`text-[8px] md:text-[9px] mt-0.5 md:mt-1 ${
+                        message.author === 'student' ? 'text-white/60 text-right' : 'text-gray-400'
+                      }`}
+                    >
+                      {message.curatorName && `${message.curatorName} • `}{formatMessageTime(message.timestamp)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="relative">
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Основные тезисы урока, важные определения, техники и упражнения..."
-              className="w-full px-4 py-3 border-2 border-[var(--sky-light)]/40 rounded-xl focus:outline-none focus:border-[var(--button-lavender-dark)]/50 focus:bg-white transition-all resize-none min-h-[150px] text-sm leading-relaxed backdrop-blur-sm bg-white/80 placeholder:text-xs md:placeholder:text-sm"
+              className="w-full px-4 py-3 border-2 border-[var(--sky-light)]/40 rounded-xl focus:outline-none focus:border-[var(--button-lavender-dark)]/50 focus:bg-white transition-all resize-none min-h-[100px] text-sm leading-relaxed backdrop-blur-sm bg-white/80 placeholder:text-xs md:placeholder:text-sm"
             />
           </div>
 
@@ -635,7 +751,7 @@ export function LessonDetailPage() {
             onClick={handleSaveNotes}
             className="mt-4 inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_8px_20px_rgba(139,149,188,0.45)] transition-all duration-300 text-sm font-medium transform hover:scale-[1.01] active:scale-[0.99] relative overflow-hidden group"
           >
-            <span className="relative z-10">Сохранить конспект</span>
+            <span className="relative z-10">Отправить запись</span>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
           </button>
         </div>

@@ -115,7 +115,7 @@ export function MiniGroupsAdmin() {
     setShowSettingsModal(true);
   }
 
-  async function saveSettings(data: { chatLink: string }) {
+  async function saveSettings(data: Partial<MiniGroup>) {
     if (!settingsGroup) return;
     try {
       await api.put(`/content/mini-groups/${settingsGroup.id}`, data);
@@ -147,23 +147,19 @@ export function MiniGroupsAdmin() {
           groups.map((group) => (
             <div key={group.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-5">
               <div className="flex items-start justify-between mb-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center">
-                  <Users2 className="w-6 h-6 text-white" />
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center">
+                    <Users2 className="w-6 h-6 text-white" />
+                  </div>
+                  {group.isPublished ? (
+                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Активна</span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">Скрыта</span>
+                  )}
                 </div>
-                <div className="flex gap-1">
-                  <button onClick={() => togglePublish(group.id, group.isPublished)} className="p-2 hover:bg-[#f5f3ed] rounded-lg" title={group.isPublished ? 'Скрыть' : 'Опубликовать'}>
-                    {group.isPublished ? <Eye className="w-4 h-4 text-green-600" /> : <EyeOff className="w-4 h-4 text-gray-400" />}
-                  </button>
-                  <button onClick={() => openSettings(group)} className="p-2 hover:bg-[#f5f3ed] rounded-lg" title="Настройки">
-                    <Settings className="w-4 h-4 text-[#3d3527]" />
-                  </button>
-                  <button onClick={() => { setEditingGroup(group); setShowModal(true); }} className="p-2 hover:bg-[#f5f3ed] rounded-lg" title="Редактировать">
-                    <Edit className="w-4 h-4 text-[#3d3527]" />
-                  </button>
-                  <button onClick={() => deleteGroup(group.id)} className="p-2 hover:bg-red-50 rounded-lg" title="Удалить">
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </button>
-                </div>
+                <button onClick={() => openSettings(group)} className="p-2 hover:bg-[#f5f3ed] rounded-lg" title="Настройки">
+                  <Settings className="w-5 h-5 text-[#3d3527]" />
+                </button>
               </div>
               <h3 className="font-bold text-[#3d3527]">{group.title}</h3>
               <p className="text-sm text-[#3d3527]/60 mt-1 line-clamp-2">{group.description}</p>
@@ -215,12 +211,15 @@ export function MiniGroupsAdmin() {
       {showSettingsModal && settingsGroup && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-lg">
-            <h2 className="text-xl font-bold text-[#3d3527] mb-4">Настройки: {settingsGroup.title}</h2>
+            <h2 className="text-xl font-bold text-[#3d3527] mb-4">Настройки группы</h2>
             <MiniGroupSettings 
-              group={settingsGroup} 
+              group={settingsGroup}
+              contacts={contacts}
               onSave={saveSettings} 
               onClose={() => { setShowSettingsModal(false); setSettingsGroup(null); }}
               onRefresh={loadGroups}
+              onDelete={deleteGroup}
+              onTogglePublish={togglePublish}
             />
           </div>
         </div>
@@ -291,12 +290,18 @@ interface EventFormData {
   isOnline: boolean;
 }
 
-function MiniGroupSettings({ group, onSave, onClose, onRefresh }: { 
+function MiniGroupSettings({ group, contacts, onSave, onClose, onRefresh, onDelete, onTogglePublish }: { 
   group: MiniGroup; 
-  onSave: (data: { chatLink: string }) => void; 
+  contacts: Contact[];
+  onSave: (data: Partial<MiniGroup>) => void; 
   onClose: () => void;
   onRefresh: () => void;
+  onDelete: (id: string) => void;
+  onTogglePublish: (id: string, isPublished: boolean) => void;
 }) {
+  const [title, setTitle] = useState(group.title);
+  const [description, setDescription] = useState(group.description || '');
+  const [curatorId, setCuratorId] = useState(group.curatorId || '');
   const [chatLink, setChatLink] = useState(group.chatLink || '');
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [showEventForm, setShowEventForm] = useState(false);
@@ -417,26 +422,51 @@ function MiniGroupSettings({ group, onSave, onClose, onRefresh }: {
 
   return (
     <div className="space-y-4 max-h-[70vh] overflow-y-auto">
-      <div className="p-4 bg-[#f5f3ed] rounded-xl">
-        <h3 className="font-medium text-[#3d3527] mb-2">Информация о группе</h3>
-        <div className="space-y-2 text-sm text-[#3d3527]/80">
-          <p><span className="font-medium">Название:</span> {group.title}</p>
-          <p><span className="font-medium">Описание:</span> {group.description || 'Не указано'}</p>
-          {group.curator && (
-            <p><span className="font-medium">Наставник:</span> {group.curator.name} {group.curator.role ? `(${group.curator.role})` : ''}</p>
-          )}
+      {/* Основные настройки группы */}
+      <div className="p-4 bg-[#f5f3ed] rounded-xl space-y-3">
+        <h3 className="font-medium text-[#3d3527] mb-2">Основные настройки</h3>
+        <div>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Название</label>
+          <input 
+            value={title} 
+            onChange={(e) => setTitle(e.target.value)} 
+            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl bg-white" 
+          />
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-[#3d3527] mb-1">Ссылка на чат</label>
-        <input 
-          value={chatLink} 
-          onChange={(e) => setChatLink(e.target.value)} 
-          className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" 
-          placeholder="@username, username или https://t.me/..."
-        />
-        <p className="text-xs text-[#3d3527]/60 mt-1">Можно указать @username, username без @ или полную ссылку</p>
+        <div>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Описание</label>
+          <textarea 
+            value={description} 
+            onChange={(e) => setDescription(e.target.value)} 
+            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl bg-white resize-none" 
+            rows={2}
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Куратор</label>
+          <select 
+            value={curatorId} 
+            onChange={(e) => setCuratorId(e.target.value)} 
+            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl bg-white"
+          >
+            <option value="">Выберите куратора</option>
+            {contacts.map((contact) => (
+              <option key={contact.id} value={contact.id}>
+                {contact.name} {contact.role ? `(${contact.role})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Ссылка на чат</label>
+          <input 
+            value={chatLink} 
+            onChange={(e) => setChatLink(e.target.value)} 
+            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl bg-white" 
+            placeholder="@username, username или https://t.me/..."
+          />
+          <p className="text-xs text-[#3d3527]/60 mt-1">Можно указать @username, username без @ или полную ссылку</p>
+        </div>
       </div>
 
       <div className="p-4 bg-blue-50 rounded-xl">
@@ -641,14 +671,41 @@ function MiniGroupSettings({ group, onSave, onClose, onRefresh }: {
         )}
       </div>
 
-      <div className="flex justify-end gap-3 sticky bottom-0 bg-white pt-3">
-        <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Закрыть</button>
-        <button 
-          onClick={() => onSave({ chatLink })} 
-          className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
-        >
-          Сохранить
-        </button>
+      <div className="flex justify-between sticky bottom-0 bg-white pt-3 border-t border-[#d4c9b0]/30 mt-4">
+        <div className="flex gap-2">
+          <button 
+            onClick={() => onTogglePublish(group.id, group.isPublished)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm ${
+              group.isPublished 
+                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                : 'bg-green-100 text-green-700 hover:bg-green-200'
+            }`}
+          >
+            {group.isPublished ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            {group.isPublished ? 'Скрыть' : 'Опубликовать'}
+          </button>
+          <button 
+            onClick={() => {
+              if (confirm('Удалить группу?')) {
+                onDelete(group.id);
+                onClose();
+              }
+            }}
+            className="flex items-center gap-2 px-3 py-2 bg-red-100 text-red-700 rounded-xl text-sm hover:bg-red-200"
+          >
+            <Trash2 className="w-4 h-4" />
+            Удалить
+          </button>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Закрыть</button>
+          <button 
+            onClick={() => onSave({ title, description, curatorId: curatorId || null, chatLink })} 
+            className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
+          >
+            Сохранить
+          </button>
+        </div>
       </div>
     </div>
   );

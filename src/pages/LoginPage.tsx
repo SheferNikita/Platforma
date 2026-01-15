@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Lock, Mail, Eye, EyeOff, Heart, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
@@ -109,25 +109,14 @@ export function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-[#b5cad9]/30 text-center space-y-3">
+            <div className="mt-8 pt-6 border-t border-[#b5cad9]/30 text-center">
               <p className="text-sm text-[#3d3527]/60">
-                Ещё нет аккаунта?
+                Доступ на платформу предоставляется после оплаты курса.
+                <br />
+                По вопросам обращайтесь к администратору.
               </p>
-              <Link
-                to="/register"
-                className="inline-flex items-center gap-2 px-6 py-2.5 border-2 border-[var(--button-lavender)]/50 text-[var(--button-lavender-dark)] rounded-xl hover:bg-[var(--button-lavender)]/10 transition-all font-medium"
-              >
-                <Heart className="w-4 h-4" />
-                Начать путь к трезвости
-              </Link>
             </div>
           </div>
-        </div>
-
-        <div className="text-center mt-6">
-          <Link to="/" className="text-[#7d9db5] hover:text-[#3d3527] text-sm transition-colors">
-            Вернуться на главную
-          </Link>
         </div>
       </div>
     </div>

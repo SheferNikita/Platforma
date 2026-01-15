@@ -1,12 +1,10 @@
 import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
-import { BookOpen, MessageSquare, Library, Calendar, Users, Building, User, AlertCircle, Users2, Heart, LogIn } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { BookOpen, MessageSquare, Library, Calendar, Users, Building, User, AlertCircle, Users2 } from 'lucide-react';
 import { SobrietyCounter } from './SobrietyCounter';
 import { NotificationBell } from './NotificationBell';
-import { useAuth } from '../lib/auth';
 
 export function Navigation() {
-  const { user, loading } = useAuth();
   const navItems = [
     { path: '/', label: 'Уроки', icon: BookOpen },
     { path: '/chats', label: 'Чаты', icon: MessageSquare },
@@ -62,7 +60,7 @@ export function Navigation() {
               ))}
             </div>
             <div className="py-2 flex items-center gap-2 lg:gap-3 flex-shrink-0">
-              {user && <NotificationBell />}
+              <NotificationBell />
               <NavLink
                 to="/sos"
                 className="px-3 lg:px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:shadow-[0_8px_20px_rgba(239,68,68,0.45)] transition-all duration-300 text-xs lg:text-sm font-medium transform hover:scale-105 active:scale-95 flex items-center gap-1.5 lg:gap-2"
@@ -70,33 +68,21 @@ export function Navigation() {
                 <AlertCircle className="w-4 h-4" />
                 <span>SOS</span>
               </NavLink>
-              {!loading && !user ? (
-                <Link
-                  to="/register"
-                  className="px-4 lg:px-5 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-[0_8px_20px_rgba(166,124,82,0.35)] transition-all duration-300 text-xs lg:text-sm font-medium transform hover:scale-105 active:scale-95 flex items-center gap-1.5 lg:gap-2"
-                >
-                  <Heart className="w-4 h-4" />
-                  <span>Начать трезвую жизнь</span>
-                </Link>
-              ) : (
-                <>
-                  <NavLink
-                    to="/profile"
-                    className={({ isActive }) =>
-                      `w-9 h-9 lg:w-10 lg:h-10 rounded-full border-2 flex items-center justify-center transition-all duration-300 flex-shrink-0 ${
-                        isActive
-                          ? 'bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] border-[var(--button-lavender-dark)] text-white shadow-lg'
-                          : 'bg-white/60 border-[var(--sky-light)]/50 hover:border-[var(--button-lavender)]/60 hover:bg-[var(--button-lavender)]/10'
-                      }`
-                    }
-                  >
-                    <User className="w-4 h-4 lg:w-5 lg:h-5" />
-                  </NavLink>
-                  <div className="hidden lg:block">
-                    <SobrietyCounter />
-                  </div>
-                </>
-              )}
+              <NavLink
+                to="/profile"
+                className={({ isActive }) =>
+                  `w-9 h-9 lg:w-10 lg:h-10 rounded-full border-2 flex items-center justify-center transition-all duration-300 flex-shrink-0 ${
+                    isActive
+                      ? 'bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] border-[var(--button-lavender-dark)] text-white shadow-lg'
+                      : 'bg-white/60 border-[var(--sky-light)]/50 hover:border-[var(--button-lavender)]/60 hover:bg-[var(--button-lavender)]/10'
+                  }`
+                }
+              >
+                <User className="w-4 h-4 lg:w-5 lg:h-5" />
+              </NavLink>
+              <div className="hidden lg:block">
+                <SobrietyCounter />
+              </div>
             </div>
           </div>
         </div>

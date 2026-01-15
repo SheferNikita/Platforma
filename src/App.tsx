@@ -14,7 +14,6 @@ import { MyDiariesPage } from './pages/MyDiariesPage';
 import { MyNotesPage } from './pages/MyNotesPage';
 import { MiniGroupPage } from './pages/MiniGroupPage';
 import { LoginPage } from './pages/LoginPage';
-import { RegisterPage } from './pages/RegisterPage';
 import { AuthProvider, useAuth } from './lib/auth';
 import { AdminLayout } from './admin/components/AdminLayout';
 import { AdminLogin } from './admin/pages/AdminLogin';
@@ -58,6 +57,24 @@ function ProtectedAdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function ProtectedStudentRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#fdfbf7] via-[#e3ebf1] to-[#f5f3ed]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--button-lavender)]"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -67,7 +84,6 @@ export default function App() {
           <Route path="/sos" element={<SOSPage />} />
           <Route path="/pay/:productId" element={<PaymentPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
           
           <Route path="/admin/login" element={<AdminLogin />} />
           
@@ -95,7 +111,14 @@ export default function App() {
             <Route path="admins" element={<AdminsAdmin />} />
           </Route>
           
-          <Route path="/" element={<Layout />}>
+          <Route
+            path="/"
+            element={
+              <ProtectedStudentRoute>
+                <Layout />
+              </ProtectedStudentRoute>
+            }
+          >
             <Route index element={<LessonsPage />} />
             <Route path="lesson/:lessonId" element={<LessonDetailPage />} />
             <Route path="lessons/:lessonId" element={<LessonsRedirect />} />

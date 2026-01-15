@@ -3,12 +3,14 @@ import { prisma } from '../index';
 import jwt from 'jsonwebtoken';
 import ordersRouter from './orders';
 import moderationRouter from './moderation';
+import auditRouter from './audit';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 router.use('/orders', ordersRouter);
 router.use('/moderation', moderationRouter);
+router.use('/audit', auditRouter);
 
 interface DecodedToken {
   id: string;

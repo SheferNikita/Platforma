@@ -18,7 +18,8 @@ import {
   Users2,
   Phone,
   ClipboardList,
-  MessageCircle
+  MessageCircle,
+  History
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 
@@ -37,6 +38,7 @@ const navItems = [
   { path: '/admin/payments', label: 'Платежи', icon: CreditCard },
   { path: '/admin/email', label: 'Email', icon: Mail },
   { path: '/admin/admins', label: 'Администраторы', icon: Shield },
+  { path: '/admin/audit', label: 'История изменений', icon: History, superAdminOnly: true },
 ];
 
 export function AdminLayout() {
@@ -76,7 +78,9 @@ export function AdminLayout() {
         
         <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-1">
-            {navItems.map((item) => (
+            {navItems
+              .filter(item => !item.superAdminOnly || user?.role === 'SUPER_ADMIN')
+              .map((item) => (
               <li key={item.path}>
                 <NavLink
                   to={item.path}

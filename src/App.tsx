@@ -29,6 +29,7 @@ import { PaymentsAdmin } from './admin/pages/PaymentsAdmin';
 import { EmailAdmin } from './admin/pages/EmailAdmin';
 import { AdminsAdmin } from './admin/pages/AdminsAdmin';
 import { CRMAdmin } from './admin/pages/CRMAdmin';
+import { ModerationAdmin } from './admin/pages/ModerationAdmin';
 import { PaymentPage } from './pages/PaymentPage';
 import { Toaster } from 'sonner';
 
@@ -82,6 +83,7 @@ export default function App() {
             <Route path="communities" element={<CommunitiesAdmin />} />
             <Route path="mini-groups" element={<MiniGroupsAdmin />} />
             <Route path="students" element={<StudentsAdmin />} />
+            <Route path="moderation" element={<ModerationAdmin />} />
             <Route path="products" element={<ProductsAdmin />} />
             <Route path="crm" element={<CRMAdmin />} />
             <Route path="payments" element={<PaymentsAdmin />} />

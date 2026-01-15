@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
+import { api } from '../../lib/api';
 import {
   LayoutDashboard,
   BookOpen,
@@ -16,7 +17,8 @@ import {
   Building,
   Users2,
   Phone,
-  ClipboardList
+  ClipboardList,
+  MessageCircle
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 
@@ -29,6 +31,7 @@ const navItems = [
   { path: '/admin/communities', label: 'Общины', icon: Building },
   { path: '/admin/mini-groups', label: 'Мини-группы', icon: Users2 },
   { path: '/admin/students', label: 'Ученики', icon: Users },
+  { path: '/admin/moderation', label: 'Модерация', icon: MessageCircle, showBadge: true },
   { path: '/admin/products', label: 'Продукты', icon: ShoppingBag },
   { path: '/admin/crm', label: 'CRM', icon: ClipboardList },
   { path: '/admin/payments', label: 'Платежи', icon: CreditCard },
@@ -39,6 +42,22 @@ const navItems = [
 export function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [moderationCount, setModerationCount] = useState(0);
+
+  useEffect(() => {
+    loadModerationCount();
+    const interval = setInterval(loadModerationCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function loadModerationCount() {
+    try {
+      const data = await api.get<{ count: number }>('/public/moderation/count');
+      setModerationCount(data.count);
+    } catch (error) {
+      console.error('Error loading moderation count');
+    }
+  }
 
   const handleLogout = async () => {
     await logout();
@@ -72,6 +91,11 @@ export function AdminLayout() {
                 >
                   <item.icon className="w-5 h-5" />
                   <span className="font-medium">{item.label}</span>
+                  {item.showBadge && moderationCount > 0 && (
+                    <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                      {moderationCount}
+                    </span>
+                  )}
                 </NavLink>
               </li>
             ))}

@@ -2,10 +2,12 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../index';
 import jwt from 'jsonwebtoken';
 import ordersRouter from './orders';
+import moderationRouter from './moderation';
 
 const router = Router();
 
 router.use('/orders', ordersRouter);
+router.use('/moderation', moderationRouter);
 
 interface DecodedToken {
   userId: string;

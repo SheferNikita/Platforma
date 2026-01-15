@@ -8,17 +8,19 @@ datasource db {
 }
 
 model User {
-  id        String     @id @default(uuid())
-  email     String     @unique
-  password  String
-  name      String
-  role      UserRole   @default(STUDENT)
-  isActive  Boolean    @default(true)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  adminLogs AdminLog[]
-  sessions  Session[]
-  student   Student?
+  id                 String        @id @default(uuid())
+  email              String        @unique
+  password           String
+  name               String
+  role               UserRole      @default(STUDENT)
+  isActive           Boolean       @default(true)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  adminLogs          AdminLog[]
+  sessions           Session[]
+  student            Student?
+  diaryReplies       Diary[]       @relation("DiaryReplies")
+  studentNoteReplies StudentNote[] @relation("StudentNoteReplies")
 }
 
 model Session {
@@ -143,25 +145,34 @@ model LessonProgress {
 }
 
 model Diary {
-  id        String   @id @default(uuid())
-  studentId String
-  lessonId  String
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid())
+  studentId   String
+  lessonId    String
+  content     String
+  reply       String?
+  repliedAt   DateTime?
+  repliedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  repliedBy   User?     @relation("DiaryReplies", fields: [repliedById], references: [id])
 }
 
 model StudentNote {
-  id        String   @id @default(uuid())
-  studentId String
-  lessonId  String
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  id          String    @id @default(uuid())
+  studentId   String
+  lessonId    String
+  content     String
+  noteType    String    @default("question")
+  reply       String?
+  repliedAt   DateTime?
+  repliedById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  repliedBy   User?     @relation("StudentNoteReplies", fields: [repliedById], references: [id])
 }
 
 model LibraryItem {

@@ -473,6 +473,8 @@ router.post('/lessons/:lessonId/personal-notes', async (req: Request, res: Respo
 router.get('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
   try {
     const student = await getStudentFromToken(req);
+    console.log('[GET notes] Student:', student, 'LessonId:', req.params.lessonId);
+    
     if (!student) {
       return res.status(401).json({ error: 'Требуется авторизация' });
     }
@@ -493,6 +495,7 @@ router.get('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
       orderBy: { createdAt: 'asc' }
     });
 
+    console.log('[GET notes] Found', notes.length, 'notes for student', student.studentId);
     res.json(notes);
   } catch (error) {
     console.error('Get student notes error:', error);

@@ -137,7 +137,9 @@ export function LessonDetailPage() {
 
         // Fetch chat history (student questions and replies)
         try {
+          console.log('[LessonDetailPage] Fetching notes for lesson:', lessonId);
           const notes = await api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/notes`);
+          console.log('[LessonDetailPage] Received notes:', notes);
           const messages: ChatMessage[] = [];
           
           notes.forEach(note => {
@@ -161,6 +163,7 @@ export function LessonDetailPage() {
             }
           });
           
+          console.log('[LessonDetailPage] Setting chat history:', messages.length, 'messages');
           setChatHistory(messages);
         } catch (notesErr) {
           console.error('Error fetching notes:', notesErr);

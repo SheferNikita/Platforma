@@ -365,9 +365,10 @@ model Metric {
 
 enum UserRole {
   SUPER_ADMIN
-  CONTENT_MANAGER
-  SUPPORT
-  FINANCE
+  ADMIN
+  CURATOR
+  MENTOR
+  MODERATOR
   STUDENT
 }
 

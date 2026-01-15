@@ -93,7 +93,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     res.status(201).json(admin);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0]?.message || 'Ошибка валидации' });
     }
     console.error('Create admin error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -136,7 +136,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     res.json(admin);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0]?.message || 'Ошибка валидации' });
     }
     console.error('Update admin error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

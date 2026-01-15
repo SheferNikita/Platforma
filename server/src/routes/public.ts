@@ -318,6 +318,36 @@ router.get('/my-mini-group', async (req: Request, res: Response) => {
   }
 });
 
+// Get student's notes/questions for a lesson with replies
+router.get('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const { lessonId } = req.params;
+
+    const notes = await prisma.studentNote.findMany({
+      where: {
+        lessonId: lessonId,
+        studentId: student.studentId
+      },
+      include: {
+        repliedBy: {
+          select: { name: true }
+        }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    res.json(notes);
+  } catch (error) {
+    console.error('Get student notes error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // Submit student question or report for a lesson
 router.post('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
   try {

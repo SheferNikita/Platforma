@@ -49,13 +49,24 @@ interface ModuleWithLessons {
 }
 
 interface ChatMessage {
-  id: number;
+  id: string;
   text: string;
   author: 'student' | 'curator';
   timestamp: Date;
   files?: { name: string; type: string; url?: string }[];
   hasAudio?: boolean;
   audioDuration?: number;
+  curatorName?: string;
+}
+
+interface StudentNoteFromAPI {
+  id: string;
+  content: string;
+  noteType: string;
+  reply: string | null;
+  repliedAt: string | null;
+  repliedBy: { name: string } | null;
+  createdAt: string;
 }
 
 export function LessonDetailPage() {
@@ -122,6 +133,38 @@ export function LessonDetailPage() {
         const currentModule = modules.find(m => m.id === lesson.module.id);
         if (currentModule) {
           setModuleLessons(currentModule);
+        }
+
+        // Fetch chat history (student questions and replies)
+        try {
+          const notes = await api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/notes`);
+          const messages: ChatMessage[] = [];
+          
+          notes.forEach(note => {
+            // Add student question
+            messages.push({
+              id: note.id,
+              text: note.content,
+              author: 'student',
+              timestamp: new Date(note.createdAt)
+            });
+            
+            // Add curator reply if exists
+            if (note.reply && note.repliedAt) {
+              messages.push({
+                id: `${note.id}-reply`,
+                text: note.reply,
+                author: 'curator',
+                timestamp: new Date(note.repliedAt),
+                curatorName: note.repliedBy?.name
+              });
+            }
+          });
+          
+          setChatHistory(messages);
+        } catch (notesErr) {
+          console.error('Error fetching notes:', notesErr);
+          // Don't fail the whole page if notes fail to load
         }
       } catch (err) {
         console.error('Error fetching lesson:', err);
@@ -193,14 +236,14 @@ export function LessonDetailPage() {
     }
 
     try {
-      await api.post(`/public/lessons/${lessonId}/notes`, {
+      const newNote = await api.post<{ id: string }>(`/public/lessons/${lessonId}/notes`, {
         content: feedback.trim(),
         noteType: 'question'
       });
 
       // Add message to chat history for UI
       const newMessage: ChatMessage = {
-        id: chatHistory.length + 1,
+        id: newNote.id,
         text: feedback,
         author: 'student',
         timestamp: new Date(),

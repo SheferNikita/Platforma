@@ -87,7 +87,7 @@ router.get('/modules', async (req: Request, res: Response) => {
 
 router.get('/lessons/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const lesson = await prisma.lesson.findFirst({
       where: { id, isPublished: true },
       include: {
@@ -231,14 +231,81 @@ router.get('/products', async (req, res) => {
         name: true,
         description: true,
         price: true,
-        currency: true,
-        accessType: true
+        currency: true
       },
       orderBy: { price: 'asc' }
     });
     res.json(products);
   } catch (error) {
     console.error('Get public products error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/my-mini-group', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    
+    if (!student) {
+      return res.status(401).json({ error: 'Не авторизован' });
+    }
+
+    const membership = await prisma.miniGroupMember.findFirst({
+      where: { studentId: student.studentId },
+      include: {
+        miniGroup: {
+          include: {
+            curator: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                telegram: true,
+                photo: true
+              }
+            },
+            events: {
+              where: {
+                isPublished: true,
+                date: { gte: new Date() }
+              },
+              orderBy: { date: 'asc' }
+            },
+            members: {
+              include: {
+                student: {
+                  include: {
+                    user: {
+                      select: { name: true }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!membership) {
+      return res.json(null);
+    }
+
+    const group = membership.miniGroup;
+    
+    res.json({
+      id: group.id,
+      title: group.title,
+      description: group.description,
+      chatLink: group.chatLink,
+      curator: group.curator,
+      events: group.events,
+      memberCount: group.members.length,
+      createdAt: group.createdAt
+    });
+  } catch (error) {
+    console.error('Get my mini-group error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

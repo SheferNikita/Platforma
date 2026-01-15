@@ -13,6 +13,8 @@ import { SOSPage } from './pages/SOSPage';
 import { MyDiariesPage } from './pages/MyDiariesPage';
 import { MyNotesPage } from './pages/MyNotesPage';
 import { MiniGroupPage } from './pages/MiniGroupPage';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
 import { AuthProvider, useAuth } from './lib/auth';
 import { AdminLayout } from './admin/components/AdminLayout';
 import { AdminLogin } from './admin/pages/AdminLogin';
@@ -64,6 +66,8 @@ export default function App() {
         <Routes>
           <Route path="/sos" element={<SOSPage />} />
           <Route path="/pay/:productId" element={<PaymentPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
           
           <Route path="/admin/login" element={<AdminLogin />} />
           

@@ -5,29 +5,37 @@ import ordersRouter from './orders';
 import moderationRouter from './moderation';
 
 const router = Router();
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 router.use('/orders', ordersRouter);
 router.use('/moderation', moderationRouter);
 
 interface DecodedToken {
-  userId: string;
+  id: string;
+  email: string;
+  name: string;
+  role: string;
 }
 
 async function getStudentFromToken(req: Request): Promise<{ studentId: string } | null> {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader?.replace('Bearer ', '') || req.cookies?.token;
-    if (!token) return null;
+    if (!token) {
+      return null;
+    }
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as DecodedToken;
+    const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
+    
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+      where: { id: decoded.id },
       include: { student: true }
     });
     
     if (!user?.student) return null;
     return { studentId: user.student.id };
-  } catch {
+  } catch (error) {
+    console.error('[getStudentFromToken] Error:', error);
     return null;
   }
 }

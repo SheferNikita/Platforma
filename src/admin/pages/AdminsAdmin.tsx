@@ -63,11 +63,12 @@ export function AdminsAdmin() {
     }
   }
 
-  const roleLabels: Record<string, { label: string; color: string }> = {
-    SUPER_ADMIN: { label: 'Супер-админ', color: 'bg-purple-100 text-purple-700' },
-    CONTENT_MANAGER: { label: 'Контент-менеджер', color: 'bg-blue-100 text-blue-700' },
-    SUPPORT: { label: 'Поддержка', color: 'bg-green-100 text-green-700' },
-    FINANCE: { label: 'Финансы', color: 'bg-orange-100 text-orange-700' }
+  const roleLabels: Record<string, { label: string; color: string; description: string }> = {
+    SUPER_ADMIN: { label: 'Супер-админ', color: 'bg-purple-100 text-purple-700', description: 'Полный доступ ко всему' },
+    ADMIN: { label: 'Администратор', color: 'bg-blue-100 text-blue-700', description: 'Полный доступ к админке, кроме удаления супер-админа' },
+    CURATOR: { label: 'Куратор наставников', color: 'bg-teal-100 text-teal-700', description: 'Полный доступ кроме «Продукты» и «CRM»' },
+    MENTOR: { label: 'Наставник', color: 'bg-green-100 text-green-700', description: 'Видит только свои мини-группы и своих учеников' },
+    MODERATOR: { label: 'Модератор', color: 'bg-orange-100 text-orange-700', description: 'Уроки, библиотека, общины, расписание, email' }
   };
 
   if (user?.role !== 'SUPER_ADMIN') {
@@ -183,7 +184,7 @@ function AdminModal({ admin, onSave, onClose }: { admin: Admin | null; onSave: (
   const [name, setName] = useState(admin?.name || '');
   const [email, setEmail] = useState(admin?.email || '');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState(admin?.role || 'CONTENT_MANAGER');
+  const [role, setRole] = useState(admin?.role || 'ADMIN');
   const [isActive, setIsActive] = useState(admin?.isActive ?? true);
 
   return (
@@ -227,11 +228,17 @@ function AdminModal({ admin, onSave, onClose }: { admin: Admin | null; onSave: (
               onChange={(e) => setRole(e.target.value)}
               className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
             >
-              <option value="SUPER_ADMIN">Супер-админ</option>
-              <option value="CONTENT_MANAGER">Контент-менеджер</option>
-              <option value="SUPPORT">Поддержка</option>
-              <option value="FINANCE">Финансы</option>
+              <option value="ADMIN">Администратор</option>
+              <option value="CURATOR">Куратор наставников</option>
+              <option value="MENTOR">Наставник</option>
+              <option value="MODERATOR">Модератор</option>
             </select>
+            <p className="text-xs text-[#3d3527]/60 mt-1">
+              {role === 'ADMIN' && 'Полный доступ к админке, кроме удаления супер-админа'}
+              {role === 'CURATOR' && 'Полный доступ кроме «Продукты» и «CRM»'}
+              {role === 'MENTOR' && 'Видит только свои мини-группы и своих учеников'}
+              {role === 'MODERATOR' && 'Уроки, библиотека, общины, расписание, email'}
+            </p>
           </div>
           {admin && (
             <div className="flex items-center gap-3">

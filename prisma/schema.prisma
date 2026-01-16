@@ -33,21 +33,26 @@ model Session {
 }
 
 model Student {
-  id           String            @id @default(uuid())
-  userId       String            @unique
-  phone        String?
-  sobrietyDate DateTime?
-  notes        String?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  diaries      Diary[]
-  enrollments  Enrollment[]
-  progress     LessonProgress[]
-  miniGroups   MiniGroupMember[]
-  moduleAccess ModuleAccess[]
-  payments     Payment[]
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  studentNotes StudentNote[]
+  id              String            @id @default(uuid())
+  userId          String            @unique
+  phone           String?
+  sobrietyDate    DateTime?
+  notes           String?
+  city            String?
+  gender          String?
+  age             Int?
+  addictionType   String?
+  surveyCompleted Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  diaries         Diary[]
+  enrollments     Enrollment[]
+  progress        LessonProgress[]
+  miniGroups      MiniGroupMember[]
+  moduleAccess    ModuleAccess[]
+  payments        Payment[]
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentNotes    StudentNote[]
 }
 
 model ModuleAccess {

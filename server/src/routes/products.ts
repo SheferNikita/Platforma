@@ -6,7 +6,7 @@ import { z } from 'zod';
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'FINANCE'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN'));
 
 const productSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),

@@ -5,7 +5,7 @@ import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'CONTENT_MANAGER', 'SUPPORT'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR'));
 
 router.get('/unassigned', async (req: AuthRequest, res: Response) => {
   try {

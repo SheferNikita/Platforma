@@ -31,7 +31,11 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
     -   **Email System:** Individual and mass email sending with customizable templates.
     -   **Rich Text Editor:** Lessons support rich text content via TipTap, Kinescope video integration, and file attachments.
     -   **Content Reordering:** Manual reordering functionality for modules, lessons, library items, and contacts.
--   **User Roles:** Granular access control with roles: `SUPER_ADMIN`, `CONTENT_MANAGER`, `SUPPORT`, `FINANCE`, and `STUDENT`.
+-   **User Roles:** Granular access control with roles: `SUPER_ADMIN`, `ADMIN`, `CURATOR`, `MENTOR`, `MODERATOR`, and `STUDENT`.
+    -   `SUPER_ADMIN`: Full access to all sections including audit logs and admin management
+    -   `ADMIN`: Full access to all sections except audit logs; cannot create/edit/delete super-admins
+    -   `CURATOR`: Access to students, distribution, and moderation
+    -   `MENTOR`, `MODERATOR`: Access to moderation only
 -   **Module Access Control:** System for managing student access to specific modules, including expiration dates.
 -   **Mini-Groups:** Enhanced management of mini-groups, including curator assignment, chat links, and dedicated scheduling within group settings.
 -   **Authentication:** Dual mechanism supporting both HttpOnly cookies (`sameSite: 'none'`, `secure: true`) and a fallback to `localStorage` with `Authorization` headers for iframe compatibility.

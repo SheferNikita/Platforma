@@ -68,6 +68,6 @@ export function requireRole(...roles: UserRole[]) {
 }
 
 export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
-  const adminRoles: UserRole[] = ['SUPER_ADMIN', 'CONTENT_MANAGER', 'SUPPORT', 'FINANCE'];
+  const adminRoles: UserRole[] = ['SUPER_ADMIN', 'ADMIN'];
   return requireRole(...adminRoles)(req, res, next);
 }

@@ -102,7 +102,7 @@ router.post('/avatar', authenticate, avatarUpload.single('avatar'), async (req: 
 });
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'CONTENT_MANAGER'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN'));
 
 router.post('/lesson/:lessonId', upload.single('file'), async (req: AuthRequest, res: Response) => {
   try {

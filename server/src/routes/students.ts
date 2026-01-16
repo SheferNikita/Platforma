@@ -9,7 +9,7 @@ import { getWelcomeEmailTemplate } from '../templates/welcomeEmail';
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'CONTENT_MANAGER', 'SUPPORT'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR'));
 
 const createStudentSchema = z.object({
   email: z.string().email('Некорректный email'),

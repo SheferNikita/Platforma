@@ -34,7 +34,7 @@ function normalizeTelegramLink(input: string): string {
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'CONTENT_MANAGER'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN'));
 
 const moduleSchema = z.object({
   title: z.string().min(1, 'Название обязательно'),

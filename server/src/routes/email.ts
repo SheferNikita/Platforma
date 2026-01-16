@@ -7,7 +7,7 @@ import { z } from 'zod';
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'CONTENT_MANAGER'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN'));
 
 const templateSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),

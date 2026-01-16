@@ -180,7 +180,7 @@ router.get('/fail', (req, res) => {
 });
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'FINANCE'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN'));
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {

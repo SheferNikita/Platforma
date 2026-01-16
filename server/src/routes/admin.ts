@@ -7,7 +7,7 @@ import { z } from 'zod';
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN'));
 
 const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'MODERATOR'] as const;
 
@@ -52,6 +52,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     const data = createAdminSchema.parse(req.body);
+
+    if (req.user!.role !== 'SUPER_ADMIN' && data.role === 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Только супер-админ может создавать супер-админов' });
+    }
 
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email }
@@ -105,6 +109,20 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const data = updateAdminSchema.parse(req.body);
 
+    const targetAdmin = await prisma.user.findUnique({ where: { id } });
+    if (!targetAdmin) {
+      return res.status(404).json({ error: 'Администратор не найден' });
+    }
+
+    if (req.user!.role !== 'SUPER_ADMIN') {
+      if (targetAdmin.role === 'SUPER_ADMIN') {
+        return res.status(403).json({ error: 'Недостаточно прав для редактирования супер-админа' });
+      }
+      if (data.role === 'SUPER_ADMIN') {
+        return res.status(403).json({ error: 'Только супер-админ может назначать роль супер-админа' });
+      }
+    }
+
     const updateData: any = { ...data };
     if (data.password) {
       updateData.password = await bcrypt.hash(data.password, 10);
@@ -149,6 +167,15 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 
     if (id === req.user!.id) {
       return res.status(400).json({ error: 'Нельзя удалить свой аккаунт' });
+    }
+
+    const targetAdmin = await prisma.user.findUnique({ where: { id } });
+    if (!targetAdmin) {
+      return res.status(404).json({ error: 'Администратор не найден' });
+    }
+
+    if (req.user!.role !== 'SUPER_ADMIN' && targetAdmin.role === 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Недостаточно прав для удаления супер-админа' });
     }
 
     await prisma.user.delete({

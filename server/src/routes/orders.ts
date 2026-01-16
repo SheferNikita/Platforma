@@ -135,7 +135,7 @@ router.get('/:orderId/payment-url', async (req: Request, res: Response) => {
 });
 
 router.use('/admin', authenticate);
-router.use('/admin', requireRole('SUPER_ADMIN', 'FINANCE'));
+router.use('/admin', requireRole('SUPER_ADMIN', 'ADMIN'));
 
 router.get('/admin/list', async (req: AuthRequest, res: Response) => {
   try {

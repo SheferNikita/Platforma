@@ -82,20 +82,75 @@ export function AdminsAdmin() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#3d3527]">Администраторы</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Администраторы</h1>
           <p className="text-[#3d3527]/60 mt-1">Управление администраторами и ролями</p>
         </div>
         <button
           onClick={() => { setEditingAdmin(null); setShowModal(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow w-full sm:w-auto"
         >
           <Plus className="w-5 h-5" /> Добавить админа
         </button>
       </div>
 
-      <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 overflow-hidden">
+      {/* Mobile card view */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#a67c52]"></div>
+          </div>
+        ) : admins.length === 0 ? (
+          <div className="text-center py-12 text-[#3d3527]/60">Администраторы не найдены</div>
+        ) : (
+          admins.map((admin) => (
+            <div key={admin.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center flex-shrink-0">
+                    <User className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-[#3d3527] truncate">{admin.name}</p>
+                    <p className="text-sm text-[#3d3527]/60 truncate">{admin.email}</p>
+                  </div>
+                </div>
+                <div className="flex gap-1 flex-shrink-0">
+                  <button
+                    onClick={() => { setEditingAdmin(admin); setShowModal(true); }}
+                    className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                  >
+                    <Edit className="w-4 h-4 text-[#3d3527]" />
+                  </button>
+                  {admin.id !== user?.id && (
+                    <button
+                      onClick={() => deleteAdmin(admin.id)}
+                      className="p-2 hover:bg-red-50 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                <span className={`px-2 py-1 rounded-full text-xs ${roleLabels[admin.role]?.color || 'bg-gray-100'}`}>
+                  {roleLabels[admin.role]?.label || admin.role}
+                </span>
+                <span className={`px-2 py-1 rounded-full text-xs ${admin.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {admin.isActive ? 'Активен' : 'Неактивен'}
+                </span>
+                <span className="text-xs text-[#3d3527]/60">
+                  {new Date(admin.createdAt).toLocaleDateString('ru')}
+                </span>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop table view */}
+      <div className="hidden md:block bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 overflow-hidden">
         <table className="w-full">
           <thead className="bg-[#f5f3ed]">
             <tr>
@@ -189,7 +244,7 @@ function AdminModal({ admin, onSave, onClose }: { admin: Admin | null; onSave: (
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg">
+      <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold text-[#3d3527] mb-4">{admin ? 'Редактировать админа' : 'Новый администратор'}</h2>
         <div className="space-y-4">
           <div>
@@ -253,8 +308,8 @@ function AdminModal({ admin, onSave, onClose }: { admin: Admin | null; onSave: (
             </div>
           )}
         </div>
-        <div className="flex justify-end gap-3 mt-6">
-          <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
+          <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl w-full sm:w-auto">Отмена</button>
           <button
             onClick={() => {
               const data: any = { name, role };
@@ -267,7 +322,7 @@ function AdminModal({ admin, onSave, onClose }: { admin: Admin | null; onSave: (
               }
               onSave(data);
             }}
-            className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
+            className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl w-full sm:w-auto"
           >
             Сохранить
           </button>

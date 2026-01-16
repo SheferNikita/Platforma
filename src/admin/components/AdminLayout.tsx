@@ -20,7 +20,9 @@ import {
   ClipboardList,
   MessageCircle,
   History,
-  UserPlus
+  UserPlus,
+  Menu,
+  X
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 
@@ -48,6 +50,7 @@ export function AdminLayout() {
   const navigate = useNavigate();
   const [moderationCount, setModerationCount] = useState(0);
   const [distributionCount, setDistributionCount] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     loadCounts();
@@ -73,71 +76,114 @@ export function AdminLayout() {
     navigate('/admin/login');
   };
 
+  const navContent = (
+    <>
+      <nav className="flex-1 p-4 overflow-y-auto">
+        <ul className="space-y-1">
+          {navItems
+            .filter(item => !item.superAdminOnly || user?.role === 'SUPER_ADMIN')
+            .map((item) => (
+            <li key={item.path}>
+              <NavLink
+                to={item.path}
+                end={item.end}
+                onClick={() => setMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isActive
+                      ? 'bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white shadow-md'
+                      : 'text-[#3d3527] hover:bg-[#f5f3ed]'
+                  }`
+                }
+              >
+                <item.icon className="w-5 h-5" />
+                <span className="font-medium">{item.label}</span>
+                {item.showBadge && moderationCount > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                    {moderationCount}
+                  </span>
+                )}
+                {item.showDistributionBadge && distributionCount > 0 && (
+                  <span className="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                    {distributionCount}
+                  </span>
+                )}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      
+      <div className="p-4 border-t border-[#d4c9b0]/30">
+        <NavLink
+          to="/"
+          onClick={() => setMobileMenuOpen(false)}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#3d3527] hover:bg-[#f5f3ed] transition-all duration-200 mb-2"
+        >
+          <BookOpen className="w-5 h-5" />
+          <span className="font-medium">На платформу</span>
+        </NavLink>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 w-full"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="font-medium">Выйти</span>
+        </button>
+      </div>
+    </>
+  );
+
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-[#f5f3ed] via-[#ebe8dc] to-[#f0ede3]">
       <Toaster position="top-right" richColors />
       
-      <aside className="w-64 bg-white/80 backdrop-blur-md border-r border-[#d4c9b0]/30 shadow-lg flex flex-col">
+      {/* Mobile header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#d4c9b0]/30 shadow-sm">
+        <div className="flex items-center justify-between px-4 py-3">
+          <h1 className="text-lg font-bold text-[#3d3527]">Админ-панель</h1>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 rounded-xl hover:bg-[#f5f3ed] transition-colors"
+          >
+            {mobileMenuOpen ? (
+              <X className="w-6 h-6 text-[#3d3527]" />
+            ) : (
+              <Menu className="w-6 h-6 text-[#3d3527]" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile menu overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 z-30 bg-black/50"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile sidebar */}
+      <aside className={`lg:hidden fixed top-14 left-0 bottom-0 z-30 w-72 bg-white/95 backdrop-blur-md border-r border-[#d4c9b0]/30 shadow-lg flex flex-col transform transition-transform duration-300 ${
+        mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="px-4 py-3 border-b border-[#d4c9b0]/30">
+          <p className="text-sm text-[#3d3527]/60">{user?.name}</p>
+        </div>
+        {navContent}
+      </aside>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex w-64 bg-white/80 backdrop-blur-md border-r border-[#d4c9b0]/30 shadow-lg flex-col">
         <div className="p-6 border-b border-[#d4c9b0]/30">
           <h1 className="text-xl font-bold text-[#3d3527]">Админ-панель</h1>
           <p className="text-sm text-[#3d3527]/60 mt-1">{user?.name}</p>
         </div>
-        
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <ul className="space-y-1">
-            {navItems
-              .filter(item => !item.superAdminOnly || user?.role === 'SUPER_ADMIN')
-              .map((item) => (
-              <li key={item.path}>
-                <NavLink
-                  to={item.path}
-                  end={item.end}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                      isActive
-                        ? 'bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white shadow-md'
-                        : 'text-[#3d3527] hover:bg-[#f5f3ed]'
-                    }`
-                  }
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="font-medium">{item.label}</span>
-                  {item.showBadge && moderationCount > 0 && (
-                    <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full min-w-[20px] text-center">
-                      {moderationCount}
-                    </span>
-                  )}
-                  {item.showDistributionBadge && distributionCount > 0 && (
-                    <span className="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full min-w-[20px] text-center">
-                      {distributionCount}
-                    </span>
-                  )}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        
-        <div className="p-4 border-t border-[#d4c9b0]/30">
-          <NavLink
-            to="/"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#3d3527] hover:bg-[#f5f3ed] transition-all duration-200 mb-2"
-          >
-            <BookOpen className="w-5 h-5" />
-            <span className="font-medium">На платформу</span>
-          </NavLink>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 w-full"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Выйти</span>
-          </button>
-        </div>
+        {navContent}
       </aside>
       
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
+      <main className="flex-1 overflow-y-auto pt-14 lg:pt-0">
+        <div className="p-4 md:p-6 lg:p-8">
           <Outlet />
         </div>
       </main>

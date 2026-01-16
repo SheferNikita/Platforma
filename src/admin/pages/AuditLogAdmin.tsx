@@ -150,64 +150,64 @@ export function AuditLogAdmin() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-[#3d3527]">История изменений</h1>
-          <p className="text-[#3d3527]/60 mt-1">Все действия администраторов в системе</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">История изменений</h1>
+          <p className="text-[#3d3527]/60 mt-1 text-sm md:text-base">Все действия администраторов в системе</p>
         </div>
         <button 
           onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 px-4 py-2 border border-[#d4c9b0] rounded-xl hover:bg-[#f5f3ed]"
+          className="flex items-center gap-2 px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl hover:bg-[#f5f3ed] text-sm md:text-base self-start sm:self-auto"
         >
-          <Filter className="w-5 h-5" />
+          <Filter className="w-4 md:w-5 h-4 md:h-5" />
           Фильтры
         </button>
       </div>
 
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <History className="w-5 h-5 text-blue-600" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+          <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-8 md:w-10 h-8 md:h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <History className="w-4 md:w-5 h-4 md:h-5 text-blue-600" />
               </div>
-              <div>
-                <p className="text-sm text-[#3d3527]/60">Всего записей</p>
-                <p className="text-2xl font-bold text-[#3d3527]">{stats.totalLogs.toLocaleString()}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-[#3d3527]/60">Сегодня</p>
-                <p className="text-2xl font-bold text-[#3d3527]">{stats.todayLogs}</p>
+              <div className="min-w-0">
+                <p className="text-xs md:text-sm text-[#3d3527]/60">Всего записей</p>
+                <p className="text-lg md:text-2xl font-bold text-[#3d3527]">{stats.totalLogs.toLocaleString()}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <User className="w-5 h-5 text-purple-600" />
+          <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-8 md:w-10 h-8 md:h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Calendar className="w-4 md:w-5 h-4 md:h-5 text-green-600" />
               </div>
-              <div>
-                <p className="text-sm text-[#3d3527]/60">Администраторов</p>
-                <p className="text-2xl font-bold text-[#3d3527]">{stats.uniqueAdmins}</p>
+              <div className="min-w-0">
+                <p className="text-xs md:text-sm text-[#3d3527]/60">Сегодня</p>
+                <p className="text-lg md:text-2xl font-bold text-[#3d3527]">{stats.todayLogs}</p>
               </div>
             </div>
           </div>
-          <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                <Activity className="w-5 h-5 text-orange-600" />
+          <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-8 md:w-10 h-8 md:h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <User className="w-4 md:w-5 h-4 md:h-5 text-purple-600" />
               </div>
-              <div>
-                <p className="text-sm text-[#3d3527]/60">Топ действие</p>
-                <p className="text-lg font-bold text-[#3d3527] truncate">
+              <div className="min-w-0">
+                <p className="text-xs md:text-sm text-[#3d3527]/60">Админов</p>
+                <p className="text-lg md:text-2xl font-bold text-[#3d3527]">{stats.uniqueAdmins}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-8 md:w-10 h-8 md:h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Activity className="w-4 md:w-5 h-4 md:h-5 text-orange-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs md:text-sm text-[#3d3527]/60">Топ действие</p>
+                <p className="text-sm md:text-lg font-bold text-[#3d3527] truncate">
                   {stats.topActions[0]?.action || '-'}
                 </p>
               </div>
@@ -217,32 +217,32 @@ export function AuditLogAdmin() {
       )}
 
       {showFilters && (
-        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
             <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Действие</label>
+              <label className="block text-xs md:text-sm font-medium text-[#3d3527] mb-1">Действие</label>
               <input
                 value={filters.action}
                 onChange={(e) => setFilters({ ...filters, action: e.target.value })}
-                placeholder="Поиск по действию"
-                className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg"
+                placeholder="Поиск"
+                className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Сущность</label>
+              <label className="block text-xs md:text-sm font-medium text-[#3d3527] mb-1">Сущность</label>
               <input
                 value={filters.entity}
                 onChange={(e) => setFilters({ ...filters, entity: e.target.value })}
-                placeholder="Поиск по сущности"
-                className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg"
+                placeholder="Поиск"
+                className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Администратор</label>
+              <label className="block text-xs md:text-sm font-medium text-[#3d3527] mb-1">Администратор</label>
               <select
                 value={filters.userId}
                 onChange={(e) => setFilters({ ...filters, userId: e.target.value })}
-                className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg bg-white"
+                className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg bg-white text-sm"
               >
                 <option value="">Все</option>
                 {admins.map((admin) => (
@@ -253,28 +253,28 @@ export function AuditLogAdmin() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">С даты</label>
+              <label className="block text-xs md:text-sm font-medium text-[#3d3527] mb-1">С даты</label>
               <input
                 type="date"
                 value={filters.startDate}
                 onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg"
+                className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">По дату</label>
+              <label className="block text-xs md:text-sm font-medium text-[#3d3527] mb-1">По дату</label>
               <input
                 type="date"
                 value={filters.endDate}
                 onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg"
+                className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg text-sm"
               />
             </div>
           </div>
-          <div className="flex justify-end mt-4">
+          <div className="flex justify-end mt-3 md:mt-4">
             <button
               onClick={resetFilters}
-              className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-lg"
+              className="px-3 md:px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-lg text-sm"
             >
               Сбросить фильтры
             </button>
@@ -293,59 +293,98 @@ export function AuditLogAdmin() {
             <p>Записей не найдено</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[#f5f3ed]">
-                <tr>
-                  <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Дата и время</th>
-                  <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Администратор</th>
-                  <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Действие</th>
-                  <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Сущность</th>
-                  <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Детали</th>
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((log) => (
-                  <tr key={log.id} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
-                    <td className="p-4 text-sm text-[#3d3527]">
-                      {format(new Date(log.createdAt), 'd MMM yyyy, HH:mm:ss', { locale: ru })}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-[#3d3527]">{log.user.name}</p>
-                          <p className="text-xs text-[#3d3527]/60">{roleLabels[log.user.role] || log.user.role}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs ${getActionColor(log.action)}`}>
-                        {actionLabels[log.action] || log.action}
-                      </span>
-                    </td>
-                    <td className="p-4 text-sm text-[#3d3527]">
-                      <span>{entityLabels[log.entity] || log.entity}</span>
-                      {log.entityId && (
-                        <span className="text-[#3d3527]/50 ml-1 text-xs">#{log.entityId.slice(0, 8)}</span>
-                      )}
-                    </td>
-                    <td className="p-4 text-sm text-[#3d3527]/70 max-w-xs truncate">
-                      {log.details ? JSON.stringify(log.details).slice(0, 50) : '-'}
-                    </td>
+          <>
+            {/* Mobile card view */}
+            <div className="md:hidden divide-y divide-[#d4c9b0]/30">
+              {logs.map((log) => (
+                <div key={log.id} className="p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs ${getActionColor(log.action)}`}>
+                      {actionLabels[log.action] || log.action}
+                    </span>
+                    <span className="text-xs text-[#3d3527]/60">
+                      {format(new Date(log.createdAt), 'd MMM, HH:mm', { locale: ru })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-3 h-3 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[#3d3527] truncate">{log.user.name}</p>
+                      <p className="text-xs text-[#3d3527]/60">{roleLabels[log.user.role] || log.user.role}</p>
+                    </div>
+                  </div>
+                  <div className="text-sm text-[#3d3527]">
+                    <span>{entityLabels[log.entity] || log.entity}</span>
+                    {log.entityId && (
+                      <span className="text-[#3d3527]/50 ml-1 text-xs">#{log.entityId.slice(0, 8)}</span>
+                    )}
+                  </div>
+                  {log.details && (
+                    <p className="text-xs text-[#3d3527]/60 truncate">
+                      {JSON.stringify(log.details).slice(0, 50)}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-[#f5f3ed]">
+                  <tr>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Дата и время</th>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Администратор</th>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Действие</th>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Сущность</th>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Детали</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {logs.map((log) => (
+                    <tr key={log.id} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
+                      <td className="p-4 text-sm text-[#3d3527]">
+                        {format(new Date(log.createdAt), 'd MMM yyyy, HH:mm:ss', { locale: ru })}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center">
+                            <User className="w-4 h-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-[#3d3527]">{log.user.name}</p>
+                            <p className="text-xs text-[#3d3527]/60">{roleLabels[log.user.role] || log.user.role}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs ${getActionColor(log.action)}`}>
+                          {actionLabels[log.action] || log.action}
+                        </span>
+                      </td>
+                      <td className="p-4 text-sm text-[#3d3527]">
+                        <span>{entityLabels[log.entity] || log.entity}</span>
+                        {log.entityId && (
+                          <span className="text-[#3d3527]/50 ml-1 text-xs">#{log.entityId.slice(0, 8)}</span>
+                        )}
+                      </td>
+                      <td className="p-4 text-sm text-[#3d3527]/70 max-w-xs truncate">
+                        {log.details ? JSON.stringify(log.details).slice(0, 50) : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between p-4 border-t border-[#d4c9b0]/30">
-            <p className="text-sm text-[#3d3527]/60">
-              Страница {page} из {totalPages}
+          <div className="flex items-center justify-between p-3 md:p-4 border-t border-[#d4c9b0]/30">
+            <p className="text-xs md:text-sm text-[#3d3527]/60">
+              {page} / {totalPages}
             </p>
             <div className="flex gap-2">
               <button
@@ -353,14 +392,14 @@ export function AuditLogAdmin() {
                 disabled={page === 1}
                 className="p-2 border border-[#d4c9b0] rounded-lg disabled:opacity-50 hover:bg-[#f5f3ed]"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 md:w-5 h-4 md:h-5" />
               </button>
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
                 className="p-2 border border-[#d4c9b0] rounded-lg disabled:opacity-50 hover:bg-[#f5f3ed]"
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 md:w-5 h-4 md:h-5" />
               </button>
             </div>
           </div>

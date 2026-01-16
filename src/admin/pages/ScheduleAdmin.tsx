@@ -81,13 +81,13 @@ export function ScheduleAdmin() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#3d3527]">Расписание</h1>
-          <p className="text-[#3d3527]/60 mt-1">Управление расписанием событий</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Расписание</h1>
+          <p className="text-sm md:text-base text-[#3d3527]/60 mt-1">Управление расписанием событий</p>
         </div>
-        <button onClick={() => { setEditingEvent(null); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg">
+        <button onClick={() => { setEditingEvent(null); setShowModal(true); }} className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg w-full sm:w-auto">
           <Plus className="w-5 h-5" /> Добавить
         </button>
       </div>
@@ -98,49 +98,89 @@ export function ScheduleAdmin() {
         ) : events.length === 0 ? (
           <div className="text-center py-12 text-[#3d3527]/60">Нет событий</div>
         ) : (
-          <div className="divide-y divide-[#d4c9b0]/30">
-            {events.map((event) => (
-              <div key={event.id} className="flex items-center justify-between p-4 hover:bg-[#f5f3ed]/50">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-[#3d3527]">{event.title}</p>
-                    <div className="flex items-center gap-2 text-sm text-[#3d3527]/60">
-                      <span>{new Date(event.date).toLocaleDateString('ru')}</span>
-                      {event.time && <span>• {event.time}</span>}
-                      {event.isOnline ? <Video className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+          <>
+            {/* Mobile card view */}
+            <div className="md:hidden divide-y divide-[#d4c9b0]/30">
+              {events.map((event) => (
+                <div key={event.id} className="p-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center shrink-0">
+                      <Calendar className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-[#3d3527] text-sm">{event.title}</p>
+                      <div className="flex flex-wrap items-center gap-1 text-xs text-[#3d3527]/60 mt-1">
+                        <span>{new Date(event.date).toLocaleDateString('ru')}</span>
+                        {event.time && <span>• {event.time}</span>}
+                        {event.isOnline ? <Video className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
+                      </div>
                       {event.miniGroup && (
-                        <span className="flex items-center gap-1 text-[#a67c52]">
-                          <Users2 className="w-3.5 h-3.5" />
+                        <span className="flex items-center gap-1 text-xs text-[#a67c52] mt-1">
+                          <Users2 className="w-3 h-3" />
                           {event.miniGroup.title}
                         </span>
                       )}
                     </div>
                   </div>
+                  <div className="flex items-center justify-end gap-1 mt-2">
+                    <button onClick={() => togglePublish(event.id, event.isPublished)} className="p-2 hover:bg-[#f5f3ed] rounded-lg">
+                      {event.isPublished ? <Eye className="w-4 h-4 text-green-600" /> : <EyeOff className="w-4 h-4 text-gray-400" />}
+                    </button>
+                    <button onClick={() => { setEditingEvent(event); setShowModal(true); }} className="p-2 hover:bg-[#f5f3ed] rounded-lg">
+                      <Edit className="w-4 h-4 text-[#3d3527]" />
+                    </button>
+                    <button onClick={() => deleteEvent(event.id)} className="p-2 hover:bg-red-50 rounded-lg">
+                      <Trash2 className="w-4 h-4 text-red-500" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => togglePublish(event.id, event.isPublished)} className="p-2 hover:bg-[#f5f3ed] rounded-lg">
-                    {event.isPublished ? <Eye className="w-5 h-5 text-green-600" /> : <EyeOff className="w-5 h-5 text-gray-400" />}
-                  </button>
-                  <button onClick={() => { setEditingEvent(event); setShowModal(true); }} className="p-2 hover:bg-[#f5f3ed] rounded-lg">
-                    <Edit className="w-5 h-5 text-[#3d3527]" />
-                  </button>
-                  <button onClick={() => deleteEvent(event.id)} className="p-2 hover:bg-red-50 rounded-lg">
-                    <Trash2 className="w-5 h-5 text-red-500" />
-                  </button>
+              ))}
+            </div>
+            {/* Desktop table view */}
+            <div className="hidden md:block divide-y divide-[#d4c9b0]/30">
+              {events.map((event) => (
+                <div key={event.id} className="flex items-center justify-between p-4 hover:bg-[#f5f3ed]/50">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center">
+                      <Calendar className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-[#3d3527]">{event.title}</p>
+                      <div className="flex items-center gap-2 text-sm text-[#3d3527]/60">
+                        <span>{new Date(event.date).toLocaleDateString('ru')}</span>
+                        {event.time && <span>• {event.time}</span>}
+                        {event.isOnline ? <Video className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                        {event.miniGroup && (
+                          <span className="flex items-center gap-1 text-[#a67c52]">
+                            <Users2 className="w-3.5 h-3.5" />
+                            {event.miniGroup.title}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => togglePublish(event.id, event.isPublished)} className="p-2 hover:bg-[#f5f3ed] rounded-lg">
+                      {event.isPublished ? <Eye className="w-5 h-5 text-green-600" /> : <EyeOff className="w-5 h-5 text-gray-400" />}
+                    </button>
+                    <button onClick={() => { setEditingEvent(event); setShowModal(true); }} className="p-2 hover:bg-[#f5f3ed] rounded-lg">
+                      <Edit className="w-5 h-5 text-[#3d3527]" />
+                    </button>
+                    <button onClick={() => deleteEvent(event.id)} className="p-2 hover:bg-red-50 rounded-lg">
+                      <Trash2 className="w-5 h-5 text-red-500" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-[#3d3527] mb-4">{editingEvent ? 'Редактировать' : 'Новое событие'}</h2>
+          <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg md:text-xl font-bold text-[#3d3527] mb-4">{editingEvent ? 'Редактировать' : 'Новое событие'}</h2>
             <ScheduleForm 
               event={editingEvent} 
               miniGroups={miniGroups}
@@ -178,7 +218,7 @@ function ScheduleForm({ event, miniGroups, onSave, onClose }: {
         <label className="block text-sm font-medium text-[#3d3527] mb-1">Описание</label>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" rows={3} />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-[#3d3527] mb-1">Дата</label>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />

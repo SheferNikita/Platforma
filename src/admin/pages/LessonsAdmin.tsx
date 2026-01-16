@@ -219,55 +219,55 @@ export function LessonsAdmin() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#3d3527]">Уроки и модули</h1>
-          <p className="text-[#3d3527]/60 mt-1">Управление содержанием курса</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Уроки и модули</h1>
+          <p className="text-[#3d3527]/60 mt-1 text-sm md:text-base">Управление содержанием курса</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           {reorderingModules ? (
             <>
               <button
                 onClick={cancelModulesReorder}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-[#d4c9b0] text-[#3d3527] rounded-xl hover:bg-[#f5f3ed]"
+                className="flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-white border border-[#d4c9b0] text-[#3d3527] rounded-xl hover:bg-[#f5f3ed] text-sm md:text-base"
               >
-                <X className="w-5 h-5" /> Отменить
+                <X className="w-4 h-4 md:w-5 md:h-5" /> Отменить
               </button>
               <button
                 onClick={saveModulesReorder}
                 disabled={savingModules}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg disabled:opacity-50 text-sm md:text-base"
               >
-                <Check className="w-5 h-5" /> {savingModules ? 'Сохранение...' : 'Сохранить'}
+                <Check className="w-4 h-4 md:w-5 md:h-5" /> {savingModules ? 'Сохранение...' : 'Сохранить'}
               </button>
             </>
           ) : (
             <>
               <button
                 onClick={startReorderingModules}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]"
+                className="flex items-center justify-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-white border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed] text-sm md:text-base"
               >
-                <Move className="w-5 h-5" /> Переместить
+                <Move className="w-4 h-4 md:w-5 md:h-5" /> Переместить
               </button>
               <button
                 onClick={() => { setEditingModule(null); setShowModuleModal(true); }}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow"
+                className="flex items-center justify-center gap-2 px-3 md:px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow text-sm md:text-base"
               >
-                <Plus className="w-5 h-5" /> Добавить модуль
+                <Plus className="w-4 h-4 md:w-5 md:h-5" /> Добавить модуль
               </button>
             </>
           )}
         </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3 md:space-y-4">
         {modules.map((module, moduleIndex) => (
-          <div key={module.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 overflow-hidden">
+          <div key={module.id} className="bg-white/80 backdrop-blur-md rounded-xl md:rounded-2xl border border-[#d4c9b0]/30 overflow-hidden">
             <div
-              className="p-4 flex items-center justify-between cursor-pointer hover:bg-[#f5f3ed]/50"
+              className="p-3 md:p-4 flex items-center justify-between cursor-pointer hover:bg-[#f5f3ed]/50"
               onClick={() => !reorderingModules && setExpandedModule(expandedModule === module.id ? null : module.id)}
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
                 {reorderingModules && (
                   <div className="flex flex-col gap-1">
                     <button
@@ -275,82 +275,82 @@ export function LessonsAdmin() {
                       disabled={moduleIndex === 0}
                       className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      <ArrowUp className="w-4 h-4 text-[#a67c52]" />
+                      <ArrowUp className="w-3 h-3 md:w-4 md:h-4 text-[#a67c52]" />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); moveModuleLocal(moduleIndex, 'down'); }}
                       disabled={moduleIndex === modules.length - 1}
                       className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                     >
-                      <ArrowDown className="w-4 h-4 text-[#a67c52]" />
+                      <ArrowDown className="w-3 h-3 md:w-4 md:h-4 text-[#a67c52]" />
                     </button>
                   </div>
                 )}
-                <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-white" />
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-lg md:rounded-xl flex items-center justify-center flex-shrink-0">
+                  <BookOpen className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </div>
-                <div>
-                  <h3 className="font-bold text-[#3d3527]">{module.title}</h3>
-                  <p className="text-sm text-[#3d3527]/60">{module.lessons.length} уроков</p>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-[#3d3527] text-sm md:text-base truncate">{module.title}</h3>
+                  <p className="text-xs md:text-sm text-[#3d3527]/60">{module.lessons.length} уроков</p>
                 </div>
                 {!module.isPublished && (
-                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">Черновик</span>
+                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full hidden sm:inline-block">Черновик</span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
                 <button
                   onClick={(e) => { e.stopPropagation(); togglePublish('module', module.id, module.isPublished); }}
-                  className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                  className="p-1.5 md:p-2 hover:bg-[#f5f3ed] rounded-lg"
                 >
-                  {module.isPublished ? <Eye className="w-5 h-5 text-green-600" /> : <EyeOff className="w-5 h-5 text-gray-400" />}
+                  {module.isPublished ? <Eye className="w-4 h-4 md:w-5 md:h-5 text-green-600" /> : <EyeOff className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />}
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); setEditingModule(module); setShowModuleModal(true); }}
-                  className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                  className="p-1.5 md:p-2 hover:bg-[#f5f3ed] rounded-lg"
                 >
-                  <Edit className="w-5 h-5 text-[#3d3527]" />
+                  <Edit className="w-4 h-4 md:w-5 md:h-5 text-[#3d3527]" />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); deleteModule(module.id); }}
-                  className="p-2 hover:bg-red-50 rounded-lg"
+                  className="p-1.5 md:p-2 hover:bg-red-50 rounded-lg"
                 >
-                  <Trash2 className="w-5 h-5 text-red-500" />
+                  <Trash2 className="w-4 h-4 md:w-5 md:h-5 text-red-500" />
                 </button>
-                {!reorderingModules && (expandedModule === module.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />)}
+                {!reorderingModules && (expandedModule === module.id ? <ChevronUp className="w-4 h-4 md:w-5 md:h-5" /> : <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />)}
               </div>
             </div>
 
             {expandedModule === module.id && (
-              <div className="border-t border-[#d4c9b0]/30 p-4 space-y-3">
-                <div className="flex justify-end mb-2 gap-2">
+              <div className="border-t border-[#d4c9b0]/30 p-3 md:p-4 space-y-2 md:space-y-3">
+                <div className="flex flex-col sm:flex-row justify-end mb-2 gap-2">
                   {reorderingLessons === module.id ? (
                     <>
                       <button
                         onClick={() => cancelLessonsReorder(module.id)}
-                        className="flex items-center gap-1 px-3 py-1 text-sm rounded-lg bg-white border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]"
+                        className="flex items-center justify-center gap-1 px-3 py-1.5 text-xs md:text-sm rounded-lg bg-white border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]"
                       >
-                        <X className="w-4 h-4" /> Отменить
+                        <X className="w-3 h-3 md:w-4 md:h-4" /> Отменить
                       </button>
                       <button
                         onClick={() => saveLessonsReorder(module.id)}
                         disabled={savingLessons}
-                        className="flex items-center gap-1 px-3 py-1 text-sm rounded-lg bg-[#a67c52] text-white hover:bg-[#8a6542] disabled:opacity-50"
+                        className="flex items-center justify-center gap-1 px-3 py-1.5 text-xs md:text-sm rounded-lg bg-[#a67c52] text-white hover:bg-[#8a6542] disabled:opacity-50"
                       >
-                        <Check className="w-4 h-4" /> {savingLessons ? 'Сохранение...' : 'Сохранить'}
+                        <Check className="w-3 h-3 md:w-4 md:h-4" /> {savingLessons ? 'Сохранение...' : 'Сохранить'}
                       </button>
                     </>
                   ) : (
                     <button
                       onClick={() => startReorderingLessons(module.id)}
-                      className="flex items-center gap-1 px-3 py-1 text-sm rounded-lg bg-[#f5f3ed] text-[#3d3527] hover:bg-[#e8e4d9]"
+                      className="flex items-center justify-center gap-1 px-3 py-1.5 text-xs md:text-sm rounded-lg bg-[#f5f3ed] text-[#3d3527] hover:bg-[#e8e4d9]"
                     >
-                      <Move className="w-4 h-4" /> Переместить
+                      <Move className="w-3 h-3 md:w-4 md:h-4" /> Переместить
                     </button>
                   )}
                 </div>
                 {module.lessons.map((lesson, lessonIndex) => (
-                  <div key={lesson.id} className="flex items-center justify-between p-3 bg-[#f5f3ed]/50 rounded-xl">
-                    <div className="flex items-center gap-3">
+                  <div key={lesson.id} className="flex items-center justify-between p-2 md:p-3 bg-[#f5f3ed]/50 rounded-lg md:rounded-xl">
+                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
                       {reorderingLessons === module.id && (
                         <div className="flex flex-col gap-1">
                           <button
@@ -358,49 +358,49 @@ export function LessonsAdmin() {
                             disabled={lessonIndex === 0}
                             className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                           >
-                            <ArrowUp className="w-3 h-3 text-[#a67c52]" />
+                            <ArrowUp className="w-2.5 h-2.5 md:w-3 md:h-3 text-[#a67c52]" />
                           </button>
                           <button
                             onClick={() => moveLessonLocal(module.id, lessonIndex, 'down')}
                             disabled={lessonIndex === module.lessons.length - 1}
                             className="p-1 hover:bg-[#a67c52]/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                           >
-                            <ArrowDown className="w-3 h-3 text-[#a67c52]" />
+                            <ArrowDown className="w-2.5 h-2.5 md:w-3 md:h-3 text-[#a67c52]" />
                           </button>
                         </div>
                       )}
-                      <div>
-                        <p className="font-medium text-[#3d3527]">{lesson.title}</p>
-                        <p className="text-sm text-[#3d3527]/60">{lesson.duration}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-[#3d3527] text-sm md:text-base truncate">{lesson.title}</p>
+                        <p className="text-xs md:text-sm text-[#3d3527]/60">{lesson.duration}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
                       <button
                         onClick={() => togglePublish('lesson', lesson.id, lesson.isPublished)}
-                        className="p-2 hover:bg-white rounded-lg"
+                        className="p-1.5 md:p-2 hover:bg-white rounded-lg"
                       >
-                        {lesson.isPublished ? <Eye className="w-4 h-4 text-green-600" /> : <EyeOff className="w-4 h-4 text-gray-400" />}
+                        {lesson.isPublished ? <Eye className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-600" /> : <EyeOff className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />}
                       </button>
                       <button
                         onClick={() => { setEditingLesson({ lesson, moduleId: module.id }); setShowLessonModal(true); }}
-                        className="p-2 hover:bg-white rounded-lg"
+                        className="p-1.5 md:p-2 hover:bg-white rounded-lg"
                       >
-                        <Edit className="w-4 h-4 text-[#3d3527]" />
+                        <Edit className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#3d3527]" />
                       </button>
                       <button
                         onClick={() => deleteLesson(lesson.id)}
-                        className="p-2 hover:bg-red-50 rounded-lg"
+                        className="p-1.5 md:p-2 hover:bg-red-50 rounded-lg"
                       >
-                        <Trash2 className="w-4 h-4 text-red-500" />
+                        <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-red-500" />
                       </button>
                     </div>
                   </div>
                 ))}
                 <button
                   onClick={() => { setEditingLesson({ lesson: null, moduleId: module.id }); setShowLessonModal(true); }}
-                  className="flex items-center gap-2 px-4 py-2 text-[#a67c52] hover:bg-[#a67c52]/10 rounded-xl w-full justify-center"
+                  className="flex items-center gap-2 px-3 md:px-4 py-2 text-[#a67c52] hover:bg-[#a67c52]/10 rounded-lg md:rounded-xl w-full justify-center text-sm md:text-base"
                 >
-                  <Plus className="w-4 h-4" /> Добавить урок
+                  <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> Добавить урок
                 </button>
               </div>
             )}
@@ -433,16 +433,16 @@ function ModuleModal({ module, onSave, onClose }: { module: Module | null; onSav
   const [isPublished, setIsPublished] = useState(module?.isPublished ?? true);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg">
-        <h2 className="text-xl font-bold text-[#3d3527] mb-4">{module ? 'Редактировать модуль' : 'Новый модуль'}</h2>
-        <div className="space-y-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg sm:text-xl font-bold text-[#3d3527] mb-4">{module ? 'Редактировать модуль' : 'Новый модуль'}</h2>
+        <div className="space-y-3 sm:space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#3d3527] mb-1">Название</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              className="w-full px-3 sm:px-4 py-2 border border-[#d4c9b0] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#a67c52] text-sm sm:text-base"
             />
           </div>
           <div>
@@ -450,7 +450,7 @@ function ModuleModal({ module, onSave, onClose }: { module: Module | null; onSav
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              className="w-full px-3 sm:px-4 py-2 border border-[#d4c9b0] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#a67c52] text-sm sm:text-base"
               rows={3}
             />
           </div>
@@ -460,20 +460,20 @@ function ModuleModal({ module, onSave, onClose }: { module: Module | null; onSav
                 type="checkbox"
                 checked={isPublished}
                 onChange={(e) => setIsPublished(e.target.checked)}
-                className="w-5 h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                className="w-4 h-4 sm:w-5 sm:h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
               />
-              <span className="flex items-center gap-2 text-[#3d3527]">
+              <span className="flex items-center gap-2 text-[#3d3527] text-sm sm:text-base">
                 <Eye className="w-4 h-4" />
                 Опубликован (виден ученикам)
               </span>
             </label>
           </div>
         </div>
-        <div className="flex justify-end gap-3 mt-6">
-          <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 mt-6">
+          <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-lg sm:rounded-xl text-sm sm:text-base">Отмена</button>
           <button
             onClick={() => onSave({ title, description, isPublished })}
-            className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
+            className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-lg sm:rounded-xl text-sm sm:text-base"
           >
             Сохранить
           </button>
@@ -523,16 +523,16 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-4xl my-8 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold text-[#3d3527] mb-4">{lesson ? 'Редактировать урок' : 'Новый урок'}</h2>
-        <div className="space-y-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
+      <div className="bg-white sm:rounded-2xl p-4 sm:p-6 w-full sm:max-w-4xl h-full sm:h-auto sm:my-8 sm:max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg sm:text-xl font-bold text-[#3d3527] mb-4">{lesson ? 'Редактировать урок' : 'Новый урок'}</h2>
+        <div className="space-y-3 sm:space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#3d3527] mb-1">Название</label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              className="w-full px-3 sm:px-4 py-2 border border-[#d4c9b0] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#a67c52] text-sm sm:text-base"
             />
           </div>
           <div>
@@ -540,7 +540,7 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              className="w-full px-3 sm:px-4 py-2 border border-[#d4c9b0] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#a67c52] text-sm sm:text-base"
               rows={2}
             />
           </div>
@@ -552,15 +552,15 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-6 py-2">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-6 py-2">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isTextOnly}
                 onChange={(e) => setIsTextOnly(e.target.checked)}
-                className="w-5 h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                className="w-4 h-4 sm:w-5 sm:h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
               />
-              <span className="flex items-center gap-2 text-[#3d3527]">
+              <span className="flex items-center gap-2 text-[#3d3527] text-sm sm:text-base">
                 <FileText className="w-4 h-4" />
                 Текстовый урок (без видео)
               </span>
@@ -570,9 +570,9 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
                 type="checkbox"
                 checked={isPublished}
                 onChange={(e) => setIsPublished(e.target.checked)}
-                className="w-5 h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                className="w-4 h-4 sm:w-5 sm:h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
               />
-              <span className="flex items-center gap-2 text-[#3d3527]">
+              <span className="flex items-center gap-2 text-[#3d3527] text-sm sm:text-base">
                 <Eye className="w-4 h-4" />
                 Опубликован (виден ученикам)
               </span>
@@ -580,8 +580,8 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
           </div>
 
           {!isTextOnly && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
+            <div className="space-y-2 sm:space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <label className="flex items-center gap-2 text-sm font-medium text-[#3d3527]">
                   <Video className="w-4 h-4" />
                   Видео Kinescope
@@ -589,22 +589,22 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
                 <button
                   type="button"
                   onClick={addVideo}
-                  className="flex items-center gap-1 px-3 py-1 text-sm bg-[#a67c52]/10 text-[#a67c52] rounded-lg hover:bg-[#a67c52]/20"
+                  className="flex items-center justify-center gap-1 px-3 py-1.5 text-xs sm:text-sm bg-[#a67c52]/10 text-[#a67c52] rounded-lg hover:bg-[#a67c52]/20"
                 >
-                  <Plus className="w-4 h-4" /> Добавить видео
+                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Добавить видео
                 </button>
               </div>
               
               {videos.length === 0 && (
-                <div className="text-center py-6 bg-[#f5f3ed] rounded-xl text-[#3d3527]/60">
+                <div className="text-center py-4 sm:py-6 bg-[#f5f3ed] rounded-lg sm:rounded-xl text-[#3d3527]/60 text-sm">
                   Нет добавленных видео. Нажмите "Добавить видео" чтобы добавить.
                 </div>
               )}
 
               {videos.map((video, index) => (
-                <div key={index} className="p-4 bg-[#f5f3ed] rounded-xl space-y-3">
+                <div key={index} className="p-3 sm:p-4 bg-[#f5f3ed] rounded-lg sm:rounded-xl space-y-2 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-[#3d3527]">Видео {index + 1}</span>
+                    <span className="text-xs sm:text-sm font-medium text-[#3d3527]">Видео {index + 1}</span>
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
@@ -612,7 +612,7 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
                         disabled={index === 0}
                         className="p-1 hover:bg-white rounded disabled:opacity-30"
                       >
-                        <ArrowUp className="w-4 h-4 text-[#3d3527]" />
+                        <ArrowUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#3d3527]" />
                       </button>
                       <button
                         type="button"
@@ -620,14 +620,14 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
                         disabled={index === videos.length - 1}
                         className="p-1 hover:bg-white rounded disabled:opacity-30"
                       >
-                        <ArrowDown className="w-4 h-4 text-[#3d3527]" />
+                        <ArrowDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#3d3527]" />
                       </button>
                       <button
                         type="button"
                         onClick={() => removeVideo(index)}
                         className="p-1 hover:bg-red-50 rounded"
                       >
-                        <Trash2 className="w-4 h-4 text-red-500" />
+                        <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-500" />
                       </button>
                     </div>
                   </div>
@@ -652,7 +652,7 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
                   {video.url && (
                     <div className="mt-2">
                       <p className="text-xs text-[#3d3527]/60 mb-2">Предпросмотр:</p>
-                      <div className="max-w-md">
+                      <div className="max-w-full sm:max-w-md">
                         <KinescopePlayer url={video.url} />
                       </div>
                     </div>
@@ -667,16 +667,16 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
             <input
               value={duration}
               onChange={(e) => setDuration(e.target.value)}
-              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              className="w-full px-3 sm:px-4 py-2 border border-[#d4c9b0] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#a67c52] text-sm sm:text-base"
               placeholder="30 минут"
             />
           </div>
         </div>
-        <div className="flex justify-end gap-3 mt-6">
-          <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
+        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 mt-6">
+          <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-lg sm:rounded-xl text-sm sm:text-base">Отмена</button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
+            className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-lg sm:rounded-xl text-sm sm:text-base"
           >
             Сохранить
           </button>

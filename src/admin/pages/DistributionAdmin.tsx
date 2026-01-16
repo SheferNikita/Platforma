@@ -147,9 +147,9 @@ export function DistributionAdmin() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#3d3527]">Распределение</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Распределение</h1>
           <p className="text-[#3d3527]/60 mt-1">
             {students.length > 0 
               ? `${students.length} учеников ожидают распределения`
@@ -159,7 +159,7 @@ export function DistributionAdmin() {
         </div>
         <button
           onClick={loadData}
-          className="flex items-center gap-2 px-4 py-2 text-[#3d3527] hover:bg-white/50 rounded-xl transition-all"
+          className="flex items-center justify-center gap-2 px-4 py-2 text-[#3d3527] hover:bg-white/50 rounded-xl transition-all w-full sm:w-auto"
         >
           <RefreshCw className="w-4 h-4" />
           Обновить
@@ -176,12 +176,12 @@ export function DistributionAdmin() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-[#d4c9b0]/30">
-            <div className="flex items-center justify-between mb-4">
+          <div className="lg:col-span-2 bg-white/60 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-[#d4c9b0]/30">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h2 className="text-lg font-semibold text-[#3d3527]">
                 Нераспределённые ученики
               </h2>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <div className="relative">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#3d3527]/40" />
                   <input
@@ -189,12 +189,12 @@ export function DistributionAdmin() {
                     placeholder="Поиск..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 pr-4 py-2 bg-white/80 border border-[#d4c9b0]/30 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                    className="w-full pl-9 pr-4 py-2 bg-white/80 border border-[#d4c9b0]/30 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
                   />
                 </div>
                 <button
                   onClick={selectAll}
-                  className="text-sm text-[#a67c52] hover:underline"
+                  className="text-sm text-[#a67c52] hover:underline whitespace-nowrap"
                 >
                   {selectedStudents.size === filteredStudents.length ? 'Снять всё' : 'Выбрать всех'}
                 </button>
@@ -205,14 +205,14 @@ export function DistributionAdmin() {
               {filteredStudents.map((student) => (
                 <div
                   key={student.id}
-                  className={`p-4 rounded-xl transition-all cursor-pointer ${
+                  className={`p-3 md:p-4 rounded-xl transition-all cursor-pointer ${
                     selectedStudents.has(student.id)
                       ? 'bg-[#a67c52]/10 border-2 border-[#a67c52]'
                       : 'bg-white/40 border border-[#d4c9b0]/30 hover:bg-white/60'
                   }`}
                   onClick={() => toggleStudent(student.id)}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 md:gap-4">
                     <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${
                       selectedStudents.has(student.id)
                         ? 'bg-[#a67c52] border-[#a67c52]'
@@ -265,7 +265,7 @@ export function DistributionAdmin() {
                   </div>
 
                   {student.surveyCompleted ? (
-                    <div className="flex flex-wrap gap-2 mt-3 ml-9">
+                    <div className="flex flex-wrap gap-1.5 md:gap-2 mt-3 ml-8 md:ml-9">
                       {student.city && (
                         <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs">
                           <MapPin className="w-3 h-3" />
@@ -291,7 +291,7 @@ export function DistributionAdmin() {
                       )}
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 mt-3 ml-9 text-amber-600 text-xs">
+                    <div className="flex items-center gap-2 mt-3 ml-8 md:ml-9 text-amber-600 text-xs">
                       <AlertCircle className="w-3 h-3" />
                       Опрос не пройден
                     </div>
@@ -301,7 +301,7 @@ export function DistributionAdmin() {
             </div>
           </div>
 
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-[#d4c9b0]/30 h-fit sticky top-6">
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 md:p-6 border border-[#d4c9b0]/30 h-fit lg:sticky lg:top-6">
             <h2 className="text-lg font-semibold text-[#3d3527] mb-4">
               Назначить в группу
             </h2>

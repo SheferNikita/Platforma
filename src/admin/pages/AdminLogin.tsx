@@ -36,7 +36,7 @@ export function AdminLogin() {
       </div>
       
       <div className="relative w-full max-w-md mx-4">
-        <div className="bg-white/80 backdrop-blur-md rounded-3xl border-2 border-[#d4c9b0]/30 shadow-xl p-8">
+        <div className="bg-white/80 backdrop-blur-md rounded-3xl border-2 border-[#d4c9b0]/30 shadow-xl p-4 md:p-8">
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
               <Lock className="w-8 h-8 text-white" />

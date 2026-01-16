@@ -136,40 +136,40 @@ export function CRMAdmin() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#3d3527]">CRM</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">CRM</h1>
           <p className="text-[#3d3527]/60 mt-1">Управление заявками</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
-          <p className="text-sm text-[#3d3527]/60">Всего заявок</p>
-          <p className="text-2xl font-bold text-[#3d3527]">{stats.total}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
+          <p className="text-xs md:text-sm text-[#3d3527]/60">Всего заявок</p>
+          <p className="text-xl md:text-2xl font-bold text-[#3d3527] truncate">{stats.total}</p>
         </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
-          <p className="text-sm text-[#3d3527]/60">Новые</p>
-          <p className="text-2xl font-bold text-blue-600">{stats.new}</p>
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
+          <p className="text-xs md:text-sm text-[#3d3527]/60">Новые</p>
+          <p className="text-xl md:text-2xl font-bold text-blue-600 truncate">{stats.new}</p>
         </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
-          <p className="text-sm text-[#3d3527]/60">Оплачено</p>
-          <p className="text-2xl font-bold text-green-600">{stats.paid}</p>
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
+          <p className="text-xs md:text-sm text-[#3d3527]/60">Оплачено</p>
+          <p className="text-xl md:text-2xl font-bold text-green-600 truncate">{stats.paid}</p>
         </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
-          <p className="text-sm text-[#3d3527]/60">Отменено</p>
-          <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
+          <p className="text-xs md:text-sm text-[#3d3527]/60">Отменено</p>
+          <p className="text-xl md:text-2xl font-bold text-red-600 truncate">{stats.cancelled}</p>
         </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
-          <p className="text-sm text-[#3d3527]/60">Выручка</p>
-          <p className="text-2xl font-bold text-[#a67c52]">{stats.totalRevenue.toLocaleString()} ₽</p>
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4 col-span-2 sm:col-span-1">
+          <p className="text-xs md:text-sm text-[#3d3527]/60">Выручка</p>
+          <p className="text-xl md:text-2xl font-bold text-[#a67c52] truncate">{stats.totalRevenue.toLocaleString()} ₽</p>
         </div>
       </div>
 
       <div className="space-y-4">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="relative flex-1 min-w-[200px]">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#3d3527]/40" />
             <input
               type="text"
@@ -179,33 +179,35 @@ export function CRMAdmin() {
               className="w-full pl-10 pr-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
             />
           </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-4 py-2 border rounded-xl transition-colors ${
-              hasActiveFilters || showFilters 
-                ? 'bg-[#a67c52] text-white border-[#a67c52]' 
-                : 'border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]'
-            }`}
-          >
-            <Filter className="w-4 h-4" />
-            Фильтры
-            {hasActiveFilters && <span className="bg-white text-[#a67c52] text-xs px-1.5 rounded-full">{Object.entries(filters).filter(([k, v]) => k === 'status' ? v !== 'all' : v !== '').length}</span>}
-            {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
-          {hasActiveFilters && (
+          <div className="flex gap-2">
             <button
-              onClick={resetFilters}
-              className="flex items-center gap-1 px-3 py-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center justify-center gap-2 px-4 py-2 border rounded-xl transition-colors flex-1 sm:flex-none ${
+                hasActiveFilters || showFilters 
+                  ? 'bg-[#a67c52] text-white border-[#a67c52]' 
+                  : 'border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]'
+              }`}
             >
-              <X className="w-4 h-4" />
-              Сбросить
+              <Filter className="w-4 h-4" />
+              <span className="hidden sm:inline">Фильтры</span>
+              {hasActiveFilters && <span className="bg-white text-[#a67c52] text-xs px-1.5 rounded-full">{Object.entries(filters).filter(([k, v]) => k === 'status' ? v !== 'all' : v !== '').length}</span>}
+              {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
-          )}
+            {hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="flex items-center justify-center gap-1 px-3 py-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+              >
+                <X className="w-4 h-4" />
+                <span className="hidden sm:inline">Сбросить</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {showFilters && (
-          <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-4 md:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
               <div>
                 <label className="block text-sm font-medium text-[#3d3527] mb-1">Номер заказа</label>
                 <input
@@ -324,59 +326,92 @@ export function CRMAdmin() {
             <p>Заявки не найдены</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[#f5f3ed]">
-                <tr>
-                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">№</th>
-                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Статус</th>
-                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Дата заказа</th>
-                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Дата оплаты</th>
-                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Контакт</th>
-                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">E-mail</th>
-                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Продукт</th>
-                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Сумма</th>
-                  <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Способ оплаты</th>
-                  <th className="p-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((order, index) => {
-                  const StatusIcon = statusConfig[order.status].icon;
-                  return (
-                    <tr key={order.id} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
-                      <td className="p-3 text-sm text-[#3d3527]">{orders.length - index}</td>
-                      <td className="p-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${statusConfig[order.status].color}`}>
-                          {statusConfig[order.status].label}
-                        </span>
-                      </td>
-                      <td className="p-3 text-sm text-[#3d3527]">
-                        {format(new Date(order.createdAt), 'yyyy-MM-dd HH:mm:ss', { locale: ru })}
-                      </td>
-                      <td className="p-3 text-sm text-[#3d3527]">
-                        {order.paidAt ? format(new Date(order.paidAt), 'yyyy-MM-dd HH:mm:ss', { locale: ru }) : '—'}
-                      </td>
-                      <td className="p-3 text-sm text-[#3d3527]">{order.firstName} {order.lastName}</td>
-                      <td className="p-3 text-sm text-[#3d3527]">{order.email}</td>
-                      <td className="p-3 text-sm text-[#3d3527]">{order.product.name}</td>
-                      <td className="p-3 text-sm font-medium text-[#3d3527]">{order.amount.toLocaleString()}</td>
-                      <td className="p-3 text-sm text-[#3d3527]">ROBOKASSA</td>
-                      <td className="p-3">
-                        <button
-                          onClick={() => setSelectedOrder(order)}
-                          className="p-2 hover:bg-[#f5f3ed] rounded-lg"
-                          title="Подробнее"
-                        >
-                          <Eye className="w-4 h-4 text-[#3d3527]" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="md:hidden divide-y divide-[#d4c9b0]/30">
+              {orders.map((order, index) => (
+                <div key={order.id} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-medium text-[#3d3527]">{order.firstName} {order.lastName}</p>
+                      <p className="text-sm text-[#3d3527]/60">{order.email}</p>
+                    </div>
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${statusConfig[order.status].color}`}>
+                      {statusConfig[order.status].label}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-[#3d3527]/60 truncate flex-1">{order.product.name}</span>
+                    <span className="font-bold text-[#3d3527] ml-2">{order.amount.toLocaleString()} ₽</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-[#3d3527]/60">
+                      {format(new Date(order.createdAt), 'dd.MM.yyyy HH:mm', { locale: ru })}
+                    </span>
+                    <button
+                      onClick={() => setSelectedOrder(order)}
+                      className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                    >
+                      <Eye className="w-4 h-4 text-[#3d3527]" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-[#f5f3ed]">
+                  <tr>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">№</th>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Статус</th>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Дата заказа</th>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Дата оплаты</th>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Контакт</th>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">E-mail</th>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Продукт</th>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Сумма</th>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Способ оплаты</th>
+                    <th className="p-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map((order, index) => {
+                    const StatusIcon = statusConfig[order.status].icon;
+                    return (
+                      <tr key={order.id} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
+                        <td className="p-3 text-sm text-[#3d3527]">{orders.length - index}</td>
+                        <td className="p-3">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${statusConfig[order.status].color}`}>
+                            {statusConfig[order.status].label}
+                          </span>
+                        </td>
+                        <td className="p-3 text-sm text-[#3d3527]">
+                          {format(new Date(order.createdAt), 'yyyy-MM-dd HH:mm:ss', { locale: ru })}
+                        </td>
+                        <td className="p-3 text-sm text-[#3d3527]">
+                          {order.paidAt ? format(new Date(order.paidAt), 'yyyy-MM-dd HH:mm:ss', { locale: ru }) : '—'}
+                        </td>
+                        <td className="p-3 text-sm text-[#3d3527]">{order.firstName} {order.lastName}</td>
+                        <td className="p-3 text-sm text-[#3d3527]">{order.email}</td>
+                        <td className="p-3 text-sm text-[#3d3527]">{order.product.name}</td>
+                        <td className="p-3 text-sm font-medium text-[#3d3527]">{order.amount.toLocaleString()}</td>
+                        <td className="p-3 text-sm text-[#3d3527]">ROBOKASSA</td>
+                        <td className="p-3">
+                          <button
+                            onClick={() => setSelectedOrder(order)}
+                            className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                            title="Подробнее"
+                          >
+                            <Eye className="w-4 h-4 text-[#3d3527]" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
@@ -397,39 +432,39 @@ function OrderModal({ order, onClose, onUpdateStatus }: {
   onUpdateStatus: (orderId: string, status: string) => void;
 }) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg">
-        <h2 className="text-xl font-bold text-[#3d3527] mb-6">Детали заявки</h2>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-lg my-4 max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
+        <h2 className="text-lg md:text-xl font-bold text-[#3d3527] mb-4 md:mb-6">Детали заявки</h2>
 
         <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-[#f5f3ed] rounded-xl">
-            <ShoppingBag className="w-10 h-10 text-[#a67c52]" />
-            <div>
-              <p className="font-medium text-[#3d3527]">{order.product.name}</p>
-              <p className="text-xl font-bold text-[#a67c52]">{order.amount.toLocaleString()} ₽</p>
+          <div className="flex items-center gap-3 p-3 md:p-4 bg-[#f5f3ed] rounded-xl">
+            <ShoppingBag className="w-8 h-8 md:w-10 md:h-10 text-[#a67c52] flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium text-[#3d3527] truncate">{order.product.name}</p>
+              <p className="text-lg md:text-xl font-bold text-[#a67c52]">{order.amount.toLocaleString()} ₽</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex items-center gap-2">
-              <User className="w-5 h-5 text-[#3d3527]/40" />
-              <div>
+              <User className="w-5 h-5 text-[#3d3527]/40 flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs text-[#3d3527]/60">Имя</p>
-                <p className="text-[#3d3527]">{order.firstName} {order.lastName}</p>
+                <p className="text-[#3d3527] truncate">{order.firstName} {order.lastName}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Phone className="w-5 h-5 text-[#3d3527]/40" />
-              <div>
+              <Phone className="w-5 h-5 text-[#3d3527]/40 flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs text-[#3d3527]/60">Телефон</p>
-                <p className="text-[#3d3527]">{order.phone}</p>
+                <p className="text-[#3d3527] truncate">{order.phone}</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 col-span-2">
-              <Mail className="w-5 h-5 text-[#3d3527]/40" />
-              <div>
+            <div className="flex items-center gap-2 sm:col-span-2">
+              <Mail className="w-5 h-5 text-[#3d3527]/40 flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="text-xs text-[#3d3527]/60">Email</p>
-                <p className="text-[#3d3527]">{order.email}</p>
+                <p className="text-[#3d3527] truncate">{order.email}</p>
               </div>
             </div>
           </div>
@@ -443,11 +478,11 @@ function OrderModal({ order, onClose, onUpdateStatus }: {
 
           <div className="border-t border-[#d4c9b0]/30 pt-4">
             <p className="text-sm text-[#3d3527]/60 mb-2">Изменить статус</p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {order.status !== 'PAID' && (
                 <button
                   onClick={() => onUpdateStatus(order.id, 'PAID')}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 flex-1 sm:flex-none"
                 >
                   <CheckCircle className="w-4 h-4" />
                   Оплачено
@@ -456,7 +491,7 @@ function OrderModal({ order, onClose, onUpdateStatus }: {
               {order.status !== 'CANCELLED' && (
                 <button
                   onClick={() => onUpdateStatus(order.id, 'CANCELLED')}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-xl hover:bg-red-200"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 flex-1 sm:flex-none"
                 >
                   <XCircle className="w-4 h-4" />
                   Отменить
@@ -465,12 +500,12 @@ function OrderModal({ order, onClose, onUpdateStatus }: {
             </div>
           </div>
 
-          <div className="text-xs text-[#3d3527]/50">
-            Создана: {format(new Date(order.createdAt), 'd MMMM yyyy, HH:mm', { locale: ru })}
+          <div className="text-xs text-[#3d3527]/50 space-y-1 sm:space-y-0">
+            <div>Создана: {format(new Date(order.createdAt), 'd MMMM yyyy, HH:mm', { locale: ru })}</div>
             {order.paidAt && (
-              <span className="ml-4">
+              <div>
                 Оплачена: {format(new Date(order.paidAt), 'd MMMM yyyy, HH:mm', { locale: ru })}
-              </span>
+              </div>
             )}
           </div>
         </div>
@@ -478,7 +513,7 @@ function OrderModal({ order, onClose, onUpdateStatus }: {
         <div className="flex justify-end mt-6">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl"
+            className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl w-full sm:w-auto"
           >
             Закрыть
           </button>

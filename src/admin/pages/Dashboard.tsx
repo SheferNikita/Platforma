@@ -85,23 +85,23 @@ export function Dashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-[#3d3527]">Дашборд</h1>
-        <p className="text-[#3d3527]/60 mt-1">Обзор ключевых метрик платформы</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Дашборд</h1>
+        <p className="text-sm md:text-base text-[#3d3527]/60 mt-1">Обзор ключевых метрик платформы</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
         {stats.map((stat, index) => (
           <div
             key={index}
-            className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-6 shadow-sm hover:shadow-md transition-shadow"
+            className="bg-white/80 backdrop-blur-md rounded-xl md:rounded-2xl border border-[#d4c9b0]/30 p-4 md:p-6 shadow-sm hover:shadow-md transition-shadow"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-[#3d3527]/60">{stat.label}</p>
-                <p className="text-3xl font-bold text-[#3d3527] mt-2">{stat.value}</p>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs md:text-sm text-[#3d3527]/60 truncate">{stat.label}</p>
+                <p className="text-xl md:text-3xl font-bold text-[#3d3527] mt-1 md:mt-2 truncate">{stat.value}</p>
               </div>
-              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-lg`}>
-                <stat.icon className="w-7 h-7 text-white" />
+              <div className={`w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-lg flex-shrink-0`}>
+                <stat.icon className="w-5 h-5 md:w-7 md:h-7 text-white" />
               </div>
             </div>
           </div>
@@ -109,9 +109,9 @@ export function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-[#3d3527] mb-6">Выручка за 30 дней</h2>
-          <div className="h-64">
+        <div className="bg-white/80 backdrop-blur-md rounded-xl md:rounded-2xl border border-[#d4c9b0]/30 p-4 md:p-6 shadow-sm">
+          <h2 className="text-lg md:text-xl font-bold text-[#3d3527] mb-4 md:mb-6">Выручка за 30 дней</h2>
+          <div className="h-48 md:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data?.revenueChart || []}>
                 <defs>
@@ -143,8 +143,8 @@ export function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-6 shadow-sm">
-          <h2 className="text-xl font-bold text-[#3d3527] mb-6">Последние платежи</h2>
+        <div className="bg-white/80 backdrop-blur-md rounded-xl md:rounded-2xl border border-[#d4c9b0]/30 p-4 md:p-6 shadow-sm">
+          <h2 className="text-lg md:text-xl font-bold text-[#3d3527] mb-4 md:mb-6">Последние платежи</h2>
           <div className="space-y-4">
             {data?.recentPayments?.length === 0 ? (
               <p className="text-[#3d3527]/60 text-center py-8">Пока нет платежей</p>

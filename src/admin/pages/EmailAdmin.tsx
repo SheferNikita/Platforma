@@ -102,40 +102,42 @@ export function EmailAdmin() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-[#3d3527]">Email рассылки</h1>
-        <p className="text-[#3d3527]/60 mt-1">Отправка писем ученикам</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Email рассылки</h1>
+        <p className="text-[#3d3527]/60 mt-1 text-sm md:text-base">Отправка писем ученикам</p>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex flex-wrap gap-2 md:gap-4">
         <button
           onClick={() => setActiveTab('send')}
-          className={`px-4 py-2 rounded-xl transition-colors ${activeTab === 'send' ? 'bg-[#a67c52] text-white' : 'bg-white text-[#3d3527] hover:bg-[#f5f3ed]'}`}
+          className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-xl transition-colors ${activeTab === 'send' ? 'bg-[#a67c52] text-white' : 'bg-white text-[#3d3527] hover:bg-[#f5f3ed]'}`}
         >
-          <Send className="w-4 h-4 inline-block mr-2" />
-          Отправить письмо
+          <Send className="w-4 h-4 inline-block mr-1 md:mr-2" />
+          <span className="hidden sm:inline">Отправить письмо</span>
+          <span className="sm:hidden">Отправить</span>
         </button>
         <button
           onClick={() => setActiveTab('templates')}
-          className={`px-4 py-2 rounded-xl transition-colors ${activeTab === 'templates' ? 'bg-[#a67c52] text-white' : 'bg-white text-[#3d3527] hover:bg-[#f5f3ed]'}`}
+          className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-xl transition-colors ${activeTab === 'templates' ? 'bg-[#a67c52] text-white' : 'bg-white text-[#3d3527] hover:bg-[#f5f3ed]'}`}
         >
-          <FileText className="w-4 h-4 inline-block mr-2" />
+          <FileText className="w-4 h-4 inline-block mr-1 md:mr-2" />
           Шаблоны
         </button>
       </div>
 
       {activeTab === 'send' && (
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-6">
-          <form onSubmit={sendEmail} className="space-y-4">
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-4 md:p-6">
+          <form onSubmit={sendEmail} className="space-y-3 md:space-y-4">
             <div>
               <label className="block text-sm font-medium text-[#3d3527] mb-1">
-                Получатель (email или несколько через запятую)
+                <span className="hidden sm:inline">Получатель (email или несколько через запятую)</span>
+                <span className="sm:hidden">Получатель (email)</span>
               </label>
               <input
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                className="w-full px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base"
                 placeholder="email@example.com"
               />
             </div>
@@ -144,7 +146,7 @@ export function EmailAdmin() {
               <input
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                className="w-full px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base"
               />
             </div>
             <div>
@@ -152,15 +154,15 @@ export function EmailAdmin() {
               <textarea
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] font-mono text-sm"
-                rows={10}
+                className="w-full px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] font-mono text-xs md:text-sm"
+                rows={8}
               />
             </div>
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-2 md:gap-4">
               <button
                 type="submit"
                 disabled={sending || !to || !subject || !body}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 text-sm md:text-base"
               >
                 <Send className="w-4 h-4" />
                 {sending ? 'Отправка...' : 'Отправить'}
@@ -169,7 +171,7 @@ export function EmailAdmin() {
                 type="button"
                 onClick={sendToAll}
                 disabled={sending || !subject || !body}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 text-sm md:text-base"
               >
                 <Users className="w-4 h-4" />
                 Всем ученикам
@@ -250,7 +252,7 @@ function TemplateModal({ template, onSave, onClose }: { template: EmailTemplate 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-2xl my-8">
+      <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-2xl my-8 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold text-[#3d3527] mb-4">{template ? 'Редактировать шаблон' : 'Новый шаблон'}</h2>
         <div className="space-y-4">
           <div>

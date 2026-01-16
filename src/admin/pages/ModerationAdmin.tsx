@@ -104,34 +104,34 @@ export function ModerationAdmin() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-[#3d3527]">Модерация</h1>
-          <p className="text-[#3d3527]/60 mt-1">Ответы и вопросы учеников</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Модерация</h1>
+          <p className="text-[#3d3527]/60 mt-1 text-sm md:text-base">Ответы и вопросы учеников</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
-          <p className="text-sm text-[#3d3527]/60">Всего записей</p>
-          <p className="text-2xl font-bold text-[#3d3527]">{stats.total}</p>
+      <div className="grid grid-cols-3 gap-2 md:gap-4">
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-2 md:p-4">
+          <p className="text-xs md:text-sm text-[#3d3527]/60">Всего записей</p>
+          <p className="text-lg md:text-2xl font-bold text-[#3d3527]">{stats.total}</p>
         </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
-          <p className="text-sm text-[#3d3527]/60">Ожидают ответа</p>
-          <p className="text-2xl font-bold text-orange-600">{stats.pending}</p>
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-2 md:p-4">
+          <p className="text-xs md:text-sm text-[#3d3527]/60">Ожидают ответа</p>
+          <p className="text-lg md:text-2xl font-bold text-orange-600">{stats.pending}</p>
         </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
-          <p className="text-sm text-[#3d3527]/60">С ответом</p>
-          <p className="text-2xl font-bold text-green-600">{stats.answered}</p>
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-2 md:p-4">
+          <p className="text-xs md:text-sm text-[#3d3527]/60">С ответом</p>
+          <p className="text-lg md:text-2xl font-bold text-green-600">{stats.answered}</p>
         </div>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-2 md:gap-4">
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as any)}
-          className="px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+          className="px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base"
         >
           <option value="all">Все статусы</option>
           <option value="pending">Ожидают ответа</option>
@@ -140,7 +140,7 @@ export function ModerationAdmin() {
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+          className="px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base"
         >
           <option value="all">Все типы</option>
           <option value="diary">Дневник</option>
@@ -160,83 +160,134 @@ export function ModerationAdmin() {
             <p>Записей не найдено</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[#f5f3ed]">
-                <tr>
-                  <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Тип</th>
-                  <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Статус</th>
-                  <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Ученик</th>
-                  <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Урок</th>
-                  <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Текст</th>
-                  <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Дата</th>
-                  <th className="p-4"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => {
-                  const TypeIcon = typeConfig[item.type]?.icon || MessageCircle;
-                  return (
-                    <tr key={`${item.type}-${item.id}`} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
-                      <td className="p-4">
+          <>
+            {/* Mobile card view */}
+            <div className="md:hidden divide-y divide-[#d4c9b0]/30">
+              {items.map((item) => {
+                const TypeIcon = typeConfig[item.type]?.icon || MessageCircle;
+                return (
+                  <div key={`${item.type}-${item.id}`} className="p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${typeConfig[item.type]?.color || 'bg-gray-100'}`}>
                           <TypeIcon className="w-3 h-3" />
                           {typeConfig[item.type]?.label || item.type}
                         </span>
-                      </td>
-                      <td className="p-4">
                         {item.reply ? (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">
                             <CheckCircle className="w-3 h-3" />
-                            Отвечено
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
                             <Clock className="w-3 h-3" />
-                            Ожидает
                           </span>
                         )}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center">
-                            <User className="w-4 h-4 text-white" />
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedItem(item);
+                          setReplyText(item.reply || '');
+                        }}
+                        className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                      >
+                        <MessageCircle className="w-4 h-4 text-[#3d3527]" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center flex-shrink-0">
+                        <User className="w-3 h-3 text-white" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-[#3d3527] truncate">{item.student.user.name}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#3d3527]/60 truncate">{item.lesson.title}</p>
+                    <p className="text-sm text-[#3d3527] line-clamp-2">{item.content}</p>
+                    <p className="text-xs text-[#3d3527]/50">{format(new Date(item.createdAt), 'd MMM yyyy', { locale: ru })}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-[#f5f3ed]">
+                  <tr>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Тип</th>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Статус</th>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Ученик</th>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Урок</th>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Текст</th>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Дата</th>
+                    <th className="p-4"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => {
+                    const TypeIcon = typeConfig[item.type]?.icon || MessageCircle;
+                    return (
+                      <tr key={`${item.type}-${item.id}`} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
+                        <td className="p-4">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${typeConfig[item.type]?.color || 'bg-gray-100'}`}>
+                            <TypeIcon className="w-3 h-3" />
+                            {typeConfig[item.type]?.label || item.type}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          {item.reply ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">
+                              <CheckCircle className="w-3 h-3" />
+                              Отвечено
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
+                              <Clock className="w-3 h-3" />
+                              Ожидает
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center">
+                              <User className="w-4 h-4 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-[#3d3527]">{item.student.user.name}</p>
+                              <p className="text-xs text-[#3d3527]/60">{item.student.user.email}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-[#3d3527]">{item.student.user.name}</p>
-                            <p className="text-xs text-[#3d3527]/60">{item.student.user.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4 text-sm text-[#3d3527]">{item.lesson.title}</td>
-                      <td className="p-4 text-sm text-[#3d3527] max-w-xs truncate">{item.content}</td>
-                      <td className="p-4 text-sm text-[#3d3527]/60">
-                        {format(new Date(item.createdAt), 'd MMM yyyy', { locale: ru })}
-                      </td>
-                      <td className="p-4">
-                        <button
-                          onClick={() => {
-                            setSelectedItem(item);
-                            setReplyText(item.reply || '');
-                          }}
-                          className="p-2 hover:bg-[#f5f3ed] rounded-lg"
-                          title={item.reply ? 'Просмотреть' : 'Ответить'}
-                        >
-                          <MessageCircle className="w-4 h-4 text-[#3d3527]" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        </td>
+                        <td className="p-4 text-sm text-[#3d3527]">{item.lesson.title}</td>
+                        <td className="p-4 text-sm text-[#3d3527] max-w-xs truncate">{item.content}</td>
+                        <td className="p-4 text-sm text-[#3d3527]/60">
+                          {format(new Date(item.createdAt), 'd MMM yyyy', { locale: ru })}
+                        </td>
+                        <td className="p-4">
+                          <button
+                            onClick={() => {
+                              setSelectedItem(item);
+                              setReplyText(item.reply || '');
+                            }}
+                            className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                            title={item.reply ? 'Просмотреть' : 'Ответить'}
+                          >
+                            <MessageCircle className="w-4 h-4 text-[#3d3527]" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
       {selectedItem && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto my-8">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-[#3d3527]">
                 {typeConfig[selectedItem.type]?.label || 'Запись'} от ученика
@@ -292,10 +343,10 @@ export function ModerationAdmin() {
               )}
             </div>
 
-            <div className="flex justify-end gap-3 mt-6">
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 mt-6">
               <button 
                 onClick={() => setSelectedItem(null)} 
-                className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl"
+                className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl order-last sm:order-first"
               >
                 Закрыть
               </button>
@@ -303,19 +354,20 @@ export function ModerationAdmin() {
                 <button
                   onClick={markAsViewed}
                   disabled={submitting}
-                  className="flex items-center gap-2 px-4 py-2 border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed] rounded-xl disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 px-4 py-2 border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed] rounded-xl disabled:opacity-50 text-sm md:text-base"
                 >
                   <Eye className="w-4 h-4" />
-                  {submitting ? 'Отметка...' : 'Отметить просмотренным'}
+                  <span className="hidden sm:inline">{submitting ? 'Отметка...' : 'Отметить просмотренным'}</span>
+                  <span className="sm:hidden">{submitting ? 'Отметка...' : 'Просмотрено'}</span>
                 </button>
               )}
               <button
                 onClick={submitReply}
                 disabled={!replyText.trim() || submitting}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl disabled:opacity-50 text-sm md:text-base"
               >
                 <Send className="w-4 h-4" />
-                {submitting ? 'Отправка...' : selectedItem.reply ? 'Обновить ответ' : 'Отправить ответ'}
+                {submitting ? 'Отправка...' : selectedItem.reply ? 'Обновить' : 'Отправить'}
               </button>
             </div>
           </div>

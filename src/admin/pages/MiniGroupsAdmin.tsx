@@ -128,12 +128,12 @@ export function MiniGroupsAdmin() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#3d3527]">Мини-группы</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Мини-группы</h1>
           <p className="text-[#3d3527]/60 mt-1">Управление мини-группами</p>
         </div>
-        <button onClick={() => { setEditingGroup(null); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg">
+        <button onClick={() => { setEditingGroup(null); setShowModal(true); }} className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg w-full sm:w-auto">
           <Plus className="w-5 h-5" /> Добавить
         </button>
       </div>
@@ -196,7 +196,7 @@ export function MiniGroupsAdmin() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg">
+          <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-[#3d3527] mb-4">{editingGroup ? 'Редактировать' : 'Новая группа'}</h2>
             <MiniGroupForm 
               group={editingGroup} 
@@ -210,7 +210,7 @@ export function MiniGroupsAdmin() {
 
       {showSettingsModal && settingsGroup && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg">
+          <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-bold text-[#3d3527] mb-4">Настройки группы</h2>
             <MiniGroupSettings 
               group={settingsGroup}
@@ -263,15 +263,15 @@ function MiniGroupForm({ group, contacts, onSave, onClose }: {
           ))}
         </select>
       </div>
-      <div className="flex justify-end gap-3">
-        <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
+      <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
+        <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl w-full sm:w-auto">Отмена</button>
         <button 
           onClick={() => onSave({ 
             title, 
             description, 
             curatorId: curatorId || null
           })} 
-          className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
+          className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl w-full sm:w-auto"
         >
           Сохранить
         </button>

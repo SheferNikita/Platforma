@@ -124,25 +124,25 @@ export function ContactsAdmin() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-[#3d3527]">Контакты</h1>
-          <p className="text-[#3d3527]/60 mt-1">Управление контактами кураторов</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Контакты</h1>
+          <p className="text-sm md:text-base text-[#3d3527]/60 mt-1">Управление контактами кураторов</p>
         </div>
         <div className="flex gap-2">
           {reordering ? (
             <>
               <button
                 onClick={cancelReorder}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-[#d4c9b0] text-[#3d3527] rounded-xl hover:bg-[#f5f3ed]"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-[#d4c9b0] text-[#3d3527] rounded-xl hover:bg-[#f5f3ed] w-full sm:w-auto"
               >
                 <X className="w-5 h-5" /> Отменить
               </button>
               <button
                 onClick={saveReorder}
                 disabled={saving}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg disabled:opacity-50"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg disabled:opacity-50 w-full sm:w-auto"
               >
                 <Check className="w-5 h-5" /> {saving ? 'Сохранение...' : 'Сохранить'}
               </button>
@@ -151,11 +151,11 @@ export function ContactsAdmin() {
             <>
               <button
                 onClick={startReordering}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed]"
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed] w-full sm:w-auto"
               >
                 <Move className="w-5 h-5" /> Переместить
               </button>
-              <button onClick={() => { setEditingContact(null); setShowModal(true); }} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg">
+              <button onClick={() => { setEditingContact(null); setShowModal(true); }} className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg w-full sm:w-auto">
                 <Plus className="w-5 h-5" /> Добавить
               </button>
             </>
@@ -163,14 +163,14 @@ export function ContactsAdmin() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         {loading ? (
           <div className="col-span-full flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#a67c52]"></div></div>
         ) : contacts.length === 0 ? (
           <div className="col-span-full text-center py-12 text-[#3d3527]/60">Нет контактов</div>
         ) : (
           contacts.map((contact, index) => (
-            <div key={contact.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-4">
+            <div key={contact.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-3 md:p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   {reordering && (
@@ -228,8 +228,8 @@ export function ContactsAdmin() {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg">
-            <h2 className="text-xl font-bold text-[#3d3527] mb-4">{editingContact ? 'Редактировать' : 'Новый контакт'}</h2>
+          <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h2 className="text-lg md:text-xl font-bold text-[#3d3527] mb-4">{editingContact ? 'Редактировать' : 'Новый контакт'}</h2>
             <ContactForm contact={editingContact} onSave={saveContact} onClose={() => { setShowModal(false); setEditingContact(null); }} />
           </div>
         </div>
@@ -323,7 +323,7 @@ function ContactForm({ contact, onSave, onClose }: { contact: Contact | null; on
           )}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-[#3d3527] mb-1">Имя</label>
           <input value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
@@ -333,7 +333,7 @@ function ContactForm({ contact, onSave, onClose }: { contact: Contact | null; on
           <input value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="Куратор" />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-[#3d3527] mb-1">Телефон</label>
           <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />

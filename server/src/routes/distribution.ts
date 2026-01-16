@@ -1,0 +1,138 @@
+import { Router, Response } from 'express';
+import { prisma } from '../index';
+import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
+
+const router = Router();
+
+router.use(authenticate);
+router.use(requireRole('SUPER_ADMIN', 'CONTENT_MANAGER', 'SUPPORT'));
+
+router.get('/unassigned', async (req: AuthRequest, res: Response) => {
+  try {
+    const students = await prisma.student.findMany({
+      where: {
+        miniGroups: { none: {} }
+      },
+      include: {
+        user: { select: { id: true, name: true, email: true, createdAt: true } },
+        payments: {
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: { product: { select: { title: true } } }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(students);
+  } catch (error) {
+    console.error('Get unassigned students error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/unassigned/count', async (req: AuthRequest, res: Response) => {
+  try {
+    const count = await prisma.student.count({
+      where: {
+        miniGroups: { none: {} }
+      }
+    });
+
+    res.json({ count });
+  } catch (error) {
+    console.error('Get unassigned count error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/mini-groups', async (req: AuthRequest, res: Response) => {
+  try {
+    const groups = await prisma.miniGroup.findMany({
+      where: { isPublished: true },
+      orderBy: { title: 'asc' },
+      include: {
+        curator: { select: { id: true, name: true } },
+        _count: { select: { members: true } }
+      }
+    });
+
+    res.json(groups);
+  } catch (error) {
+    console.error('Get mini-groups error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/assign', async (req: AuthRequest, res: Response) => {
+  try {
+    const { studentId, miniGroupId } = req.body;
+
+    if (!studentId || !miniGroupId) {
+      return res.status(400).json({ error: 'Требуется ID ученика и мини-группы' });
+    }
+
+    const existing = await prisma.miniGroupMember.findFirst({
+      where: { studentId, miniGroupId }
+    });
+
+    if (existing) {
+      return res.status(400).json({ error: 'Ученик уже состоит в этой группе' });
+    }
+
+    const member = await prisma.miniGroupMember.create({
+      data: { studentId, miniGroupId },
+      include: {
+        student: {
+          include: { user: { select: { id: true, name: true, email: true } } }
+        },
+        miniGroup: { select: { title: true } }
+      }
+    });
+
+    res.status(201).json(member);
+  } catch (error) {
+    console.error('Assign student error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/assign-multiple', async (req: AuthRequest, res: Response) => {
+  try {
+    const { studentIds, miniGroupId } = req.body;
+
+    if (!studentIds?.length || !miniGroupId) {
+      return res.status(400).json({ error: 'Требуются ID учеников и мини-группы' });
+    }
+
+    const existingMembers = await prisma.miniGroupMember.findMany({
+      where: {
+        miniGroupId,
+        studentId: { in: studentIds }
+      },
+      select: { studentId: true }
+    });
+
+    const existingStudentIds = new Set(existingMembers.map(m => m.studentId));
+    const newStudentIds = studentIds.filter((id: string) => !existingStudentIds.has(id));
+
+    if (newStudentIds.length === 0) {
+      return res.status(400).json({ error: 'Все выбранные ученики уже состоят в этой группе' });
+    }
+
+    await prisma.miniGroupMember.createMany({
+      data: newStudentIds.map((studentId: string) => ({ studentId, miniGroupId }))
+    });
+
+    res.status(201).json({ 
+      message: `Добавлено ${newStudentIds.length} учеников в группу`,
+      count: newStudentIds.length
+    });
+  } catch (error) {
+    console.error('Assign multiple students error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+export default router;

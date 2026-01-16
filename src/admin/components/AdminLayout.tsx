@@ -19,7 +19,8 @@ import {
   Phone,
   ClipboardList,
   MessageCircle,
-  History
+  History,
+  UserPlus
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 
@@ -32,6 +33,7 @@ const navItems = [
   { path: '/admin/communities', label: 'Общины', icon: Building },
   { path: '/admin/mini-groups', label: 'Мини-группы', icon: Users2 },
   { path: '/admin/students', label: 'Ученики', icon: Users },
+  { path: '/admin/distribution', label: 'Распределение', icon: UserPlus, showDistributionBadge: true },
   { path: '/admin/moderation', label: 'Модерация', icon: MessageCircle, showBadge: true },
   { path: '/admin/products', label: 'Продукты', icon: ShoppingBag },
   { path: '/admin/crm', label: 'CRM', icon: ClipboardList },
@@ -45,19 +47,24 @@ export function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [moderationCount, setModerationCount] = useState(0);
+  const [distributionCount, setDistributionCount] = useState(0);
 
   useEffect(() => {
-    loadModerationCount();
-    const interval = setInterval(loadModerationCount, 30000);
+    loadCounts();
+    const interval = setInterval(loadCounts, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  async function loadModerationCount() {
+  async function loadCounts() {
     try {
-      const data = await api.get<{ count: number }>('/public/moderation/count');
-      setModerationCount(data.count);
+      const [moderation, distribution] = await Promise.all([
+        api.get<{ count: number }>('/public/moderation/count'),
+        api.get<{ count: number }>('/public/distribution/unassigned/count')
+      ]);
+      setModerationCount(moderation.count);
+      setDistributionCount(distribution.count);
     } catch (error) {
-      console.error('Error loading moderation count');
+      console.error('Error loading counts');
     }
   }
 
@@ -98,6 +105,11 @@ export function AdminLayout() {
                   {item.showBadge && moderationCount > 0 && (
                     <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full min-w-[20px] text-center">
                       {moderationCount}
+                    </span>
+                  )}
+                  {item.showDistributionBadge && distributionCount > 0 && (
+                    <span className="ml-auto bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full min-w-[20px] text-center">
+                      {distributionCount}
                     </span>
                   )}
                 </NavLink>

@@ -32,6 +32,7 @@ import { AdminsAdmin } from './admin/pages/AdminsAdmin';
 import { CRMAdmin } from './admin/pages/CRMAdmin';
 import { ModerationAdmin } from './admin/pages/ModerationAdmin';
 import { AuditLogAdmin } from './admin/pages/AuditLogAdmin';
+import { DistributionAdmin } from './admin/pages/DistributionAdmin';
 import { PaymentPage } from './pages/PaymentPage';
 import { Toaster } from 'sonner';
 
@@ -111,6 +112,7 @@ export default function App() {
             <Route path="email" element={<EmailAdmin />} />
             <Route path="admins" element={<AdminsAdmin />} />
             <Route path="audit" element={<AuditLogAdmin />} />
+            <Route path="distribution" element={<DistributionAdmin />} />
           </Route>
           
           <Route

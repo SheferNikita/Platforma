@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import ordersRouter from './orders';
 import moderationRouter from './moderation';
 import auditRouter from './audit';
+import distributionRouter from './distribution';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -11,6 +12,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 router.use('/orders', ordersRouter);
 router.use('/moderation', moderationRouter);
 router.use('/audit', auditRouter);
+router.use('/distribution', distributionRouter);
 
 interface DecodedToken {
   id: string;

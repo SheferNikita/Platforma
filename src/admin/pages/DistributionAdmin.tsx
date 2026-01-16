@@ -1,10 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Users2, UserPlus, Check, RefreshCw, Search, ChevronRight } from 'lucide-react';
+import { Users2, UserPlus, Check, RefreshCw, Search, ChevronRight, MapPin, User, Calendar, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+
+const GENDER_LABELS: Record<string, string> = {
+  male: 'М',
+  female: 'Ж'
+};
+
+const ADDICTION_LABELS: Record<string, string> = {
+  alcohol: 'Алкогольная',
+  drugs: 'Наркотическая',
+  gambling: 'Игровая',
+  food: 'Пищевая',
+  codependency: 'Созавис.',
+  other: 'Другая'
+};
 
 interface Student {
   id: string;
+  city: string | null;
+  gender: string | null;
+  age: number | null;
+  addictionType: string | null;
+  surveyCompleted: boolean;
   user: { id: string; name: string; email: string; createdAt: string };
   payments: Array<{ product: { name: string } }>;
 }
@@ -186,62 +205,97 @@ export function DistributionAdmin() {
               {filteredStudents.map((student) => (
                 <div
                   key={student.id}
-                  className={`flex items-center gap-4 p-4 rounded-xl transition-all cursor-pointer ${
+                  className={`p-4 rounded-xl transition-all cursor-pointer ${
                     selectedStudents.has(student.id)
                       ? 'bg-[#a67c52]/10 border-2 border-[#a67c52]'
                       : 'bg-white/40 border border-[#d4c9b0]/30 hover:bg-white/60'
                   }`}
                   onClick={() => toggleStudent(student.id)}
                 >
-                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
-                    selectedStudents.has(student.id)
-                      ? 'bg-[#a67c52] border-[#a67c52]'
-                      : 'border-[#d4c9b0]'
-                  }`}>
-                    {selectedStudents.has(student.id) && (
-                      <Check className="w-3 h-3 text-white" />
-                    )}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-[#3d3527] truncate">{student.user.name}</p>
-                    <p className="text-sm text-[#3d3527]/60 truncate">{student.user.email}</p>
-                  </div>
-                  
-                  <div className="text-right hidden sm:block">
-                    <p className="text-xs text-[#3d3527]/40">
-                      {formatDate(student.user.createdAt)}
-                    </p>
-                    {student.payments[0] && (
-                      <p className="text-xs text-[#a67c52] truncate max-w-[150px]">
-                        {student.payments[0].product.name}
+                  <div className="flex items-center gap-4">
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all flex-shrink-0 ${
+                      selectedStudents.has(student.id)
+                        ? 'bg-[#a67c52] border-[#a67c52]'
+                        : 'border-[#d4c9b0]'
+                    }`}>
+                      {selectedStudents.has(student.id) && (
+                        <Check className="w-3 h-3 text-white" />
+                      )}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-[#3d3527] truncate">{student.user.name}</p>
+                      <p className="text-sm text-[#3d3527]/60 truncate">{student.user.email}</p>
+                    </div>
+                    
+                    <div className="text-right hidden sm:block">
+                      <p className="text-xs text-[#3d3527]/40">
+                        {formatDate(student.user.createdAt)}
                       </p>
-                    )}
-                  </div>
+                      {student.payments[0] && (
+                        <p className="text-xs text-[#a67c52] truncate max-w-[150px]">
+                          {student.payments[0].product.name}
+                        </p>
+                      )}
+                    </div>
 
-                  <div className="relative group">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); }}
-                      className="p-2 text-[#3d3527]/40 hover:text-[#a67c52] hover:bg-[#a67c52]/10 rounded-lg transition-all"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                    <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-[#d4c9b0]/30 py-1 z-10 hidden group-hover:block">
-                      {groups.map((group) => (
-                        <button
-                          key={group.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            assignSingle(student.id, group.id);
-                          }}
-                          className="w-full text-left px-4 py-2 text-sm text-[#3d3527] hover:bg-[#f5f3ed] transition-all"
-                        >
-                          <span className="truncate block">{group.title}</span>
-                          <span className="text-xs text-[#3d3527]/40">{group._count.members} уч.</span>
-                        </button>
-                      ))}
+                    <div className="relative group">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); }}
+                        className="p-2 text-[#3d3527]/40 hover:text-[#a67c52] hover:bg-[#a67c52]/10 rounded-lg transition-all"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                      <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-xl shadow-lg border border-[#d4c9b0]/30 py-1 z-10 hidden group-hover:block">
+                        {groups.map((group) => (
+                          <button
+                            key={group.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              assignSingle(student.id, group.id);
+                            }}
+                            className="w-full text-left px-4 py-2 text-sm text-[#3d3527] hover:bg-[#f5f3ed] transition-all"
+                          >
+                            <span className="truncate block">{group.title}</span>
+                            <span className="text-xs text-[#3d3527]/40">{group._count.members} уч.</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
+
+                  {student.surveyCompleted ? (
+                    <div className="flex flex-wrap gap-2 mt-3 ml-9">
+                      {student.city && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs">
+                          <MapPin className="w-3 h-3" />
+                          {student.city}
+                        </span>
+                      )}
+                      {student.gender && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs">
+                          <User className="w-3 h-3" />
+                          {GENDER_LABELS[student.gender] || student.gender}
+                        </span>
+                      )}
+                      {student.age && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs">
+                          <Calendar className="w-3 h-3" />
+                          {student.age} лет
+                        </span>
+                      )}
+                      {student.addictionType && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs">
+                          {ADDICTION_LABELS[student.addictionType] || student.addictionType}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 mt-3 ml-9 text-amber-600 text-xs">
+                      <AlertCircle className="w-3 h-3" />
+                      Опрос не пройден
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

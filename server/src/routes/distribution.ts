@@ -13,7 +13,14 @@ router.get('/unassigned', async (req: AuthRequest, res: Response) => {
       where: {
         miniGroups: { none: {} }
       },
-      include: {
+      select: {
+        id: true,
+        city: true,
+        gender: true,
+        age: true,
+        addictionType: true,
+        surveyCompleted: true,
+        createdAt: true,
         user: { select: { id: true, name: true, email: true, createdAt: true } },
         payments: {
           where: { status: 'COMPLETED' },

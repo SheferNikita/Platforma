@@ -6,6 +6,7 @@ interface User {
   email: string;
   name: string;
   role: 'SUPER_ADMIN' | 'CONTENT_MANAGER' | 'SUPPORT' | 'FINANCE' | 'STUDENT';
+  surveyCompleted?: boolean;
 }
 
 interface AuthContextType {

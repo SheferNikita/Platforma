@@ -119,7 +119,60 @@ router.post('/register', async (req, res) => {
 });
 
 router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
-  res.json({ user: req.user });
+  try {
+    if (req.user?.role === 'STUDENT') {
+      const student = await prisma.student.findFirst({
+        where: { userId: req.user.id },
+        select: { surveyCompleted: true }
+      });
+      return res.json({ 
+        user: { 
+          ...req.user, 
+          surveyCompleted: student?.surveyCompleted || false 
+        } 
+      });
+    }
+    res.json({ user: { ...req.user, surveyCompleted: true } });
+  } catch (error) {
+    console.error('Get me error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+const surveySchema = z.object({
+  city: z.string().min(1, 'Укажите город'),
+  gender: z.string().min(1, 'Укажите пол'),
+  age: z.number().min(1, 'Укажите возраст').max(120, 'Некорректный возраст'),
+  addictionType: z.string().min(1, 'Укажите тип зависимости')
+});
+
+router.post('/survey', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.user?.role !== 'STUDENT') {
+      return res.status(403).json({ error: 'Опрос доступен только для учеников' });
+    }
+
+    const data = surveySchema.parse(req.body);
+
+    const student = await prisma.student.update({
+      where: { userId: req.user.id },
+      data: {
+        city: data.city,
+        gender: data.gender,
+        age: data.age,
+        addictionType: data.addictionType,
+        surveyCompleted: true
+      }
+    });
+
+    res.json({ success: true, student });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.issues[0].message });
+    }
+    console.error('Survey error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
 router.post('/logout', (req, res) => {

@@ -14,6 +14,7 @@ import { MyDiariesPage } from './pages/MyDiariesPage';
 import { MyNotesPage } from './pages/MyNotesPage';
 import { MiniGroupPage } from './pages/MiniGroupPage';
 import { LoginPage } from './pages/LoginPage';
+import { OnboardingSurvey } from './pages/OnboardingSurvey';
 import { AuthProvider, useAuth } from './lib/auth';
 import { AdminLayout } from './admin/components/AdminLayout';
 import { AdminLogin } from './admin/pages/AdminLogin';
@@ -74,6 +75,10 @@ function ProtectedStudentRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
+  if (user.role === 'STUDENT' && !user.surveyCompleted) {
+    return <Navigate to="/survey" replace />;
+  }
+
   return <>{children}</>;
 }
 
@@ -86,6 +91,7 @@ export default function App() {
           <Route path="/sos" element={<SOSPage />} />
           <Route path="/pay/:productId" element={<PaymentPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/survey" element={<OnboardingSurvey />} />
           
           <Route path="/admin/login" element={<AdminLogin />} />
           

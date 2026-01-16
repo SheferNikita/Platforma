@@ -36,6 +36,12 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
 -   **Mini-Groups:** Enhanced management of mini-groups, including curator assignment, chat links, and dedicated scheduling within group settings.
 -   **Authentication:** Dual mechanism supporting both HttpOnly cookies (`sameSite: 'none'`, `secure: true`) and a fallback to `localStorage` with `Authorization` headers for iframe compatibility.
 -   **UI/UX:** The admin panel features a warm, beige color scheme, rounded corners, and a glassmorphism effect, aligning with the platform's overall aesthetic.
+-   **Mobile Responsiveness:** The admin panel is fully responsive for mobile devices:
+    -   Hamburger menu with slide-out navigation sidebar on mobile (lg: breakpoint)
+    -   Tables converted to card views on mobile (md:hidden for cards, hidden md:block for tables)
+    -   Modals are full-screen and scrollable on mobile (max-h-[90vh] overflow-y-auto)
+    -   Responsive grids (grid-cols-1 sm:grid-cols-2 lg:grid-cols-3)
+    -   Tailwind responsive prefixes preserve desktop layouts unchanged
 
 ## External Dependencies
 

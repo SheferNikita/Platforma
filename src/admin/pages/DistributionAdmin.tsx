@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 interface Student {
   id: string;
   user: { id: string; name: string; email: string; createdAt: string };
-  payments: Array<{ product: { title: string } }>;
+  payments: Array<{ product: { name: string } }>;
 }
 
 interface MiniGroup {
@@ -214,7 +214,7 @@ export function DistributionAdmin() {
                     </p>
                     {student.payments[0] && (
                       <p className="text-xs text-[#a67c52] truncate max-w-[150px]">
-                        {student.payments[0].product.title}
+                        {student.payments[0].product.name}
                       </p>
                     )}
                   </div>

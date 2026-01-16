@@ -19,7 +19,7 @@ router.get('/unassigned', async (req: AuthRequest, res: Response) => {
           where: { status: 'COMPLETED' },
           orderBy: { createdAt: 'desc' },
           take: 1,
-          include: { product: { select: { title: true } } }
+          include: { product: { select: { name: true } } }
         }
       },
       orderBy: { createdAt: 'desc' }

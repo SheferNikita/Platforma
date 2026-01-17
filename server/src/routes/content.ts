@@ -34,7 +34,11 @@ function normalizeTelegramLink(input: string): string {
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'ADMIN'));
+
+const adminOnly = requireRole('SUPER_ADMIN', 'ADMIN');
+const contentRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'MODERATOR');
+const moderatorRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'MODERATOR');
+const groupRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR');
 
 const moduleSchema = z.object({
   title: z.string().min(1, 'Название обязательно'),
@@ -60,7 +64,7 @@ const lessonSchema = z.object({
   })).optional()
 });
 
-router.get('/modules', async (req: AuthRequest, res: Response) => {
+router.get('/modules', contentRoles, async (req: AuthRequest, res: Response) => {
   try {
     const modules = await prisma.module.findMany({
       include: {
@@ -82,7 +86,7 @@ router.get('/modules', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/modules', async (req: AuthRequest, res: Response) => {
+router.post('/modules', contentRoles, async (req: AuthRequest, res: Response) => {
   try {
     const data = moduleSchema.parse(req.body);
     const module = await prisma.module.create({ data });
@@ -108,7 +112,7 @@ router.post('/modules', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/modules/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.put('/modules/:id', contentRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     const data = moduleSchema.partial().parse(req.body);
@@ -134,7 +138,7 @@ router.put('/modules/:id', async (req: AuthRequest & Request<IdParams>, res: Res
   }
 });
 
-router.delete('/modules/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.delete('/modules/:id', contentRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     await prisma.module.delete({ where: { id } });
@@ -155,7 +159,7 @@ router.delete('/modules/:id', async (req: AuthRequest & Request<IdParams>, res: 
   }
 });
 
-router.get('/lessons', async (req: AuthRequest, res: Response) => {
+router.get('/lessons', contentRoles, async (req: AuthRequest, res: Response) => {
   try {
     const lessons = await prisma.lesson.findMany({
       include: { module: true },
@@ -168,7 +172,7 @@ router.get('/lessons', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.get('/lessons/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.get('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     const lesson = await prisma.lesson.findUnique({
@@ -193,7 +197,7 @@ router.get('/lessons/:id', async (req: AuthRequest & Request<IdParams>, res: Res
   }
 });
 
-router.post('/lessons', async (req: AuthRequest, res: Response) => {
+router.post('/lessons', contentRoles, async (req: AuthRequest, res: Response) => {
   try {
     const data = lessonSchema.parse(req.body);
     const { videos, ...lessonData } = data;
@@ -236,7 +240,7 @@ router.post('/lessons', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/lessons/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.put('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     const data = lessonSchema.partial().parse(req.body);
@@ -286,7 +290,7 @@ router.put('/lessons/:id', async (req: AuthRequest & Request<IdParams>, res: Res
   }
 });
 
-router.delete('/lessons/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.delete('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     await prisma.lesson.delete({ where: { id } });
@@ -307,7 +311,7 @@ router.delete('/lessons/:id', async (req: AuthRequest & Request<IdParams>, res: 
   }
 });
 
-router.get('/library', async (req: AuthRequest, res: Response) => {
+router.get('/library', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const items = await prisma.libraryItem.findMany({
       orderBy: { order: 'asc' }
@@ -319,7 +323,7 @@ router.get('/library', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/library', async (req: AuthRequest, res: Response) => {
+router.post('/library', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const item = await prisma.libraryItem.create({ data: req.body });
     res.status(201).json(item);
@@ -329,7 +333,7 @@ router.post('/library', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/library/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.put('/library/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     const item = await prisma.libraryItem.update({ where: { id }, data: req.body });
@@ -340,7 +344,7 @@ router.put('/library/:id', async (req: AuthRequest & Request<IdParams>, res: Res
   }
 });
 
-router.delete('/library/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.delete('/library/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     await prisma.libraryItem.delete({ where: { id } });
@@ -351,7 +355,7 @@ router.delete('/library/:id', async (req: AuthRequest & Request<IdParams>, res: 
   }
 });
 
-router.get('/schedule', async (req: AuthRequest, res: Response) => {
+router.get('/schedule', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const events = await prisma.scheduleEvent.findMany({
       orderBy: { date: 'asc' },
@@ -364,7 +368,7 @@ router.get('/schedule', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/schedule', async (req: AuthRequest, res: Response) => {
+router.post('/schedule', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const { date, ...rest } = req.body;
     const isoDate = date ? new Date(date).toISOString() : new Date().toISOString();
@@ -379,7 +383,7 @@ router.post('/schedule', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/schedule/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.put('/schedule/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     const { date, ...rest } = req.body;
@@ -396,7 +400,7 @@ router.put('/schedule/:id', async (req: AuthRequest & Request<IdParams>, res: Re
   }
 });
 
-router.delete('/schedule/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.delete('/schedule/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     await prisma.scheduleEvent.delete({ where: { id } });
@@ -407,7 +411,7 @@ router.delete('/schedule/:id', async (req: AuthRequest & Request<IdParams>, res:
   }
 });
 
-router.get('/contacts', async (req: AuthRequest, res: Response) => {
+router.get('/contacts', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
     const contacts = await prisma.contact.findMany({
       orderBy: { order: 'asc' }
@@ -419,7 +423,7 @@ router.get('/contacts', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/contacts', async (req: AuthRequest, res: Response) => {
+router.post('/contacts', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
     const contact = await prisma.contact.create({ data: { ...req.body, isPublished: true } });
     res.status(201).json(contact);
@@ -429,7 +433,7 @@ router.post('/contacts', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/contacts/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.put('/contacts/:id', adminOnly, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     const contact = await prisma.contact.update({ where: { id }, data: req.body });
@@ -440,7 +444,7 @@ router.put('/contacts/:id', async (req: AuthRequest & Request<IdParams>, res: Re
   }
 });
 
-router.delete('/contacts/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.delete('/contacts/:id', adminOnly, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     await prisma.contact.delete({ where: { id } });
@@ -451,7 +455,7 @@ router.delete('/contacts/:id', async (req: AuthRequest & Request<IdParams>, res:
   }
 });
 
-router.get('/communities', async (req: AuthRequest, res: Response) => {
+router.get('/communities', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const communities = await prisma.community.findMany({
       orderBy: { name: 'asc' }
@@ -463,7 +467,7 @@ router.get('/communities', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/communities', async (req: AuthRequest, res: Response) => {
+router.post('/communities', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const community = await prisma.community.create({ 
       data: { 
@@ -478,7 +482,7 @@ router.post('/communities', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/communities/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.put('/communities/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     const community = await prisma.community.update({ where: { id }, data: req.body });
@@ -489,7 +493,7 @@ router.put('/communities/:id', async (req: AuthRequest & Request<IdParams>, res:
   }
 });
 
-router.delete('/communities/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.delete('/communities/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     await prisma.community.delete({ where: { id } });
@@ -500,9 +504,25 @@ router.delete('/communities/:id', async (req: AuthRequest & Request<IdParams>, r
   }
 });
 
-router.get('/mini-groups', async (req: AuthRequest, res: Response) => {
+router.get('/mini-groups', groupRoles, async (req: AuthRequest, res: Response) => {
   try {
+    let where: any = {};
+    
+    // MENTOR can only see groups where they are the curator (matched by email)
+    if (req.user!.role === 'MENTOR') {
+      const contact = await prisma.contact.findFirst({
+        where: { email: req.user!.email }
+      });
+      if (contact) {
+        where.curatorId = contact.id;
+      } else {
+        // No matching contact found, return empty array
+        return res.json([]);
+      }
+    }
+    
     const groups = await prisma.miniGroup.findMany({
+      where,
       orderBy: { title: 'asc' },
       include: { 
         curator: true,
@@ -517,7 +537,7 @@ router.get('/mini-groups', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/mini-groups', async (req: AuthRequest, res: Response) => {
+router.post('/mini-groups', groupRoles, async (req: AuthRequest, res: Response) => {
   try {
     const { chatLink, ...rest } = req.body;
     const group = await prisma.miniGroup.create({ 
@@ -535,9 +555,21 @@ router.post('/mini-groups', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.put('/mini-groups/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.put('/mini-groups/:id', groupRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
+    
+    // MENTOR can only edit their own groups
+    if (req.user!.role === 'MENTOR') {
+      const group = await prisma.miniGroup.findUnique({
+        where: { id },
+        include: { curator: true }
+      });
+      if (!group || group.curator?.email !== req.user!.email) {
+        return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
+      }
+    }
+    
     const { chatLink, ...rest } = req.body;
     const data = chatLink !== undefined 
       ? { ...rest, chatLink: chatLink ? normalizeTelegramLink(chatLink) : null }
@@ -554,9 +586,21 @@ router.put('/mini-groups/:id', async (req: AuthRequest & Request<IdParams>, res:
   }
 });
 
-router.delete('/mini-groups/:id', async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.delete('/mini-groups/:id', groupRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
+    
+    // MENTOR can only delete their own groups
+    if (req.user!.role === 'MENTOR') {
+      const group = await prisma.miniGroup.findUnique({
+        where: { id },
+        include: { curator: true }
+      });
+      if (!group || group.curator?.email !== req.user!.email) {
+        return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
+      }
+    }
+    
     await prisma.miniGroup.delete({ where: { id } });
     res.json({ message: 'Мини-группа удалена' });
   } catch (error) {
@@ -565,9 +609,26 @@ router.delete('/mini-groups/:id', async (req: AuthRequest & Request<IdParams>, r
   }
 });
 
-router.get('/mini-groups/:groupId/events', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
+async function verifyMentorGroupAccess(groupId: string, userEmail: string): Promise<boolean> {
+  const group = await prisma.miniGroup.findUnique({
+    where: { id: groupId },
+    include: { curator: true }
+  });
+  return group?.curator?.email === userEmail;
+}
+
+router.get('/mini-groups/:groupId/events', groupRoles, async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
   try {
     const { groupId } = req.params;
+    
+    // MENTOR can only access their own groups
+    if (req.user!.role === 'MENTOR') {
+      const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
+      }
+    }
+    
     const events = await prisma.scheduleEvent.findMany({
       where: { miniGroupId: groupId },
       orderBy: { date: 'asc' }
@@ -579,9 +640,18 @@ router.get('/mini-groups/:groupId/events', async (req: AuthRequest & Request<Gro
   }
 });
 
-router.post('/mini-groups/:groupId/events', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
+router.post('/mini-groups/:groupId/events', groupRoles, async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
   try {
     const { groupId } = req.params;
+    
+    // MENTOR can only add events to their own groups
+    if (req.user!.role === 'MENTOR') {
+      const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
+      }
+    }
+    
     const { date, ...rest } = req.body;
     const event = await prisma.scheduleEvent.create({
       data: {
@@ -598,9 +668,26 @@ router.post('/mini-groups/:groupId/events', async (req: AuthRequest & Request<Gr
   }
 });
 
-router.put('/mini-groups/:groupId/events/:eventId', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
+router.put('/mini-groups/:groupId/events/:eventId', groupRoles, async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
   try {
-    const { eventId } = req.params;
+    const { groupId, eventId } = req.params;
+    
+    // MENTOR can only update events in their own groups
+    if (req.user!.role === 'MENTOR') {
+      const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
+      }
+    }
+    
+    // Verify event belongs to the specified group
+    const existingEvent = await prisma.scheduleEvent.findFirst({
+      where: { id: eventId, miniGroupId: groupId }
+    });
+    if (!existingEvent) {
+      return res.status(404).json({ error: 'Событие не найдено' });
+    }
+    
     const { date, ...rest } = req.body;
     const event = await prisma.scheduleEvent.update({
       where: { id: eventId },
@@ -616,9 +703,26 @@ router.put('/mini-groups/:groupId/events/:eventId', async (req: AuthRequest & Re
   }
 });
 
-router.delete('/mini-groups/:groupId/events/:eventId', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
+router.delete('/mini-groups/:groupId/events/:eventId', groupRoles, async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
   try {
-    const { eventId } = req.params;
+    const { groupId, eventId } = req.params;
+    
+    // MENTOR can only delete events in their own groups
+    if (req.user!.role === 'MENTOR') {
+      const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
+      }
+    }
+    
+    // Verify event belongs to the specified group
+    const existingEvent = await prisma.scheduleEvent.findFirst({
+      where: { id: eventId, miniGroupId: groupId }
+    });
+    if (!existingEvent) {
+      return res.status(404).json({ error: 'Событие не найдено' });
+    }
+    
     await prisma.scheduleEvent.delete({ where: { id: eventId } });
     res.json({ message: 'Событие удалено' });
   } catch (error) {
@@ -628,9 +732,18 @@ router.delete('/mini-groups/:groupId/events/:eventId', async (req: AuthRequest &
 });
 
 // Mini-group members management
-router.get('/mini-groups/:groupId/members', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
+router.get('/mini-groups/:groupId/members', groupRoles, async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
   try {
     const { groupId } = req.params;
+    
+    // MENTOR can only access their own groups
+    if (req.user!.role === 'MENTOR') {
+      const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
+      }
+    }
+    
     const members = await prisma.miniGroupMember.findMany({
       where: { miniGroupId: groupId },
       include: {
@@ -647,9 +760,18 @@ router.get('/mini-groups/:groupId/members', async (req: AuthRequest & Request<Gr
   }
 });
 
-router.post('/mini-groups/:groupId/members', async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
+router.post('/mini-groups/:groupId/members', groupRoles, async (req: AuthRequest & Request<GroupEventParams>, res: Response) => {
   try {
     const { groupId } = req.params;
+    
+    // MENTOR can only add members to their own groups
+    if (req.user!.role === 'MENTOR') {
+      const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
+      }
+    }
+    
     const { studentId } = req.body;
     const member = await prisma.miniGroupMember.create({
       data: { miniGroupId: groupId, studentId },
@@ -669,9 +791,26 @@ router.post('/mini-groups/:groupId/members', async (req: AuthRequest & Request<G
   }
 });
 
-router.delete('/mini-groups/:groupId/members/:memberId', async (req: AuthRequest & Request<{groupId: string, memberId: string}>, res: Response) => {
+router.delete('/mini-groups/:groupId/members/:memberId', groupRoles, async (req: AuthRequest & Request<{groupId: string, memberId: string}>, res: Response) => {
   try {
-    const { memberId } = req.params;
+    const { groupId, memberId } = req.params;
+    
+    // MENTOR can only remove members from their own groups
+    if (req.user!.role === 'MENTOR') {
+      const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
+      if (!hasAccess) {
+        return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
+      }
+    }
+    
+    // Verify member belongs to the specified group
+    const existingMember = await prisma.miniGroupMember.findFirst({
+      where: { id: memberId, miniGroupId: groupId }
+    });
+    if (!existingMember) {
+      return res.status(404).json({ error: 'Участник не найден' });
+    }
+    
     await prisma.miniGroupMember.delete({ where: { id: memberId } });
     res.json({ message: 'Участник удален из группы' });
   } catch (error) {
@@ -681,7 +820,7 @@ router.delete('/mini-groups/:groupId/members/:memberId', async (req: AuthRequest
 });
 
 // Search students for adding to mini-group
-router.get('/students/search', async (req: AuthRequest, res: Response) => {
+router.get('/students/search', groupRoles, async (req: AuthRequest, res: Response) => {
   try {
     const { q, excludeGroupId } = req.query as { q?: string; excludeGroupId?: string };
     const students = await prisma.student.findMany({
@@ -709,7 +848,7 @@ router.get('/students/search', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/modules/reorder', async (req: AuthRequest, res: Response) => {
+router.post('/modules/reorder', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
     const { id, direction } = req.body;
     const currentModule = await prisma.module.findUnique({ where: { id } });
@@ -736,7 +875,7 @@ router.post('/modules/reorder', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/lessons/reorder', async (req: AuthRequest, res: Response) => {
+router.post('/lessons/reorder', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
     const { id, direction, moduleId } = req.body;
     const currentLesson = await prisma.lesson.findUnique({ where: { id } });
@@ -766,7 +905,7 @@ router.post('/lessons/reorder', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/library/reorder', async (req: AuthRequest, res: Response) => {
+router.post('/library/reorder', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
     const { id, direction } = req.body;
     const currentItem = await prisma.libraryItem.findUnique({ where: { id } });
@@ -793,7 +932,7 @@ router.post('/library/reorder', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/contacts/reorder', async (req: AuthRequest, res: Response) => {
+router.post('/contacts/reorder', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
     const { id, direction } = req.body;
     const currentContact = await prisma.contact.findUnique({ where: { id } });
@@ -820,7 +959,7 @@ router.post('/contacts/reorder', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.post('/modules/reorder-batch', async (req: AuthRequest, res: Response) => {
+router.post('/modules/reorder-batch', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
     const { items } = req.body;
     await prisma.$transaction(
@@ -835,7 +974,7 @@ router.post('/modules/reorder-batch', async (req: AuthRequest, res: Response) =>
   }
 });
 
-router.post('/lessons/reorder-batch', async (req: AuthRequest, res: Response) => {
+router.post('/lessons/reorder-batch', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
     const { items } = req.body;
     await prisma.$transaction(
@@ -850,7 +989,7 @@ router.post('/lessons/reorder-batch', async (req: AuthRequest, res: Response) =>
   }
 });
 
-router.post('/library/reorder-batch', async (req: AuthRequest, res: Response) => {
+router.post('/library/reorder-batch', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
     const { items } = req.body;
     await prisma.$transaction(
@@ -865,7 +1004,7 @@ router.post('/library/reorder-batch', async (req: AuthRequest, res: Response) =>
   }
 });
 
-router.post('/contacts/reorder-batch', async (req: AuthRequest, res: Response) => {
+router.post('/contacts/reorder-batch', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
     const { items } = req.body;
     await prisma.$transaction(
@@ -880,7 +1019,7 @@ router.post('/contacts/reorder-batch', async (req: AuthRequest, res: Response) =
   }
 });
 
-router.get('/modules/next-order', async (req: AuthRequest, res: Response) => {
+router.get('/modules/next-order', contentRoles, async (req: AuthRequest, res: Response) => {
   try {
     const maxModule = await prisma.module.findFirst({ orderBy: { order: 'desc' } });
     res.json({ nextOrder: (maxModule?.order || 0) + 1 });
@@ -889,7 +1028,7 @@ router.get('/modules/next-order', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.get('/lessons/next-order/:moduleId', async (req: AuthRequest & Request<{ moduleId: string }>, res: Response) => {
+router.get('/lessons/next-order/:moduleId', contentRoles, async (req: AuthRequest & Request<{ moduleId: string }>, res: Response) => {
   try {
     const moduleId = req.params.moduleId;
     const maxLesson = await prisma.lesson.findFirst({ 
@@ -902,7 +1041,7 @@ router.get('/lessons/next-order/:moduleId', async (req: AuthRequest & Request<{ 
   }
 });
 
-router.get('/library/next-order', async (req: AuthRequest, res: Response) => {
+router.get('/library/next-order', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const maxItem = await prisma.libraryItem.findFirst({ orderBy: { order: 'desc' } });
     res.json({ nextOrder: (maxItem?.order || 0) + 1 });
@@ -911,7 +1050,7 @@ router.get('/library/next-order', async (req: AuthRequest, res: Response) => {
   }
 });
 
-router.get('/contacts/next-order', async (req: AuthRequest, res: Response) => {
+router.get('/contacts/next-order', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
     const maxContact = await prisma.contact.findFirst({ orderBy: { order: 'desc' } });
     res.json({ nextOrder: (maxContact?.order || 0) + 1 });

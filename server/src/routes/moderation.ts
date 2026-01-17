@@ -23,9 +23,18 @@ interface ModerationItem {
   };
 }
 
-async function getMentorStudentIds(userId: string): Promise<string[]> {
+async function getMentorStudentIds(userEmail: string): Promise<string[]> {
+  // Find contact matching mentor's email
+  const contact = await prisma.contact.findFirst({
+    where: { email: userEmail }
+  });
+  
+  if (!contact) {
+    return [];
+  }
+  
   const mentorMiniGroups = await prisma.miniGroup.findMany({
-    where: { curatorId: userId },
+    where: { curatorId: contact.id },
     select: {
       members: {
         select: { studentId: true }
@@ -51,7 +60,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     let studentFilter: { studentId?: { in: string[] } } = {};
     
     if (user.role === 'MENTOR') {
-      const studentIds = await getMentorStudentIds(user.id);
+      const studentIds = await getMentorStudentIds(user.email);
       if (studentIds.length === 0) {
         return res.json([]);
       }
@@ -143,7 +152,7 @@ router.get('/count', async (req: AuthRequest, res: Response) => {
     let studentFilter: { studentId?: { in: string[] } } = {};
     
     if (user.role === 'MENTOR') {
-      const studentIds = await getMentorStudentIds(user.id);
+      const studentIds = await getMentorStudentIds(user.email);
       if (studentIds.length === 0) {
         return res.json({ count: 0 });
       }

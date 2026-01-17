@@ -26,23 +26,33 @@ import {
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 
-const navItems = [
-  { path: '/admin', label: 'Дашборд', icon: LayoutDashboard, end: true },
-  { path: '/admin/lessons', label: 'Уроки', icon: BookOpen },
-  { path: '/admin/library', label: 'Библиотека', icon: Library },
-  { path: '/admin/schedule', label: 'Расписание', icon: Calendar },
-  { path: '/admin/contacts', label: 'Контакты', icon: Phone },
-  { path: '/admin/communities', label: 'Общины', icon: Building },
-  { path: '/admin/mini-groups', label: 'Мини-группы', icon: Users2 },
-  { path: '/admin/students', label: 'Ученики', icon: Users },
-  { path: '/admin/distribution', label: 'Распределение', icon: UserPlus, showDistributionBadge: true },
-  { path: '/admin/moderation', label: 'Модерация', icon: MessageCircle, showBadge: true },
-  { path: '/admin/products', label: 'Продукты', icon: ShoppingBag },
-  { path: '/admin/crm', label: 'CRM', icon: ClipboardList },
-  { path: '/admin/payments', label: 'Платежи', icon: CreditCard },
-  { path: '/admin/email', label: 'Email', icon: Mail },
-  { path: '/admin/admins', label: 'Администраторы', icon: Shield },
-  { path: '/admin/audit', label: 'История изменений', icon: History, superAdminOnly: true },
+type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'CURATOR' | 'MENTOR' | 'MODERATOR' | 'STUDENT';
+
+const navItems: {
+  path: string;
+  label: string;
+  icon: any;
+  end?: boolean;
+  showBadge?: boolean;
+  showDistributionBadge?: boolean;
+  roles?: UserRole[];
+}[] = [
+  { path: '/admin', label: 'Дашборд', icon: LayoutDashboard, end: true, roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { path: '/admin/lessons', label: 'Уроки', icon: BookOpen, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'MODERATOR'] },
+  { path: '/admin/library', label: 'Библиотека', icon: Library, roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] },
+  { path: '/admin/schedule', label: 'Расписание', icon: Calendar, roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] },
+  { path: '/admin/contacts', label: 'Контакты', icon: Phone, roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { path: '/admin/communities', label: 'Общины', icon: Building, roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] },
+  { path: '/admin/mini-groups', label: 'Мини-группы', icon: Users2, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR'] },
+  { path: '/admin/students', label: 'Ученики', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR'] },
+  { path: '/admin/distribution', label: 'Распределение', icon: UserPlus, showDistributionBadge: true, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR'] },
+  { path: '/admin/moderation', label: 'Модерация', icon: MessageCircle, showBadge: true, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'MODERATOR'] },
+  { path: '/admin/products', label: 'Продукты', icon: ShoppingBag, roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { path: '/admin/crm', label: 'CRM', icon: ClipboardList, roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { path: '/admin/payments', label: 'Платежи', icon: CreditCard, roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { path: '/admin/email', label: 'Email', icon: Mail, roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { path: '/admin/admins', label: 'Администраторы', icon: Shield, roles: ['SUPER_ADMIN', 'ADMIN'] },
+  { path: '/admin/audit', label: 'История изменений', icon: History, roles: ['SUPER_ADMIN'] },
 ];
 
 export function AdminLayout() {
@@ -81,7 +91,7 @@ export function AdminLayout() {
       <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-1">
           {navItems
-            .filter(item => !item.superAdminOnly || user?.role === 'SUPER_ADMIN')
+            .filter(item => !item.roles || item.roles.includes(user?.role as UserRole))
             .map((item) => (
             <li key={item.path}>
               <NavLink

@@ -9,7 +9,7 @@ import { getWelcomeEmailTemplate } from '../templates/welcomeEmail';
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR'));
 
 const createStudentSchema = z.object({
   email: z.string().email('Некорректный email'),
@@ -29,6 +29,34 @@ const updateStudentSchema = z.object({
   isActive: z.boolean().optional()
 });
 
+async function getMentorStudentIds(userEmail: string): Promise<string[]> {
+  const contact = await prisma.contact.findFirst({
+    where: { email: userEmail }
+  });
+  
+  if (!contact) {
+    return [];
+  }
+  
+  const mentorMiniGroups = await prisma.miniGroup.findMany({
+    where: { curatorId: contact.id },
+    select: {
+      members: {
+        select: { studentId: true }
+      }
+    }
+  });
+
+  const studentIds = new Set<string>();
+  mentorMiniGroups.forEach(group => {
+    group.members.forEach(member => {
+      studentIds.add(member.studentId);
+    });
+  });
+
+  return Array.from(studentIds);
+}
+
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const { search, page = '1', limit = '20' } = req.query;
@@ -37,6 +65,41 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const where: any = {
       role: 'STUDENT'
     };
+
+    // MENTOR can only see students from their mini-groups
+    if (req.user!.role === 'MENTOR') {
+      const contact = await prisma.contact.findFirst({
+        where: { email: req.user!.email }
+      });
+      if (contact) {
+        const mentorGroups = await prisma.miniGroup.findMany({
+          where: { curatorId: contact.id },
+          select: { id: true }
+        });
+        const groupIds = mentorGroups.map(g => g.id);
+        
+        if (groupIds.length === 0) {
+          return res.json({
+            students: [],
+            pagination: { page: 1, limit: 20, total: 0, pages: 0 }
+          });
+        }
+        
+        // Get student IDs that belong to mentor's groups
+        const memberStudentIds = await prisma.miniGroupMember.findMany({
+          where: { miniGroupId: { in: groupIds } },
+          select: { studentId: true }
+        });
+        const studentIds = memberStudentIds.map(m => m.studentId);
+        
+        where.student = { id: { in: studentIds } };
+      } else {
+        return res.json({
+          students: [],
+          pagination: { page: 1, limit: 20, total: 0, pages: 0 }
+        });
+      }
+    }
 
     if (search) {
       where.OR = [
@@ -95,6 +158,20 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+
+    // MENTOR can only access students from their mini-groups
+    if (req.user!.role === 'MENTOR') {
+      const studentRecord = await prisma.student.findFirst({
+        where: { userId: id }
+      });
+      if (!studentRecord) {
+        return res.status(403).json({ error: 'Нет доступа к этому ученику' });
+      }
+      const allowedStudentIds = await getMentorStudentIds(req.user!.email);
+      if (!allowedStudentIds.includes(studentRecord.id)) {
+        return res.status(403).json({ error: 'Нет доступа к этому ученику' });
+      }
+    }
 
     const student = await prisma.user.findUnique({
       where: { id },
@@ -218,6 +295,20 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const data = updateStudentSchema.parse(req.body);
 
+    // MENTOR can only update students from their mini-groups
+    if (req.user!.role === 'MENTOR') {
+      const studentRecord = await prisma.student.findFirst({
+        where: { userId: id }
+      });
+      if (!studentRecord) {
+        return res.status(403).json({ error: 'Нет доступа к этому ученику' });
+      }
+      const allowedStudentIds = await getMentorStudentIds(req.user!.email);
+      if (!allowedStudentIds.includes(studentRecord.id)) {
+        return res.status(403).json({ error: 'Нет доступа к этому ученику' });
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: {
@@ -258,6 +349,20 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
+    // MENTOR can only delete students from their mini-groups
+    if (req.user!.role === 'MENTOR') {
+      const studentRecord = await prisma.student.findFirst({
+        where: { userId: id }
+      });
+      if (!studentRecord) {
+        return res.status(403).json({ error: 'Нет доступа к этому ученику' });
+      }
+      const allowedStudentIds = await getMentorStudentIds(req.user!.email);
+      if (!allowedStudentIds.includes(studentRecord.id)) {
+        return res.status(403).json({ error: 'Нет доступа к этому ученику' });
+      }
+    }
+
     await prisma.user.delete({
       where: { id }
     });
@@ -289,6 +394,14 @@ router.get('/:userId/access', async (req: AuthRequest, res: Response) => {
     
     if (!user?.student) {
       return res.status(404).json({ error: 'Ученик не найден' });
+    }
+    
+    // MENTOR can only access students from their mini-groups
+    if (req.user!.role === 'MENTOR') {
+      const allowedStudentIds = await getMentorStudentIds(req.user!.email);
+      if (!allowedStudentIds.includes(user.student.id)) {
+        return res.status(403).json({ error: 'Нет доступа к этому ученику' });
+      }
     }
 
     const [modules, accessList] = await Promise.all([
@@ -337,6 +450,14 @@ router.post('/:userId/access', async (req: AuthRequest, res: Response) => {
     if (!user?.student) {
       return res.status(404).json({ error: 'Ученик не найден' });
     }
+    
+    // MENTOR can only modify access for students from their mini-groups
+    if (req.user!.role === 'MENTOR') {
+      const allowedStudentIds = await getMentorStudentIds(req.user!.email);
+      if (!allowedStudentIds.includes(user.student.id)) {
+        return res.status(403).json({ error: 'Нет доступа к этому ученику' });
+      }
+    }
 
     const access = await prisma.moduleAccess.upsert({
       where: {
@@ -375,6 +496,14 @@ router.delete('/:userId/access/:moduleId', async (req: AuthRequest, res: Respons
     
     if (!user?.student) {
       return res.status(404).json({ error: 'Ученик не найден' });
+    }
+    
+    // MENTOR can only delete access for students from their mini-groups
+    if (req.user!.role === 'MENTOR') {
+      const allowedStudentIds = await getMentorStudentIds(req.user!.email);
+      if (!allowedStudentIds.includes(user.student.id)) {
+        return res.status(403).json({ error: 'Нет доступа к этому ученику' });
+      }
     }
 
     await prisma.moduleAccess.delete({

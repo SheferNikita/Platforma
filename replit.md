@@ -34,8 +34,9 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
 -   **User Roles:** Granular access control with roles: `SUPER_ADMIN`, `ADMIN`, `CURATOR`, `MENTOR`, `MODERATOR`, and `STUDENT`.
     -   `SUPER_ADMIN`: Full access to all sections including audit logs and admin management
     -   `ADMIN`: Full access to all sections except audit logs; cannot create/edit/delete super-admins
-    -   `CURATOR`: Access to students, distribution, and moderation
-    -   `MENTOR`, `MODERATOR`: Access to moderation only
+    -   `CURATOR`: Access to students, mini-groups, distribution, moderation, and lessons
+    -   `MENTOR`: Access to their own mini-groups and students (scoped by email→Contact→curatorId mapping), moderation for their students only, and lessons (view)
+    -   `MODERATOR`: Access to lessons, library, schedule, communities, and moderation
 -   **Module Access Control:** System for managing student access to specific modules, including expiration dates.
 -   **Mini-Groups:** Enhanced management of mini-groups, including curator assignment, chat links, and dedicated scheduling within group settings.
 -   **Authentication:** Dual mechanism supporting both HttpOnly cookies (`sameSite: 'none'`, `secure: true`) and a fallback to `localStorage` with `Authorization` headers for iframe compatibility.

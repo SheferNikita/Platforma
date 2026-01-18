@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
-import { PrismaClient } from '@prisma/client';
 import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
 import contentRoutes from './routes/content';
@@ -13,8 +12,6 @@ import metricsRoutes from './routes/metrics';
 import emailRoutes from './routes/email';
 import publicRoutes from './routes/public';
 import uploadsRoutes from './routes/uploads';
-
-export const prisma = new PrismaClient();
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
@@ -46,9 +43,11 @@ app.get('/api/health', (req, res) => {
 const buildPath = path.join(process.cwd(), 'build');
 app.use(express.static(buildPath));
 
-app.get('*', (req, res) => {
-  if (!req.path.startsWith('/api')) {
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
     res.sendFile(path.join(buildPath, 'index.html'));
+  } else {
+    next();
   }
 });
 

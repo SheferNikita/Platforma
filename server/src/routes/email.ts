@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { prisma } from '../index';
+import { prisma } from '../db';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { sendEmail } from '../services/email';
 import { z } from 'zod';

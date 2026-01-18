@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { prisma } from '../index';
+import { prisma } from '../db';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 
 const router = Router();

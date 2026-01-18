@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { prisma } from '../index';
+import { prisma } from '../db';
 import jwt from 'jsonwebtoken';
 import ordersRouter from './orders';
 import moderationRouter from './moderation';

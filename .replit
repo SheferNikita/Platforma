@@ -42,9 +42,10 @@ localPort = 5001
 externalPort = 3000
 
 [deployment]
-deploymentTarget = "static"
+deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 publicDir = "build"
+run = ["npm", "start"]
 
 [userenv]
 

@@ -8,6 +8,7 @@
     "dev:client": "vite",
     "dev:server": "tsx watch server/src/index.ts",
     "build": "vite build",
+    "start": "node --import tsx server/src/production.ts",
     "preview": "vite preview",
     "db:seed": "tsx prisma/seed.ts"
   },

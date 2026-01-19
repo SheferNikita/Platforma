@@ -50,7 +50,12 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
 
 ## External Dependencies
 
--   **PostgreSQL:** Primary database managed by Prisma ORM.
+-   **PostgreSQL (TimeWeb.cloud):** External database on TimeWeb.cloud servers for production data persistence.
+    -   Host: 31.130.150.167
+    -   Database: Platform
+    -   Connection via `EXTERNAL_DATABASE_URL` environment variable
+    -   Prisma ORM connects to TimeWeb database (not Replit's built-in database)
+    -   All user data persists externally, survives cache clears and redeployments
 -   **Robokassa:** Payment gateway integrated for processing payments.
     -   Endpoints: `POST /api/payments/result`, `GET /api/payments/success`, `GET /api/payments/fail`.
     -   Automated enrollment and email notification upon successful payment.

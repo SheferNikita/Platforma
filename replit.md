@@ -54,4 +54,11 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
 -   **Robokassa:** Payment gateway integrated for processing payments.
     -   Endpoints: `POST /api/payments/result`, `GET /api/payments/success`, `GET /api/payments/fail`.
     -   Automated enrollment and email notification upon successful payment.
+-   **Tilda:** Landing page integration for payment webhooks.
+    -   Endpoint: `POST /api/webhooks/tilda`
+    -   Accepts payment data from Tilda shopping cart
+    -   Auto-creates user accounts with generated passwords
+    -   Grants module access based on product matching (by name)
+    -   Sends welcome email with login credentials
+    -   Security: Set `TILDA_WEBHOOK_SECRET` env var and add `?secret=YOUR_SECRET` to webhook URL
 -   **Kinescope:** Video hosting service integrated for lesson content.

@@ -6,7 +6,6 @@ import { sendEmail } from '../services/email';
 const router = Router();
 
 const TILDA_WEBHOOK_SECRET = process.env.TILDA_WEBHOOK_SECRET || '';
-const REQUIRE_WEBHOOK_AUTH = process.env.NODE_ENV === 'production' || !!TILDA_WEBHOOK_SECRET;
 
 function generatePassword(length: number = 10): string {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -18,22 +17,18 @@ function generatePassword(length: number = 10): string {
 }
 
 function verifyTildaWebhook(req: Request): boolean {
+  if (!TILDA_WEBHOOK_SECRET) {
+    console.log('Tilda webhook: No secret configured, allowing all requests');
+    return true;
+  }
+  
   const secret = req.query.secret as string || req.body.secret;
   
-  if (TILDA_WEBHOOK_SECRET && secret === TILDA_WEBHOOK_SECRET) {
+  if (secret === TILDA_WEBHOOK_SECRET) {
     return true;
   }
   
-  if (REQUIRE_WEBHOOK_AUTH && !TILDA_WEBHOOK_SECRET) {
-    console.error('Tilda webhook: TILDA_WEBHOOK_SECRET not configured in production');
-    return false;
-  }
-  
-  if (!TILDA_WEBHOOK_SECRET) {
-    console.warn('Tilda webhook: No secret configured, allowing request (development mode)');
-    return true;
-  }
-  
+  console.warn('Tilda webhook: Invalid secret provided');
   return false;
 }
 
@@ -75,11 +70,6 @@ router.post('/tilda', async (req: Request, res: Response) => {
     };
     console.log('Tilda webhook received:', JSON.stringify(logData));
 
-    if (!verifyTildaWebhook(req)) {
-      console.error('Tilda webhook: Authentication failed');
-      return res.status(401).json({ error: 'Unauthorized - invalid or missing secret' });
-    }
-
     const {
       name,
       email,
@@ -90,8 +80,17 @@ router.post('/tilda', async (req: Request, res: Response) => {
     } = req.body;
 
     if (!email) {
-      console.error('Tilda webhook: email is required');
-      return res.status(400).json({ error: 'Email is required' });
+      console.log('Tilda webhook: Test connection request (no email provided)');
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Webhook connection test successful',
+        test: true 
+      });
+    }
+
+    if (!verifyTildaWebhook(req)) {
+      console.error('Tilda webhook: Authentication failed');
+      return res.status(401).json({ error: 'Unauthorized - invalid or missing secret' });
     }
 
     const customerEmail = email.toLowerCase().trim();

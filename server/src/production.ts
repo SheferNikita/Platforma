@@ -12,6 +12,7 @@ import metricsRoutes from './routes/metrics';
 import emailRoutes from './routes/email';
 import publicRoutes from './routes/public';
 import uploadsRoutes from './routes/uploads';
+import webhooksRoutes from './routes/webhooks';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
@@ -35,6 +36,7 @@ app.use('/api/metrics', metricsRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/uploads', uploadsRoutes);
+app.use('/api/webhooks', webhooksRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

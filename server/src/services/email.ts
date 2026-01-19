@@ -1,4 +1,4 @@
-const UNISENDER_API_URL = 'https://go1.unisender.ru/ru/transactional/api/v1/email/send.json';
+const UNISENDER_API_URL = 'https://go2.unisender.ru/ru/transactional/api/v1/email/send.json';
 
 interface UnisenderResponse {
   status: string;

@@ -51,3 +51,4 @@ run = ["npm", "start"]
 
 [userenv.shared]
 APP_URL = "https://your-platform.com"
+TILDA_WEBHOOK_SECRET = "P1zIku4RGolF"

@@ -53,3 +53,5 @@ run = ["npm", "start"]
 APP_URL = "https://your-platform.com"
 TILDA_WEBHOOK_SECRET = "P1zIku4RGolF"
 EXTERNAL_DATABASE_URL = "postgresql://gen_user:9.U82o%7D%3Bs8BX7V@31.130.150.167:5432/Platform"
+EMAIL_FROM = "support@schkola-trezvosti.ru"
+EMAIL_FROM_NAME = "Платформа школы трезвости"

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
+import { useAuth } from '../lib/auth';
 
 const GENDER_OPTIONS = [
   { value: 'male', label: 'Мужской' },
@@ -19,6 +20,7 @@ const ADDICTION_OPTIONS = [
 
 export function OnboardingSurvey() {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     city: '',
@@ -26,6 +28,25 @@ export function OnboardingSurvey() {
     age: '',
     addictionType: ''
   });
+
+  // Redirect if not logged in
+  if (!authLoading && !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Redirect if survey already completed
+  if (!authLoading && user?.surveyCompleted) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#fdfbf7] via-[#e3ebf1] to-[#f5f3ed]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--button-lavender)]"></div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

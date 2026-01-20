@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Award, BookOpen, Target, Settings, Camera, CheckCircle, Trophy, Star, FileText, Lock } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Award, BookOpen, Target, Settings, Camera, CheckCircle, Trophy, Star, FileText, Lock, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../lib/auth';
 
 interface Achievement {
   id: number;
@@ -13,6 +14,7 @@ interface Achievement {
 
 export function ProfileTab() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingPassword, setIsEditingPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -478,6 +480,20 @@ export function ProfileTab() {
               </div>
             </div>
           </div>
+
+          {/* Logout Button */}
+          <button
+            onClick={async () => {
+              await logout();
+              navigate('/login');
+            }}
+            className="w-full border-2 border-red-300/50 bg-gradient-to-br from-red-50/80 to-white/80 hover:from-red-100/80 hover:to-red-50/80 rounded-2xl p-4 shadow-[0_4px_16px_var(--ethereal-shadow)] transition-all duration-300 group"
+          >
+            <div className="flex items-center justify-center gap-3">
+              <LogOut className="w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors" />
+              <span className="text-red-600 group-hover:text-red-700 font-medium transition-colors">Выйти из аккаунта</span>
+            </div>
+          </button>
         </div>
       </div>
     </div>

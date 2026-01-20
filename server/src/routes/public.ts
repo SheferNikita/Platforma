@@ -626,4 +626,120 @@ router.put('/profile', async (req: Request, res: Response) => {
   }
 });
 
+// Get student's diaries
+router.get('/my-diaries', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const diaries = await prisma.diary.findMany({
+      where: { studentId: student.studentId },
+      include: {
+        lesson: {
+          select: {
+            id: true,
+            title: true,
+            module: {
+              select: { title: true }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const result = diaries.map(d => ({
+      id: d.id,
+      lessonId: d.lesson.id,
+      lessonTitle: d.lesson.title,
+      moduleName: d.lesson.module.title,
+      date: d.createdAt.toISOString(),
+      content: d.content,
+      reply: d.reply,
+      repliedAt: d.repliedAt?.toISOString()
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Get my diaries error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Get student's notes (конспекты)
+router.get('/my-notes', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const notes = await prisma.studentNote.findMany({
+      where: { 
+        studentId: student.studentId,
+        noteType: 'note' // Только конспекты, не вопросы
+      },
+      include: {
+        lesson: {
+          select: {
+            id: true,
+            title: true,
+            module: {
+              select: { title: true }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const result = notes.map(n => ({
+      id: n.id,
+      lessonId: n.lesson.id,
+      lessonTitle: n.lesson.title,
+      moduleName: n.lesson.module.title,
+      date: n.createdAt.toISOString(),
+      content: n.content,
+      reply: n.reply,
+      repliedAt: n.repliedAt?.toISOString()
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Get my notes error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Get counts for profile summary
+router.get('/my-materials-count', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const diariesCount = await prisma.diary.count({
+      where: { studentId: student.studentId }
+    });
+
+    const notesCount = await prisma.studentNote.count({
+      where: { 
+        studentId: student.studentId,
+        noteType: 'note'
+      }
+    });
+
+    res.json({ diariesCount, notesCount });
+  } catch (error) {
+    console.error('Get materials count error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;

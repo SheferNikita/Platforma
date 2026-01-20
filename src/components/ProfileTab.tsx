@@ -52,9 +52,12 @@ export function ProfileTab() {
   });
   const [lessonsCompleted, setLessonsCompleted] = useState(0);
   const [totalLessons, setTotalLessons] = useState(0);
+  const [diariesCount, setDiariesCount] = useState(0);
+  const [notesCount, setNotesCount] = useState(0);
 
   useEffect(() => {
     loadProfile();
+    loadMaterialsCounts();
   }, []);
 
   async function loadProfile() {
@@ -76,6 +79,16 @@ export function ProfileTab() {
       console.error('Error loading profile:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadMaterialsCounts() {
+    try {
+      const data = await api.get<{ diariesCount: number; notesCount: number }>('/public/my-materials-count');
+      setDiariesCount(data.diariesCount);
+      setNotesCount(data.notesCount);
+    } catch (error) {
+      console.error('Error loading materials counts:', error);
     }
   }
 
@@ -419,7 +432,7 @@ export function ProfileTab() {
                   <h5 className="text-base mb-2">Мои дневники</h5>
                   <p className="text-xs opacity-70 leading-relaxed">Все заполненные дневники к урокам</p>
                   <div className="mt-4 text-sm opacity-60 flex items-center gap-1">
-                    <span>3 записи</span>
+                    <span>{diariesCount} {diariesCount === 1 ? 'запись' : diariesCount >= 2 && diariesCount <= 4 ? 'записи' : 'записей'}</span>
                     <span className="ml-auto">→</span>
                   </div>
                 </div>
@@ -437,7 +450,7 @@ export function ProfileTab() {
                   <h5 className="text-base mb-2">Мои конспекты</h5>
                   <p className="text-xs opacity-70 leading-relaxed">Все заполненные конспекты к урокам</p>
                   <div className="mt-4 text-sm opacity-60 flex items-center gap-1">
-                    <span>2 записи</span>
+                    <span>{notesCount} {notesCount === 1 ? 'конспект' : notesCount >= 2 && notesCount <= 4 ? 'конспекта' : 'конспектов'}</span>
                     <span className="ml-auto">→</span>
                   </div>
                 </div>

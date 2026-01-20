@@ -1,82 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageWrapper } from '../components/PageWrapper';
-import { FileText, Calendar, ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, Calendar, ArrowLeft, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../lib/api';
 
 interface NoteEntry {
-  id: number;
-  lessonId: number;
+  id: string;
+  lessonId: string;
   lessonTitle: string;
   moduleName: string;
   date: string;
   content: string;
+  reply?: string;
+  repliedAt?: string;
 }
 
 export function MyNotesPage() {
   const navigate = useNavigate();
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [notes, setNotes] = useState<NoteEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const notes: NoteEntry[] = [
-    {
-      id: 1,
-      lessonId: 1,
-      lessonTitle: 'Первый шаг к трезвости',
-      moduleName: 'Модуль 1: Основы трезвости',
-      date: '2025-12-01',
-      content: `Основные тезисы урока:
+  useEffect(() => {
+    const fetchNotes = async () => {
+      try {
+        const data = await api.get('/public/my-notes') as NoteEntry[];
+        setNotes(data);
+      } catch (err: any) {
+        setError(err.message || 'Ошибка загрузки');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchNotes();
+  }, []);
 
-• Признание проблемы — первый и самый важный шаг
-• Трезвость — это не отказ, а выбор новой жизни
-• Поддержка окружающих критически важна
-• Каждый день без алкоголя — это победа
-
-Ключевые моменты:
-- Зависимость формируется постепенно, незаметно
-- Мозг перестраивается и требует вещество для нормального функционирования
-- Восстановление возможно, но требует времени и усилий
-
-План действий:
-1. Признать проблему перед собой
-2. Рассказать близким о своем решении
-3. Найти группу поддержки
-4. Начать вести дневник трезвости`,
-    },
-    {
-      id: 2,
-      lessonId: 3,
-      lessonTitle: 'Психология зависимости',
-      moduleName: 'Модуль 1: Основы трезвости',
-      date: '2025-12-10',
-      content: `Психологические механизмы зависимости:
-
-1. Дофаминовая система награды
-   - Алкаголь вызывает выброс дофамина
-   - Мозг запоминает это как "награду"
-   - Формируется условный рефлекс
-
-2. Триггеры и паттерны
-   - Эмоциональные триггеры (стресс, тревога, одиночество)
-   - Социальные триггеры (встречи с друзьями, праздники)
-   - Ситуационные триггеры (определенные места, время суток)
-
-3. Методы работы с триггерами:
-   - Осознание и идентификация
-   - Избегание или изменение ситуации
-   - Альтернативные способы справиться
-   - Техники релаксации и осознанности
-
-Важное наблюдение: понимание механизма помогает не винить себя и эффективнее бороться.`,
-    },
-  ];
-
-  const toggleExpand = (id: number) => {
+  const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
   };
+
+  const getWordForm = (count: number) => {
+    if (count === 1) return 'конспект';
+    if (count >= 2 && count <= 4) return 'конспекта';
+    return 'конспектов';
+  };
+
+  if (loading) {
+    return (
+      <PageWrapper>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--button-lavender)]" />
+        </div>
+      </PageWrapper>
+    );
+  }
 
   return (
     <PageWrapper>
       <div className="animate-fade-in">
-        {/* Back Button */}
         <button
           onClick={() => navigate('/profile')}
           className="mb-6 inline-flex items-center gap-2 px-4 py-2 text-sm border-2 border-[var(--sky-light)]/40 rounded-xl hover:bg-[var(--sky-soft)]/20 transition-all duration-300 transform hover:scale-105"
@@ -85,7 +67,6 @@ export function MyNotesPage() {
           Вернуться к профилю
         </button>
 
-        {/* Header */}
         <div className="mb-10 border-b-2 border-[var(--book-border)]/30 pb-8 relative">
           <div className="absolute -top-2 left-0 w-20 h-1 bg-gradient-to-r from-[var(--button-lavender-dark)] via-[var(--button-lavender-light)] to-transparent rounded-full"></div>
           
@@ -95,27 +76,33 @@ export function MyNotesPage() {
           </p>
         </div>
 
-        {/* Summary Card */}
-        <div className="mb-8 border-2 border-[var(--button-lavender-dark)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-white/80 rounded-2xl p-6 shadow-[0_8px_24px_var(--ethereal-shadow)]">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] rounded-xl flex items-center justify-center shadow-lg">
-                <FileText className="w-7 h-7 text-white" />
-              </div>
-              <div>
-                <div className="text-2xl mb-1">
-                  <span className="bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] bg-clip-text text-transparent">{notes.length}</span>
-                  <span className="text-sm opacity-70 ml-2">{notes.length === 1 ? 'конспект' : notes.length < 5 ? 'конспекта' : 'конспектов'}</span>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 text-red-700 rounded-xl">
+            {error}
+          </div>
+        )}
+
+        {notes.length > 0 && (
+          <div className="mb-8 border-2 border-[var(--button-lavender-dark)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-white/80 rounded-2xl p-6 shadow-[0_8px_24px_var(--ethereal-shadow)]">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] rounded-xl flex items-center justify-center shadow-lg">
+                  <FileText className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <div className="text-2xl mb-1">
+                    <span className="bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] bg-clip-text text-transparent">{notes.length}</span>
+                    <span className="text-sm opacity-70 ml-2">{getWordForm(notes.length)}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="text-sm opacity-70">
-              Последний конспект: {new Date(notes[notes.length - 1].date).toLocaleDateString('ru-RU')}
+              <div className="text-sm opacity-70">
+                Последний конспект: {new Date(notes[0].date).toLocaleDateString('ru-RU')}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Notes List */}
         <div className="space-y-5">
           {notes.map((note, index) => (
             <div
@@ -124,7 +111,6 @@ export function MyNotesPage() {
               style={{ animationDelay: `${index * 0.05}s` }}
             >
               <div className="p-6 md:p-7">
-                {/* Header */}
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div className="flex-1 min-w-0">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--button-lavender-light)]/10 border border-[var(--button-lavender)]/20 rounded-lg text-xs mb-3">
@@ -135,7 +121,7 @@ export function MyNotesPage() {
                       className="block text-left w-full group/title"
                     >
                       <h3 className="text-lg md:text-xl mb-2 hover:text-[var(--button-lavender-dark)] transition-colors duration-200">
-                        <span className="bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] bg-clip-text text-transparent">Урок {note.lessonId}:</span> {note.lessonTitle}
+                        <span className="bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] bg-clip-text text-transparent">{note.lessonTitle}</span>
                         <span className="inline-block ml-2 opacity-0 group-hover/title:opacity-100 transition-opacity duration-200">→</span>
                       </h3>
                     </button>
@@ -151,7 +137,6 @@ export function MyNotesPage() {
                   </div>
                 </div>
 
-                {/* Content Preview / Full */}
                 <div className="relative">
                   <div className={`text-sm opacity-80 leading-relaxed whitespace-pre-line transition-all duration-300 ${
                     expandedId === note.id ? '' : 'line-clamp-4'
@@ -159,12 +144,20 @@ export function MyNotesPage() {
                     {note.content}
                   </div>
                   
-                  {!expandedId || expandedId !== note.id ? (
+                  {expandedId !== note.id && (
                     <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white/90 to-transparent pointer-events-none"></div>
-                  ) : null}
+                  )}
                 </div>
 
-                {/* Expand Button */}
+                {note.reply && expandedId === note.id && (
+                  <div className="mt-4 p-4 bg-[var(--button-lavender-light)]/10 border border-[var(--button-lavender)]/20 rounded-xl">
+                    <div className="text-xs font-medium text-[var(--button-lavender-dark)] mb-2">
+                      Ответ куратора {note.repliedAt && `• ${new Date(note.repliedAt).toLocaleDateString('ru-RU')}`}
+                    </div>
+                    <div className="text-sm opacity-80 whitespace-pre-line">{note.reply}</div>
+                  </div>
+                )}
+
                 <button
                   onClick={() => toggleExpand(note.id)}
                   className="mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm border-2 border-[var(--button-lavender)]/30 rounded-xl hover:bg-[var(--button-lavender)]/10 transition-all duration-300 transform hover:scale-105"
@@ -186,8 +179,7 @@ export function MyNotesPage() {
           ))}
         </div>
 
-        {/* Empty State (shown when no notes) */}
-        {notes.length === 0 && (
+        {notes.length === 0 && !error && (
           <div className="text-center py-16 border-2 border-[var(--sky-light)]/40 rounded-2xl bg-gradient-to-br from-white/90 to-white/50">
             <div className="text-6xl mb-4 opacity-20">📝</div>
             <h3 className="text-lg mb-2">Конспектов пока нет</h3>
@@ -203,7 +195,6 @@ export function MyNotesPage() {
           </div>
         )}
 
-        {/* Motivational Card */}
         <div className="mt-10 border-2 border-[var(--button-lavender-dark)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/15 to-white/80 rounded-2xl p-6 md:p-8 shadow-[0_8px_24px_var(--ethereal-shadow)] relative overflow-hidden">
           <div className="absolute top-0 right-0 opacity-[0.04] text-[100px] pointer-events-none">
             🕊️

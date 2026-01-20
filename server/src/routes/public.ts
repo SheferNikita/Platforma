@@ -528,4 +528,102 @@ router.post('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
   }
 });
 
+// Get student profile
+router.get('/profile', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const studentData = await prisma.student.findUnique({
+      where: { id: student.studentId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            createdAt: true
+          }
+        },
+        progress: {
+          where: { isCompleted: true }
+        },
+        moduleAccess: {
+          where: { isActive: true }
+        }
+      }
+    });
+
+    if (!studentData) {
+      return res.status(404).json({ error: 'Профиль не найден' });
+    }
+
+    // Count total lessons
+    const totalLessons = await prisma.lesson.count({
+      where: { isPublished: true }
+    });
+
+    res.json({
+      id: studentData.id,
+      name: studentData.user.name,
+      email: studentData.user.email,
+      phone: studentData.phone,
+      city: studentData.city,
+      sobrietyDate: studentData.sobrietyDate,
+      gender: studentData.gender,
+      age: studentData.age,
+      addictionType: studentData.addictionType,
+      joinDate: studentData.user.createdAt,
+      lessonsCompleted: studentData.progress.length,
+      totalLessons,
+      modulesAccess: studentData.moduleAccess.length
+    });
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Update student profile
+router.put('/profile', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const { name, phone, city, sobrietyDate } = req.body;
+
+    // Update student data
+    const updatedStudent = await prisma.student.update({
+      where: { id: student.studentId },
+      data: {
+        phone: phone || undefined,
+        city: city || undefined,
+        sobrietyDate: sobrietyDate ? new Date(sobrietyDate) : undefined
+      },
+      include: {
+        user: true
+      }
+    });
+
+    // Update user name if provided
+    if (name) {
+      await prisma.user.update({
+        where: { id: updatedStudent.userId },
+        data: { name }
+      });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;

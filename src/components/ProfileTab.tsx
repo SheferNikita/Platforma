@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Award, BookOpen, Target, Settings, Camera, CheckCircle, Trophy, Star, FileText, Lock, LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Phone, MapPin, Calendar, Award, BookOpen, Target, Settings, Camera, CheckCircle, Trophy, Star, FileText, Lock, LogOut, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { api } from '../lib/api';
+import { toast } from 'sonner';
 
 interface Achievement {
   id: number;
@@ -12,24 +14,87 @@ interface Achievement {
   earnedDate?: string;
 }
 
+interface ProfileData {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  city: string | null;
+  sobrietyDate: string | null;
+  gender: string | null;
+  age: number | null;
+  addictionType: string | null;
+  joinDate: string;
+  lessonsCompleted: number;
+  totalLessons: number;
+  modulesAccess: number;
+}
+
 export function ProfileTab() {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingPassword, setIsEditingPassword] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [passwordUpdateSuccess, setPasswordUpdateSuccess] = useState(false);
   const [profileUpdateSuccess, setProfileUpdateSuccess] = useState(false);
   const [editableName, setEditableName] = useState('');
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [userInfo, setUserInfo] = useState({
-    name: 'Александр Иванов',
-    email: 'alexander.ivanov@example.com',
-    phone: '+7 (999) 123-45-67',
-    city: 'Москва',
-    joinDate: '2025-11-15',
-    sobrietyStartDate: '2025-11-20',
+    name: '',
+    email: '',
+    phone: '',
+    city: '',
+    joinDate: '',
+    sobrietyStartDate: '',
     avatar: '',
   });
+  const [lessonsCompleted, setLessonsCompleted] = useState(0);
+  const [totalLessons, setTotalLessons] = useState(0);
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  async function loadProfile() {
+    try {
+      const data = await api.get<ProfileData>('/public/profile');
+      setProfile(data);
+      setUserInfo({
+        name: data.name || '',
+        email: data.email || '',
+        phone: data.phone || '',
+        city: data.city || '',
+        joinDate: data.joinDate ? new Date(data.joinDate).toISOString().split('T')[0] : '',
+        sobrietyStartDate: data.sobrietyDate ? new Date(data.sobrietyDate).toISOString().split('T')[0] : '',
+        avatar: '',
+      });
+      setLessonsCompleted(data.lessonsCompleted);
+      setTotalLessons(data.totalLessons);
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSaveProfile() {
+    try {
+      await api.put('/public/profile', {
+        name: editableName,
+        phone: userInfo.phone,
+        city: userInfo.city,
+        sobrietyDate: userInfo.sobrietyStartDate
+      });
+      setUserInfo({ ...userInfo, name: editableName });
+      setIsEditing(false);
+      setProfileUpdateSuccess(true);
+      setTimeout(() => setProfileUpdateSuccess(false), 3000);
+    } catch (error) {
+      toast.error('Ошибка при сохранении профиля');
+    }
+  }
 
   const [achievements] = useState<Achievement[]>([
     {
@@ -80,6 +145,7 @@ export function ProfileTab() {
   ]);
 
   const calculateSobrietyDays = () => {
+    if (!userInfo.sobrietyStartDate) return 0;
     const start = new Date(userInfo.sobrietyStartDate);
     const today = new Date();
     const diffTime = Math.abs(today.getTime() - start.getTime());
@@ -88,6 +154,7 @@ export function ProfileTab() {
   };
 
   const calculateMembershipDays = () => {
+    if (!userInfo.joinDate) return 0;
     const start = new Date(userInfo.joinDate);
     const today = new Date();
     const diffTime = Math.abs(today.getTime() - start.getTime());
@@ -95,9 +162,15 @@ export function ProfileTab() {
     return diffDays;
   };
 
-  const lessonsCompleted = 3;
-  const totalLessons = 8;
-  const progressPercentage = (lessonsCompleted / totalLessons) * 100;
+  const progressPercentage = totalLessons > 0 ? (lessonsCompleted / totalLessons) * 100 : 0;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--button-lavender-dark)]" />
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-in">
@@ -199,14 +272,7 @@ export function ProfileTab() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => {
-                        setUserInfo({ ...userInfo, name: editableName });
-                        setIsEditing(false);
-                        setProfileUpdateSuccess(true);
-                        setTimeout(() => {
-                          setProfileUpdateSuccess(false);
-                        }, 3000);
-                      }}
+                      onClick={handleSaveProfile}
                       className="w-10 h-10 bg-[var(--success-green)] hover:bg-[var(--success-green)]/80 rounded-xl flex items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-md"
                     >
                       <CheckCircle className="w-5 h-5 text-white" />

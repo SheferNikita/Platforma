@@ -11,11 +11,12 @@ router.use(requireRole('SUPER_ADMIN', 'ADMIN'));
 const productSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
   description: z.string().optional(),
-  price: z.number().min(0, 'Цена должна быть неотрицательной'),
+  price: z.number().min(0, 'Цена должна быть неотрицательной').default(0),
   currency: z.string().default('RUB'),
   accessDurationType: z.enum(['unlimited', 'days', 'date']).default('unlimited'),
   accessDuration: z.number().optional().nullable(),
   accessExpiresAt: z.string().optional().nullable(),
+  startDate: z.string().optional().nullable(),
   emailSubject: z.string().optional(),
   emailTemplate: z.string().optional(),
   offerUrl: z.string().optional().nullable(),
@@ -81,16 +82,17 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { moduleIds, accessExpiresAt, ...data } = productSchema.parse(req.body);
+    const { moduleIds, accessExpiresAt, startDate, ...data } = productSchema.parse(req.body);
 
     const product = await prisma.product.create({ 
       data: {
         ...data,
         accessExpiresAt: accessExpiresAt ? new Date(accessExpiresAt) : null,
+        startDate: startDate ? new Date(startDate) : null,
         modules: moduleIds?.length ? {
           create: moduleIds.map(moduleId => ({ moduleId }))
         } : undefined
-      },
+      } as any,
       include: {
         modules: { include: { module: { select: { id: true, title: true } } } }
       }
@@ -109,7 +111,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     res.status(201).json(product);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0].message });
     }
     console.error('Create product error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -119,7 +121,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 router.put('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { moduleIds, accessExpiresAt, ...data } = productSchema.partial().parse(req.body);
+    const { moduleIds, accessExpiresAt, startDate, ...data } = productSchema.partial().parse(req.body);
 
     if (moduleIds !== undefined) {
       await prisma.productModule.deleteMany({ where: { productId: id } });
@@ -134,8 +136,9 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
       where: { id },
       data: {
         ...data,
-        accessExpiresAt: accessExpiresAt ? new Date(accessExpiresAt) : accessExpiresAt === null ? null : undefined
-      },
+        accessExpiresAt: accessExpiresAt ? new Date(accessExpiresAt) : accessExpiresAt === null ? null : undefined,
+        startDate: startDate ? new Date(startDate) : startDate === null ? null : undefined
+      } as any,
       include: {
         modules: { include: { module: { select: { id: true, title: true } } } }
       }
@@ -154,7 +157,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     res.json(product);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0].message });
     }
     console.error('Update product error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, ShoppingBag, Mail, Link as LinkIcon, Copy, Check } from 'lucide-react';
+import { Plus, Edit, Trash2, ShoppingBag, Link as LinkIcon, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { RichTextEditor } from '../../components/RichTextEditor';
 
@@ -22,6 +22,7 @@ interface Product {
   accessDurationType: 'unlimited' | 'days' | 'date';
   accessDuration: number | null;
   accessExpiresAt: string | null;
+  startDate: string | null;
   emailSubject: string;
   emailTemplate: string;
   offerUrl: string | null;
@@ -125,8 +126,7 @@ export function ProductsAdmin() {
               </div>
               <h3 className="text-base md:text-lg font-bold text-[#3d3527] mb-2 truncate">{product.name}</h3>
               <p className="text-sm text-[#3d3527]/60 mb-4 line-clamp-2">{product.description}</p>
-              <div className="flex items-center justify-between">
-                <p className="text-xl md:text-2xl font-bold text-[#3d3527]">{product.price.toLocaleString()} ₽</p>
+              <div className="flex items-center justify-end">
                 <span className={`px-2 py-1 rounded-full text-xs ${product.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
                   {product.isActive ? 'Активен' : 'Неактивен'}
                 </span>
@@ -138,12 +138,6 @@ export function ProductsAdmin() {
               {product.modules?.length > 0 && (
                 <div className="mt-3 text-xs text-[#3d3527]/60 truncate">
                   Модули: {product.modules.map(m => m.module.title).join(', ')}
-                </div>
-              )}
-              {product.emailTemplate && (
-                <div className="flex items-center gap-2 mt-3 text-sm text-green-600">
-                  <Mail className="w-4 h-4" />
-                  <span>Email настроен</span>
                 </div>
               )}
               <PaymentLinkButton productId={product.id} />
@@ -194,13 +188,8 @@ function PaymentLinkButton({ productId }: { productId: string }) {
 function ProductModal({ product, onSave, onClose }: { product: Product | null; onSave: (data: any) => void; onClose: () => void }) {
   const [name, setName] = useState(product?.name || '');
   const [description, setDescription] = useState(product?.description || '');
-  const [priceValue, setPriceValue] = useState(product?.price?.toString() || '');
-  const [accessDurationType, setAccessDurationType] = useState<'unlimited' | 'days' | 'date'>(product?.accessDurationType || 'unlimited');
-  const [accessDuration, setAccessDuration] = useState(product?.accessDuration || 30);
+  const [startDate, setStartDate] = useState(product?.startDate?.split('T')[0] || '');
   const [accessExpiresAt, setAccessExpiresAt] = useState(product?.accessExpiresAt?.split('T')[0] || '');
-  const [emailSubject, setEmailSubject] = useState(product?.emailSubject || '');
-  const [emailTemplate, setEmailTemplate] = useState(product?.emailTemplate || '');
-  const [offerUrl, setOfferUrl] = useState(product?.offerUrl || '');
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
   const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>(
     product?.modules?.map(m => m.module.id) || []
@@ -222,17 +211,13 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
   };
 
   const handleSave = () => {
-    const price = parseFloat(priceValue) || 0;
     onSave({
       name,
       description,
-      price,
-      accessDurationType,
-      accessDuration: accessDurationType === 'days' ? accessDuration : null,
-      accessExpiresAt: accessDurationType === 'date' ? accessExpiresAt : null,
-      emailSubject,
-      emailTemplate,
-      offerUrl: offerUrl || null,
+      price: 0,
+      startDate: startDate || null,
+      accessDurationType: accessExpiresAt ? 'date' : 'unlimited',
+      accessExpiresAt: accessExpiresAt || null,
       isActive,
       moduleIds: selectedModuleIds
     });
@@ -243,26 +228,13 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
       <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-3xl my-4 md:my-8 max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
         <h2 className="text-lg md:text-xl font-bold text-[#3d3527] mb-4">{product ? 'Редактировать продукт' : 'Новый продукт'}</h2>
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Название</label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Цена (₽)</label>
-              <input
-                type="number"
-                value={priceValue}
-                onFocus={(e) => { if (e.target.value === '0') setPriceValue(''); }}
-                onChange={(e) => setPriceValue(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-                placeholder="0"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Название</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+            />
           </div>
 
           <div>
@@ -272,6 +244,28 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
               onChange={setDescription}
               placeholder="Описание продукта..."
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#3d3527] mb-1">Дата старта</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#3d3527] mb-1">Дата окончания доступа</label>
+              <input
+                type="date"
+                value={accessExpiresAt}
+                onChange={(e) => setAccessExpiresAt(e.target.value)}
+                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              />
+              <p className="text-xs text-[#3d3527]/60 mt-1">Оставьте пустым для бессрочного доступа</p>
+            </div>
           </div>
 
           <div className="border-t border-[#d4c9b0]/30 pt-4">
@@ -295,88 +289,6 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
                 ))}
               </div>
             )}
-          </div>
-
-          <div className="border-t border-[#d4c9b0]/30 pt-4">
-            <label className="block text-sm font-medium text-[#3d3527] mb-2">Срок доступа</label>
-            <div className="flex flex-wrap gap-2 mb-3">
-              <button
-                type="button"
-                onClick={() => setAccessDurationType('unlimited')}
-                className={`px-3 md:px-4 py-2 rounded-xl text-sm transition-colors ${accessDurationType === 'unlimited' ? 'bg-[#a67c52] text-white' : 'bg-[#f5f3ed] text-[#3d3527] hover:bg-[#ebe8dc]'}`}
-              >
-                Бессрочно
-              </button>
-              <button
-                type="button"
-                onClick={() => setAccessDurationType('days')}
-                className={`px-3 md:px-4 py-2 rounded-xl text-sm transition-colors ${accessDurationType === 'days' ? 'bg-[#a67c52] text-white' : 'bg-[#f5f3ed] text-[#3d3527] hover:bg-[#ebe8dc]'}`}
-              >
-                Кол-во дней
-              </button>
-              <button
-                type="button"
-                onClick={() => setAccessDurationType('date')}
-                className={`px-3 md:px-4 py-2 rounded-xl text-sm transition-colors ${accessDurationType === 'date' ? 'bg-[#a67c52] text-white' : 'bg-[#f5f3ed] text-[#3d3527] hover:bg-[#ebe8dc]'}`}
-              >
-                До даты
-              </button>
-            </div>
-            {accessDurationType === 'days' && (
-              <input
-                type="number"
-                value={accessDuration}
-                onChange={(e) => setAccessDuration(parseInt(e.target.value) || 30)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-                placeholder="Количество дней"
-              />
-            )}
-            {accessDurationType === 'date' && (
-              <input
-                type="date"
-                value={accessExpiresAt}
-                onChange={(e) => setAccessExpiresAt(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-              />
-            )}
-          </div>
-
-          <div className="border-t border-[#d4c9b0]/30 pt-4">
-            <label className="block text-sm font-medium text-[#3d3527] mb-1">Ссылка на оферту</label>
-            <input
-              value={offerUrl}
-              onChange={(e) => setOfferUrl(e.target.value)}
-              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-              placeholder="https://example.com/offer"
-            />
-          </div>
-
-          <div className="border-t border-[#d4c9b0]/30 pt-4">
-            <h3 className="font-semibold text-[#3d3527] mb-3 flex items-center gap-2">
-              <Mail className="w-5 h-5" /> Email после оплаты
-            </h3>
-            <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Тема письма</label>
-              <input
-                value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-                placeholder="Добро пожаловать на курс!"
-              />
-            </div>
-            <div className="mt-3">
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">
-                Шаблон письма (HTML)
-                <span className="text-[#3d3527]/60 ml-2 block sm:inline text-xs">Переменные: {'{{name}}'}, {'{{productName}}'}, {'{{amount}}'}</span>
-              </label>
-              <textarea
-                value={emailTemplate}
-                onChange={(e) => setEmailTemplate(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] font-mono text-sm"
-                rows={6}
-                placeholder="<h1>Здравствуйте, {{name}}!</h1>..."
-              />
-            </div>
           </div>
 
           <div className="flex items-center gap-3">

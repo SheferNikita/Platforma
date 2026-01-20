@@ -209,6 +209,7 @@ router.post('/tilda', async (req: Request, res: Response) => {
             }
           });
           
+          
           const productNameLower = productName.toLowerCase().trim();
           dbProduct = allProducts.find(p => 
             p.name.toLowerCase().includes(productNameLower) ||

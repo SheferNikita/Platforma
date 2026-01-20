@@ -532,9 +532,11 @@ export function ProfileTab() {
               <p className="text-sm opacity-70 mb-1">
                 {calculateSobrietyDays() === 1 ? 'день' : calculateSobrietyDays() < 5 ? 'дня' : 'дней'} трезвости
               </p>
-              <p className="text-xs opacity-50 italic">
-                С {new Date(userInfo.sobrietyStartDate).toLocaleDateString('ru-RU')}
-              </p>
+              {userInfo.sobrietyStartDate && (
+                <p className="text-xs opacity-50 italic">
+                  С {new Date(userInfo.sobrietyStartDate).toLocaleDateString('ru-RU')}
+                </p>
+              )}
             </div>
           </div>
 

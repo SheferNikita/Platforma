@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Check, Award } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { api } from '../lib/api';
 
 export function SobrietyCounter() {
   const [startDate, setStartDate] = useState<string | null>(null);
@@ -14,16 +15,40 @@ export function SobrietyCounter() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Load data from localStorage
-    const saved = localStorage.getItem('sobrietyData');
-    if (saved) {
-      const data = JSON.parse(saved);
-      setStartDate(data.startDate);
-      setLastCheckIn(data.lastCheckIn);
-      calculateDays(data.startDate);
-    } else {
-      setShowSetup(true);
-    }
+    // Load sobriety date from API profile first
+    const loadFromProfile = async () => {
+      try {
+        const profile = await api.get<{ sobrietyDate: string | null }>('/public/profile');
+        if (profile.sobrietyDate) {
+          const dateStr = new Date(profile.sobrietyDate).toISOString().split('T')[0];
+          setStartDate(dateStr);
+          calculateDays(dateStr);
+          // Sync with localStorage
+          const saved = localStorage.getItem('sobrietyData');
+          if (saved) {
+            const data = JSON.parse(saved);
+            setLastCheckIn(data.lastCheckIn);
+          }
+          setShowSetup(false);
+          return;
+        }
+      } catch (error) {
+        console.log('Could not load profile, using localStorage');
+      }
+      
+      // Fallback to localStorage
+      const saved = localStorage.getItem('sobrietyData');
+      if (saved) {
+        const data = JSON.parse(saved);
+        setStartDate(data.startDate);
+        setLastCheckIn(data.lastCheckIn);
+        calculateDays(data.startDate);
+      } else {
+        setShowSetup(true);
+      }
+    };
+    
+    loadFromProfile();
   }, []);
 
   // Close menu when clicking outside

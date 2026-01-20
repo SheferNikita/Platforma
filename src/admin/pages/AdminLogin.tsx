@@ -19,10 +19,10 @@ export function AdminLogin() {
     try {
       await login(email, password);
       toast.success('Успешный вход!');
-      navigate('/admin');
+      // Use window.location for reliable navigation after login
+      window.location.href = '/admin';
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Ошибка входа');
-    } finally {
       setLoading(false);
     }
   };

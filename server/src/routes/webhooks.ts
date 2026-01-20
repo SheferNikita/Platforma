@@ -61,12 +61,16 @@ function generateOrderHash(email: string, tranid: string | undefined, orderid: s
 
 router.post('/tilda', async (req: Request, res: Response) => {
   try {
+    // Log full incoming data for debugging (mask sensitive info)
     const logData = {
       email: req.body.email ? `${req.body.email.substring(0, 3)}***` : undefined,
       hasName: !!req.body.name,
       tranid: req.body.tranid,
       orderid: req.body.orderid,
-      productsCount: req.body.products?.length || 0
+      productsCount: req.body.products?.length || 0,
+      productNames: req.body.products?.map((p: any) => p.name || p.title) || [],
+      contentType: req.headers['content-type'],
+      bodyKeys: Object.keys(req.body)
     };
     console.log('Tilda webhook received:', JSON.stringify(logData));
 
@@ -194,6 +198,28 @@ router.post('/tilda', async (req: Request, res: Response) => {
           });
         }
 
+        // Try case-insensitive partial match if exact match fails
+        if (!dbProduct) {
+          const allProducts = await prisma.product.findMany({
+            where: { isActive: true },
+            include: {
+              modules: {
+                include: { module: true }
+              }
+            }
+          });
+          
+          const productNameLower = productName.toLowerCase().trim();
+          dbProduct = allProducts.find(p => 
+            p.name.toLowerCase().includes(productNameLower) ||
+            productNameLower.includes(p.name.toLowerCase())
+          ) || null;
+          
+          if (dbProduct) {
+            console.log(`Tilda webhook: Found product by partial match: "${dbProduct.name}" for "${productName}"`);
+          }
+        }
+
         if (dbProduct) {
           matchedProducts.push(dbProduct);
 
@@ -318,7 +344,6 @@ router.get('/tilda/test', (req: Request, res: Response) => {
     status: 'ok',
     message: 'Tilda webhook endpoint is working',
     timestamp: new Date().toISOString(),
-    authRequired: REQUIRE_WEBHOOK_AUTH,
     secretConfigured: !!TILDA_WEBHOOK_SECRET
   });
 });

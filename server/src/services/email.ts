@@ -29,10 +29,7 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
       from_email: fromEmail,
       from_name: fromName,
       track_links: 0,
-      track_read: 0,
-      options: {
-        tracking_domain: 'support.schkola-trezvosti.ru'
-      }
+      track_read: 0
     }
   };
 
@@ -105,10 +102,7 @@ export async function sendBulkEmail(
       from_email: fromEmail,
       from_name: fromName,
       track_links: 0,
-      track_read: 0,
-      options: {
-        tracking_domain: 'support.schkola-trezvosti.ru'
-      }
+      track_read: 0
     }
   };
 

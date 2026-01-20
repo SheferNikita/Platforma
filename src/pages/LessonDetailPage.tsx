@@ -91,9 +91,14 @@ export function LessonDetailPage() {
   
   // States for attachments
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [diaryFiles, setDiaryFiles] = useState<File[]>([]);
+  const [notesFiles, setNotesFiles] = useState<File[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
+  
+  // Lesson completion state
+  const [isLessonCompleted, setIsLessonCompleted] = useState(false);
   
   // Chat history state
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -118,6 +123,8 @@ export function LessonDetailPage() {
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const diaryFileInputRef = useRef<HTMLInputElement>(null);
+  const notesFileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -260,7 +267,9 @@ export function LessonDetailPage() {
   };
 
   const handleMarkComplete = () => {
+    if (isLessonCompleted) return;
     // Здесь должна быть логика для сохранения статуса урока
+    setIsLessonCompleted(true);
     toast.success('Урок отмечен как пройденный!');
   };
 
@@ -278,10 +287,16 @@ export function LessonDetailPage() {
         id: newEntry.id,
         text: diary.trim(),
         author: 'student',
-        timestamp: new Date()
+        timestamp: new Date(),
+        files: diaryFiles.map(f => ({ 
+          name: f.name, 
+          type: f.type,
+          url: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined
+        }))
       };
       setDiaryHistory(prev => [...prev, newMessage]);
       setDiary('');
+      setDiaryFiles([]);
       toast.success('Запись в дневнике сохранена!');
     } catch (error: any) {
       console.error('Save diary error:', error);
@@ -303,10 +318,16 @@ export function LessonDetailPage() {
         id: newEntry.id,
         text: notes.trim(),
         author: 'student',
-        timestamp: new Date()
+        timestamp: new Date(),
+        files: notesFiles.map(f => ({ 
+          name: f.name, 
+          type: f.type,
+          url: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined
+        }))
       };
       setNotesHistory(prev => [...prev, newMessage]);
       setNotes('');
+      setNotesFiles([]);
       toast.success('Конспект сохранен!');
     } catch (error: any) {
       console.error('Save notes error:', error);
@@ -622,11 +643,20 @@ export function LessonDetailPage() {
         <div className="mb-10 flex justify-center">
           <button
             onClick={handleMarkComplete}
-            className="inline-flex items-center gap-2.5 px-10 py-4 bg-gradient-to-r from-[var(--success-green)] to-[#5a8c69] text-white rounded-xl hover:shadow-[0_12px_28px_rgba(74,124,89,0.35)] transition-all duration-300 text-base font-medium transform hover:scale-[1.03] active:scale-[0.98] relative overflow-hidden group"
+            disabled={isLessonCompleted}
+            className={`inline-flex items-center gap-2.5 px-10 py-4 text-white rounded-xl transition-all duration-300 text-base font-medium relative overflow-hidden group ${
+              isLessonCompleted 
+                ? 'bg-gradient-to-r from-[#6b9e7a] to-[#5a8c69] cursor-default' 
+                : 'bg-gradient-to-r from-[var(--success-green)] to-[#5a8c69] hover:shadow-[0_12px_28px_rgba(74,124,89,0.35)] transform hover:scale-[1.03] active:scale-[0.98]'
+            }`}
           >
             <CheckCircle className="w-5 h-5 relative z-10 drop-shadow-sm" />
-            <span className="relative z-10">Отметить урок пройденным</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+            <span className="relative z-10">
+              {isLessonCompleted ? 'Урок отмечен пройденным' : 'Отметить урок пройденным'}
+            </span>
+            {!isLessonCompleted && (
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+            )}
           </button>
         </div>
 
@@ -662,6 +692,32 @@ export function LessonDetailPage() {
                     <p className={`text-xs md:text-sm leading-snug ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
                       {message.text}
                     </p>
+                    {/* Attached files */}
+                    {message.files && message.files.length > 0 && (
+                      <div className="mt-1 md:mt-1.5 space-y-1">
+                        {message.files.map((file, idx) => (
+                          <div key={idx}>
+                            {file.type.startsWith('image/') && file.url ? (
+                              <img 
+                                src={file.url} 
+                                alt={file.name}
+                                onClick={() => setFullscreenImage(file.url!)}
+                                className="w-full max-w-full rounded-lg mt-1 border border-white/20 cursor-pointer hover:opacity-90 transition-opacity"
+                              />
+                            ) : (
+                              <div
+                                className={`flex items-center gap-1.5 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-[10px] md:text-xs ${
+                                  message.author === 'student' ? 'bg-white/20' : 'bg-[var(--sky-soft)]/30'
+                                }`}
+                              >
+                                <File className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                                <span className="truncate max-w-[100px] md:max-w-[120px]">{file.name}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <p
                       className={`text-[8px] md:text-[9px] mt-0.5 md:mt-1 ${
                         message.author === 'student' ? 'text-white/60 text-right' : 'text-gray-400'
@@ -675,13 +731,61 @@ export function LessonDetailPage() {
             </div>
           )}
 
+          {/* Diary attached files display */}
+          {diaryFiles.length > 0 && (
+            <div className="mb-3">
+              <div className="flex flex-wrap gap-2">
+                {diaryFiles.map((file, index) => (
+                  <div key={index} className="group flex items-center gap-2 bg-[var(--sky-soft)]/40 hover:bg-[var(--sky-soft)]/60 px-3 py-2 rounded-xl transition-all duration-200 border border-[var(--sky-light)]/30">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--button-lavender-light)]/20 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0">
+                      {getFileIcon(file)}
+                    </div>
+                    <span className="text-xs truncate max-w-[120px]">{file.name}</span>
+                    <button
+                      onClick={() => setDiaryFiles(prev => prev.filter((_, i) => i !== index))}
+                      className="ml-1 w-5 h-5 flex items-center justify-center rounded-full hover:bg-red-500/10 text-[var(--button-lavender-dark)] hover:text-red-500 transition-colors opacity-60 group-hover:opacity-100"
+                      title="Удалить"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="relative">
             <textarea
               value={diary}
               onChange={(e) => setDiary(e.target.value)}
               placeholder="Опишите, что вы узнали сегодня, какие мысли вызвал урок, что вы чувствуете..."
-              className="w-full px-4 py-3 border-2 border-[var(--sky-light)]/40 rounded-xl focus:outline-none focus:border-[var(--button-lavender-dark)]/50 focus:bg-white transition-all resize-none min-h-[100px] text-sm leading-relaxed backdrop-blur-sm bg-white/80 placeholder:text-xs md:placeholder:text-sm"
+              className="w-full px-4 py-3 pr-12 border-2 border-[var(--sky-light)]/40 rounded-xl focus:outline-none focus:border-[var(--button-lavender-dark)]/50 focus:bg-white transition-all resize-none min-h-[100px] text-sm leading-relaxed backdrop-blur-sm bg-white/80 placeholder:text-xs md:placeholder:text-sm"
             />
+            
+            {/* Diary attachment button */}
+            <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+              <input
+                ref={diaryFileInputRef}
+                type="file"
+                multiple
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files) {
+                    const newFiles = Array.from(files);
+                    setDiaryFiles(prev => [...prev, ...newFiles]);
+                    toast.success(`${newFiles.length} ${newFiles.length === 1 ? 'файл' : 'файла'} прикреплен`);
+                  }
+                }}
+                className="hidden"
+              />
+              <button
+                onClick={() => diaryFileInputRef.current?.click()}
+                className="w-8 h-8 rounded-lg bg-white/80 hover:bg-[var(--button-lavender-light)]/10 border border-[var(--sky-light)]/40 hover:border-[var(--button-lavender-dark)]/40 flex items-center justify-center transition-all duration-200 transform hover:scale-105 active:scale-95 group"
+                title="Прикрепить файл"
+              >
+                <Paperclip className="w-4 h-4 text-[var(--button-lavender-dark)] group-hover:text-[var(--icon-lavender)]" />
+              </button>
+            </div>
           </div>
 
           <button
@@ -725,6 +829,32 @@ export function LessonDetailPage() {
                     <p className={`text-xs md:text-sm leading-snug ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
                       {message.text}
                     </p>
+                    {/* Attached files */}
+                    {message.files && message.files.length > 0 && (
+                      <div className="mt-1 md:mt-1.5 space-y-1">
+                        {message.files.map((file, idx) => (
+                          <div key={idx}>
+                            {file.type.startsWith('image/') && file.url ? (
+                              <img 
+                                src={file.url} 
+                                alt={file.name}
+                                onClick={() => setFullscreenImage(file.url!)}
+                                className="w-full max-w-full rounded-lg mt-1 border border-white/20 cursor-pointer hover:opacity-90 transition-opacity"
+                              />
+                            ) : (
+                              <div
+                                className={`flex items-center gap-1.5 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-[10px] md:text-xs ${
+                                  message.author === 'student' ? 'bg-white/20' : 'bg-[var(--sky-soft)]/30'
+                                }`}
+                              >
+                                <File className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                                <span className="truncate max-w-[100px] md:max-w-[120px]">{file.name}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <p
                       className={`text-[8px] md:text-[9px] mt-0.5 md:mt-1 ${
                         message.author === 'student' ? 'text-white/60 text-right' : 'text-gray-400'
@@ -738,13 +868,61 @@ export function LessonDetailPage() {
             </div>
           )}
 
+          {/* Notes attached files display */}
+          {notesFiles.length > 0 && (
+            <div className="mb-3">
+              <div className="flex flex-wrap gap-2">
+                {notesFiles.map((file, index) => (
+                  <div key={index} className="group flex items-center gap-2 bg-[var(--sky-soft)]/40 hover:bg-[var(--sky-soft)]/60 px-3 py-2 rounded-xl transition-all duration-200 border border-[var(--sky-light)]/30">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--button-lavender-light)]/20 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0">
+                      {getFileIcon(file)}
+                    </div>
+                    <span className="text-xs truncate max-w-[120px]">{file.name}</span>
+                    <button
+                      onClick={() => setNotesFiles(prev => prev.filter((_, i) => i !== index))}
+                      className="ml-1 w-5 h-5 flex items-center justify-center rounded-full hover:bg-red-500/10 text-[var(--button-lavender-dark)] hover:text-red-500 transition-colors opacity-60 group-hover:opacity-100"
+                      title="Удалить"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="relative">
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Основные тезисы урока, важные определения, техники и упражнения..."
-              className="w-full px-4 py-3 border-2 border-[var(--sky-light)]/40 rounded-xl focus:outline-none focus:border-[var(--button-lavender-dark)]/50 focus:bg-white transition-all resize-none min-h-[100px] text-sm leading-relaxed backdrop-blur-sm bg-white/80 placeholder:text-xs md:placeholder:text-sm"
+              className="w-full px-4 py-3 pr-12 border-2 border-[var(--sky-light)]/40 rounded-xl focus:outline-none focus:border-[var(--button-lavender-dark)]/50 focus:bg-white transition-all resize-none min-h-[100px] text-sm leading-relaxed backdrop-blur-sm bg-white/80 placeholder:text-xs md:placeholder:text-sm"
             />
+            
+            {/* Notes attachment button */}
+            <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+              <input
+                ref={notesFileInputRef}
+                type="file"
+                multiple
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files) {
+                    const newFiles = Array.from(files);
+                    setNotesFiles(prev => [...prev, ...newFiles]);
+                    toast.success(`${newFiles.length} ${newFiles.length === 1 ? 'файл' : 'файла'} прикреплен`);
+                  }
+                }}
+                className="hidden"
+              />
+              <button
+                onClick={() => notesFileInputRef.current?.click()}
+                className="w-8 h-8 rounded-lg bg-white/80 hover:bg-[var(--button-lavender-light)]/10 border border-[var(--sky-light)]/40 hover:border-[var(--button-lavender-dark)]/40 flex items-center justify-center transition-all duration-200 transform hover:scale-105 active:scale-95 group"
+                title="Прикрепить файл"
+              >
+                <Paperclip className="w-4 h-4 text-[var(--button-lavender-dark)] group-hover:text-[var(--icon-lavender)]" />
+              </button>
+            </div>
           </div>
 
           <button
@@ -967,7 +1145,7 @@ export function LessonDetailPage() {
                 Предыдущий урок
               </button>
             )}
-            {nextLesson && !nextLesson.isLocked && (
+            {nextLesson && (
               <button
                 onClick={() => navigate(`/lesson/${nextLesson.id}`)}
                 className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_8px_20px_rgba(139,149,188,0.45)] transition-all duration-300 text-sm font-medium transform hover:scale-[1.03] active:scale-[0.98] relative overflow-hidden group"

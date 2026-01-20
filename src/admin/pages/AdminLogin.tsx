@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,17 +9,32 @@ export function AdminLogin() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, logout, user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Clear any existing session when visiting admin login
+  useEffect(() => {
+    // If user is logged in but not admin, log them out first
+    if (user && !isAdmin && !authLoading) {
+      localStorage.removeItem('auth_token');
+    }
+  }, [user, isAdmin, authLoading]);
+
+  // If already logged in as admin, redirect to admin panel
+  if (!authLoading && user && isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Clear any existing token before login
+      localStorage.removeItem('auth_token');
       await login(email, password);
       toast.success('Успешный вход!');
-      // Use window.location for reliable navigation after login
+      // Use window.location for full reload to ensure fresh state
       window.location.href = '/admin';
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Ошибка входа');

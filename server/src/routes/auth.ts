@@ -47,12 +47,23 @@ router.post('/login', async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
+    // Get surveyCompleted for students
+    let surveyCompleted = true;
+    if (user.role === 'STUDENT') {
+      const student = await prisma.student.findFirst({
+        where: { userId: user.id },
+        select: { surveyCompleted: true }
+      });
+      surveyCompleted = student?.surveyCompleted || false;
+    }
+
     res.json({
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        surveyCompleted
       },
       token
     });
@@ -105,7 +116,8 @@ router.post('/register', async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        surveyCompleted: false
       },
       token
     });

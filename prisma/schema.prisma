@@ -103,6 +103,7 @@ model Lesson {
   order       Int                @default(0)
   isPublished Boolean            @default(false)
   isTextOnly  Boolean            @default(false)
+  publishAt   DateTime?
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   diaries     Diary[]

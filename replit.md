@@ -57,6 +57,7 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
     -   Connection via `EXTERNAL_DATABASE_URL` environment variable
     -   Prisma ORM connects to TimeWeb database (not Replit's built-in database)
     -   All user data persists externally, survives cache clears and redeployments
+    -   **CRITICAL**: Never run `prisma db pull` without `--url "$EXTERNAL_DATABASE_URL"` flag! It will hardcode the URL and break the connection. Always use `npx prisma db execute --url "$EXTERNAL_DATABASE_URL"` for schema changes.
 -   **Robokassa:** Payment gateway integrated for processing payments.
     -   Endpoints: `POST /api/payments/result`, `GET /api/payments/success`, `GET /api/payments/fail`.
     -   Automated enrollment and email notification upon successful payment.

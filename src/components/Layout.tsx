@@ -5,7 +5,6 @@ import { User, Calendar, Users } from 'lucide-react';
 import { Navigation } from './Navigation';
 import { SobrietyCounter } from './SobrietyCounter';
 import { NotificationBell } from './NotificationBell';
-import { Toaster } from 'sonner';
 
 export function Layout() {
   const location = useLocation();
@@ -104,22 +103,6 @@ export function Layout() {
           </footer>
         </div>
       </div>
-      
-      {/* Toast Notifications */}
-      <Toaster 
-        position="top-center"
-        toastOptions={{
-          style: {
-            background: 'linear-gradient(135deg, rgba(253,251,247,0.95) 0%, rgba(242,237,227,0.9) 100%)',
-            border: '2px solid rgba(166,124,82,0.2)',
-            borderRadius: '12px',
-            boxShadow: '0 8px 24px rgba(77,107,133,0.15), 0 4px 12px rgba(0,0,0,0.1)',
-            backdropFilter: 'blur(8px)',
-            padding: '16px 20px',
-          },
-          className: 'font-serif',
-        }}
-      />
     </div>
   );
 }

@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../../lib/api';
-import { Users2, UserPlus, Check, RefreshCw, Search, ChevronRight, MapPin, User, Calendar, AlertCircle, Church } from 'lucide-react';
+import { Users2, UserPlus, Check, RefreshCw, Search, ChevronRight, MapPin, User, Calendar, AlertCircle, Church, Filter, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 const GENDER_LABELS: Record<string, string> = {
   male: 'М',
   female: 'Ж'
 };
+
+const GENDER_OPTIONS = [
+  { value: 'male', label: 'Мужской' },
+  { value: 'female', label: 'Женский' }
+];
 
 const ADDICTION_LABELS: Record<string, string> = {
   alcohol: 'Алкогольная',
@@ -16,6 +21,25 @@ const ADDICTION_LABELS: Record<string, string> = {
   codependency: 'Созавис.',
   other: 'Другая'
 };
+
+const ADDICTION_OPTIONS = [
+  { value: 'alcohol', label: 'Алкогольная' },
+  { value: 'drugs', label: 'Наркотическая' },
+  { value: 'gambling', label: 'Игровая' },
+  { value: 'food', label: 'Пищевая' },
+  { value: 'codependency', label: 'Созависимость' },
+  { value: 'other', label: 'Другая' }
+];
+
+const SURVEY_OPTIONS = [
+  { value: 'completed', label: 'Пройден' },
+  { value: 'pending', label: 'Не пройден' }
+];
+
+const CLERGY_OPTIONS = [
+  { value: 'yes', label: 'Да' },
+  { value: 'no', label: 'Нет' }
+];
 
 function formatAddictionTypes(addictionType: string | null): string[] {
   if (!addictionType) return [];
@@ -41,6 +65,14 @@ interface MiniGroup {
   _count: { members: number };
 }
 
+interface Filters {
+  gender: string;
+  addictionType: string;
+  surveyStatus: string;
+  isClergy: string;
+  city: string;
+}
+
 export function DistributionAdmin() {
   const [students, setStudents] = useState<Student[]>([]);
   const [groups, setGroups] = useState<MiniGroup[]>([]);
@@ -49,6 +81,14 @@ export function DistributionAdmin() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [assigning, setAssigning] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<Filters>({
+    gender: '',
+    addictionType: '',
+    surveyStatus: '',
+    isClergy: '',
+    city: ''
+  });
 
   useEffect(() => {
     loadData();
@@ -130,10 +170,57 @@ export function DistributionAdmin() {
     }
   }
 
-  const filteredStudents = students.filter(s => 
-    s.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const uniqueCities = useMemo(() => {
+    const cities = students
+      .map(s => s.city)
+      .filter((city): city is string => !!city);
+    return [...new Set(cities)].sort();
+  }, [students]);
+
+  const activeFiltersCount = useMemo(() => {
+    return Object.values(filters).filter(v => v !== '').length;
+  }, [filters]);
+
+  const clearFilters = () => {
+    setFilters({
+      gender: '',
+      addictionType: '',
+      surveyStatus: '',
+      isClergy: '',
+      city: ''
+    });
+  };
+
+  const filteredStudents = useMemo(() => {
+    return students.filter(s => {
+      // Text search
+      const matchesSearch = searchTerm === '' || 
+        s.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      // Gender filter
+      const matchesGender = filters.gender === '' || s.gender === filters.gender;
+      
+      // Addiction type filter
+      const matchesAddiction = filters.addictionType === '' || 
+        (s.addictionType && formatAddictionTypes(s.addictionType).includes(filters.addictionType));
+      
+      // Survey status filter
+      const matchesSurvey = filters.surveyStatus === '' ||
+        (filters.surveyStatus === 'completed' && s.surveyCompleted) ||
+        (filters.surveyStatus === 'pending' && !s.surveyCompleted);
+      
+      // Clergy filter
+      const matchesClergy = filters.isClergy === '' ||
+        (filters.isClergy === 'yes' && s.isClergy === true) ||
+        (filters.isClergy === 'no' && s.isClergy !== true);
+      
+      // City filter
+      const matchesCity = filters.city === '' || s.city === filters.city;
+
+      return matchesSearch && matchesGender && matchesAddiction && matchesSurvey && matchesClergy && matchesCity;
+    });
+  }, [students, searchTerm, filters]);
 
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString('ru-RU', {
@@ -186,6 +273,11 @@ export function DistributionAdmin() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h2 className="text-lg font-semibold text-[#3d3527]">
                 Нераспределённые ученики
+                {activeFiltersCount > 0 && (
+                  <span className="ml-2 text-sm font-normal text-[#a67c52]">
+                    (найдено: {filteredStudents.length})
+                  </span>
+                )}
               </h2>
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <div className="relative">
@@ -199,6 +291,22 @@ export function DistributionAdmin() {
                   />
                 </div>
                 <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all ${
+                    showFilters || activeFiltersCount > 0
+                      ? 'bg-[#a67c52] text-white'
+                      : 'bg-white/80 text-[#3d3527] border border-[#d4c9b0]/30 hover:bg-white'
+                  }`}
+                >
+                  <Filter className="w-4 h-4" />
+                  Фильтры
+                  {activeFiltersCount > 0 && (
+                    <span className="w-5 h-5 bg-white text-[#a67c52] rounded-full text-xs flex items-center justify-center font-medium">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </button>
+                <button
                   onClick={selectAll}
                   className="text-sm text-[#a67c52] hover:underline whitespace-nowrap"
                 >
@@ -206,6 +314,90 @@ export function DistributionAdmin() {
                 </button>
               </div>
             </div>
+
+            {showFilters && (
+              <div className="mb-4 p-4 bg-[#f5f3ed] rounded-xl border border-[#d4c9b0]/30">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-[#3d3527]">Фильтры</span>
+                  {activeFiltersCount > 0 && (
+                    <button
+                      onClick={clearFilters}
+                      className="flex items-center gap-1 text-xs text-[#a67c52] hover:underline"
+                    >
+                      <X className="w-3 h-3" />
+                      Сбросить
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                  <div>
+                    <label className="block text-xs text-[#3d3527]/60 mb-1">Пол</label>
+                    <select
+                      value={filters.gender}
+                      onChange={(e) => setFilters({ ...filters, gender: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                    >
+                      <option value="">Все</option>
+                      {GENDER_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[#3d3527]/60 mb-1">Зависимость</label>
+                    <select
+                      value={filters.addictionType}
+                      onChange={(e) => setFilters({ ...filters, addictionType: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                    >
+                      <option value="">Все</option>
+                      {ADDICTION_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[#3d3527]/60 mb-1">Опрос</label>
+                    <select
+                      value={filters.surveyStatus}
+                      onChange={(e) => setFilters({ ...filters, surveyStatus: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                    >
+                      <option value="">Все</option>
+                      {SURVEY_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[#3d3527]/60 mb-1">Духовенство</label>
+                    <select
+                      value={filters.isClergy}
+                      onChange={(e) => setFilters({ ...filters, isClergy: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                    >
+                      <option value="">Все</option>
+                      {CLERGY_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[#3d3527]/60 mb-1">Город</label>
+                    <select
+                      value={filters.city}
+                      onChange={(e) => setFilters({ ...filters, city: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                    >
+                      <option value="">Все</option>
+                      {uniqueCities.map(city => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2 max-h-[60vh] overflow-y-auto">
               {filteredStudents.map((student) => (

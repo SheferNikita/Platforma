@@ -53,6 +53,29 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.get('/mentors', async (req: AuthRequest, res: Response) => {
+  try {
+    const mentors = await prisma.user.findMany({
+      where: {
+        role: { in: ['MENTOR', 'INTERN'] },
+        isActive: true
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    res.json(mentors);
+  } catch (error) {
+    console.error('Get mentors error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     const data = createAdminSchema.parse(req.body);

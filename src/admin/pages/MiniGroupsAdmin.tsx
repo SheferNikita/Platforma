@@ -12,6 +12,13 @@ interface Contact {
   photo: string | null;
 }
 
+interface Mentor {
+  id: string;
+  name: string;
+  email: string;
+  role: 'MENTOR' | 'INTERN';
+}
+
 interface ScheduleEvent {
   id: string;
   title: string;
@@ -50,6 +57,7 @@ interface MiniGroup {
 export function MiniGroupsAdmin() {
   const [groups, setGroups] = useState<MiniGroup[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [mentors, setMentors] = useState<Mentor[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -59,6 +67,7 @@ export function MiniGroupsAdmin() {
   useEffect(() => { 
     loadGroups(); 
     loadContacts();
+    loadMentors();
   }, []);
 
   async function loadGroups() {
@@ -74,6 +83,22 @@ export function MiniGroupsAdmin() {
       const data = await api.get<Contact[]>('/content/contacts');
       setContacts(data);
     } catch (error) { }
+  }
+
+  async function loadMentors() {
+    try {
+      const data = await api.get<Mentor[]>('/admin/mentors');
+      setMentors(data);
+    } catch (error) { }
+  }
+
+  function getMentorNames(curatorId: string, mentorsList: Mentor[]): string {
+    const ids = curatorId.split(',').filter(Boolean);
+    const names = ids.map(id => {
+      const mentor = mentorsList.find(m => m.id === id);
+      return mentor ? mentor.name : '';
+    }).filter(Boolean);
+    return names.length > 0 ? names.join(', ') : 'Не назначены';
   }
 
   async function saveGroup(data: Partial<MiniGroup>) {
@@ -164,10 +189,10 @@ export function MiniGroupsAdmin() {
               <h3 className="font-bold text-[#3d3527]">{group.title}</h3>
               <p className="text-sm text-[#3d3527]/60 mt-1 line-clamp-2">{group.description}</p>
               <div className="mt-3 space-y-1 text-sm text-[#3d3527]/80">
-                {group.curator && (
+                {group.curatorId && (
                   <div className="flex items-center gap-2">
-                    <span className="text-[#3d3527]/60">Куратор:</span>
-                    <span>{group.curator.name}</span>
+                    <span className="text-[#3d3527]/60">Наставники:</span>
+                    <span>{getMentorNames(group.curatorId, mentors)}</span>
                   </div>
                 )}
                 {group.chatLink && (
@@ -200,7 +225,7 @@ export function MiniGroupsAdmin() {
             <h2 className="text-xl font-bold text-[#3d3527] mb-4">{editingGroup ? 'Редактировать' : 'Новая группа'}</h2>
             <MiniGroupForm 
               group={editingGroup} 
-              contacts={contacts}
+              mentors={mentors}
               onSave={saveGroup} 
               onClose={() => { setShowModal(false); setEditingGroup(null); }} 
             />
@@ -214,7 +239,7 @@ export function MiniGroupsAdmin() {
             <h2 className="text-xl font-bold text-[#3d3527] mb-4">Настройки группы</h2>
             <MiniGroupSettings 
               group={settingsGroup}
-              contacts={contacts}
+              mentors={mentors}
               onSave={saveSettings} 
               onClose={() => { setShowSettingsModal(false); setSettingsGroup(null); }}
               onRefresh={loadGroups}
@@ -228,15 +253,43 @@ export function MiniGroupsAdmin() {
   );
 }
 
-function MiniGroupForm({ group, contacts, onSave, onClose }: { 
+function MiniGroupForm({ group, mentors, onSave, onClose }: { 
   group: MiniGroup | null; 
-  contacts: Contact[];
+  mentors: Mentor[];
   onSave: (data: any) => void; 
   onClose: () => void 
 }) {
   const [title, setTitle] = useState(group?.title || '');
   const [description, setDescription] = useState(group?.description || '');
-  const [curatorId, setCuratorId] = useState(group?.curatorId || '');
+  const [selectedMentorIds, setSelectedMentorIds] = useState<string[]>(() => {
+    if (group?.curatorId) {
+      return group.curatorId.split(',').filter(Boolean);
+    }
+    return [];
+  });
+
+  const addMentor = () => {
+    setSelectedMentorIds([...selectedMentorIds, '']);
+  };
+
+  const updateMentor = (index: number, value: string) => {
+    const newIds = [...selectedMentorIds];
+    newIds[index] = value;
+    setSelectedMentorIds(newIds);
+  };
+
+  const removeMentor = (index: number) => {
+    setSelectedMentorIds(selectedMentorIds.filter((_, i) => i !== index));
+  };
+
+  const getAvailableMentors = (currentIndex: number) => {
+    const selectedOthers = selectedMentorIds.filter((_, i) => i !== currentIndex);
+    return mentors.filter(m => !selectedOthers.includes(m.id));
+  };
+
+  const getRoleLabel = (role: string) => {
+    return role === 'INTERN' ? '(Стажер)' : '';
+  };
 
   return (
     <div className="space-y-4">
@@ -249,19 +302,46 @@ function MiniGroupForm({ group, contacts, onSave, onClose }: {
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" rows={3} />
       </div>
       <div>
-        <label className="block text-sm font-medium text-[#3d3527] mb-1">Куратор</label>
-        <select 
-          value={curatorId} 
-          onChange={(e) => setCuratorId(e.target.value)} 
-          className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl bg-white"
-        >
-          <option value="">Выберите куратора</option>
-          {contacts.map((contact) => (
-            <option key={contact.id} value={contact.id}>
-              {contact.name} {contact.role ? `(${contact.role})` : ''}
-            </option>
-          ))}
-        </select>
+        <label className="block text-sm font-medium text-[#3d3527] mb-1">Наставники</label>
+        <div className="space-y-2">
+          {selectedMentorIds.length === 0 ? (
+            <div className="text-sm text-[#3d3527]/60 py-2">Наставники не назначены</div>
+          ) : (
+            selectedMentorIds.map((mentorId, index) => (
+              <div key={index} className="flex gap-2">
+                <select 
+                  value={mentorId} 
+                  onChange={(e) => updateMentor(index, e.target.value)} 
+                  className="flex-1 px-4 py-2 border border-[#d4c9b0] rounded-xl bg-white"
+                >
+                  <option value="">Выберите наставника</option>
+                  {getAvailableMentors(index).map((mentor) => (
+                    <option key={mentor.id} value={mentor.id}>
+                      {mentor.name} {getRoleLabel(mentor.role)}
+                    </option>
+                  ))}
+                </select>
+                <button 
+                  type="button"
+                  onClick={() => removeMentor(index)}
+                  className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-xl"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))
+          )}
+          {selectedMentorIds.length < mentors.length && (
+            <button 
+              type="button"
+              onClick={addMentor}
+              className="flex items-center gap-2 text-sm text-[#a67c52] hover:text-[#8b6a47] py-2"
+            >
+              <Plus className="w-4 h-4" />
+              Добавить наставника
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
         <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl w-full sm:w-auto">Отмена</button>
@@ -269,7 +349,7 @@ function MiniGroupForm({ group, contacts, onSave, onClose }: {
           onClick={() => onSave({ 
             title, 
             description, 
-            curatorId: curatorId || null
+            curatorId: selectedMentorIds.filter(Boolean).join(',') || null
           })} 
           className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl w-full sm:w-auto"
         >
@@ -290,9 +370,9 @@ interface EventFormData {
   isOnline: boolean;
 }
 
-function MiniGroupSettings({ group, contacts, onSave, onClose, onRefresh, onDelete, onTogglePublish }: { 
+function MiniGroupSettings({ group, mentors, onSave, onClose, onRefresh, onDelete, onTogglePublish }: { 
   group: MiniGroup; 
-  contacts: Contact[];
+  mentors: Mentor[];
   onSave: (data: Partial<MiniGroup>) => void; 
   onClose: () => void;
   onRefresh: () => void;
@@ -301,8 +381,36 @@ function MiniGroupSettings({ group, contacts, onSave, onClose, onRefresh, onDele
 }) {
   const [title, setTitle] = useState(group.title);
   const [description, setDescription] = useState(group.description || '');
-  const [curatorId, setCuratorId] = useState(group.curatorId || '');
+  const [selectedMentorIds, setSelectedMentorIds] = useState<string[]>(() => {
+    if (group.curatorId) {
+      return group.curatorId.split(',').filter(Boolean);
+    }
+    return [];
+  });
   const [chatLink, setChatLink] = useState(group.chatLink || '');
+
+  const addMentor = () => {
+    setSelectedMentorIds([...selectedMentorIds, '']);
+  };
+
+  const updateMentor = (index: number, value: string) => {
+    const newIds = [...selectedMentorIds];
+    newIds[index] = value;
+    setSelectedMentorIds(newIds);
+  };
+
+  const removeMentor = (index: number) => {
+    setSelectedMentorIds(selectedMentorIds.filter((_, i) => i !== index));
+  };
+
+  const getAvailableMentors = (currentIndex: number) => {
+    const selectedOthers = selectedMentorIds.filter((_, i) => i !== currentIndex);
+    return mentors.filter(m => !selectedOthers.includes(m.id));
+  };
+
+  const getRoleLabel = (role: string) => {
+    return role === 'INTERN' ? '(Стажер)' : '';
+  };
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [showEventForm, setShowEventForm] = useState(false);
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
@@ -443,19 +551,46 @@ function MiniGroupSettings({ group, contacts, onSave, onClose, onRefresh, onDele
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#3d3527] mb-1">Куратор</label>
-          <select 
-            value={curatorId} 
-            onChange={(e) => setCuratorId(e.target.value)} 
-            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl bg-white"
-          >
-            <option value="">Выберите куратора</option>
-            {contacts.map((contact) => (
-              <option key={contact.id} value={contact.id}>
-                {contact.name} {contact.role ? `(${contact.role})` : ''}
-              </option>
-            ))}
-          </select>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Наставники</label>
+          <div className="space-y-2">
+            {selectedMentorIds.length === 0 ? (
+              <div className="text-sm text-[#3d3527]/60 py-2">Наставники не назначены</div>
+            ) : (
+              selectedMentorIds.map((mentorId, index) => (
+                <div key={index} className="flex gap-2">
+                  <select 
+                    value={mentorId} 
+                    onChange={(e) => updateMentor(index, e.target.value)} 
+                    className="flex-1 px-4 py-2 border border-[#d4c9b0] rounded-xl bg-white"
+                  >
+                    <option value="">Выберите наставника</option>
+                    {getAvailableMentors(index).map((mentor) => (
+                      <option key={mentor.id} value={mentor.id}>
+                        {mentor.name} {getRoleLabel(mentor.role)}
+                      </option>
+                    ))}
+                  </select>
+                  <button 
+                    type="button"
+                    onClick={() => removeMentor(index)}
+                    className="px-3 py-2 text-red-500 hover:bg-red-50 rounded-xl"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))
+            )}
+            {selectedMentorIds.length < mentors.length && (
+              <button 
+                type="button"
+                onClick={addMentor}
+                className="flex items-center gap-2 text-sm text-[#a67c52] hover:text-[#8b6a47] py-2"
+              >
+                <Plus className="w-4 h-4" />
+                Добавить наставника
+              </button>
+            )}
+          </div>
         </div>
         <div>
           <label className="block text-sm font-medium text-[#3d3527] mb-1">Ссылка на чат</label>
@@ -700,7 +835,7 @@ function MiniGroupSettings({ group, contacts, onSave, onClose, onRefresh, onDele
         <div className="flex gap-2">
           <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Закрыть</button>
           <button 
-            onClick={() => onSave({ title, description, curatorId: curatorId || null, chatLink })} 
+            onClick={() => onSave({ title, description, curatorId: selectedMentorIds.filter(Boolean).join(',') || null, chatLink })} 
             className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
           >
             Сохранить

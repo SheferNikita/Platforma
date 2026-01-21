@@ -371,6 +371,16 @@ router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
     const lessonId = req.params.lessonId as string;
     const { content, attachments } = req.body;
 
+    console.log('[POST diary] Received attachments:', attachments?.length || 0, 'files');
+    if (attachments?.length) {
+      console.log('[POST diary] First attachment:', {
+        filename: attachments[0].filename,
+        mimeType: attachments[0].mimeType,
+        size: attachments[0].size,
+        dataLength: attachments[0].data?.length || 0
+      });
+    }
+
     if (!content || !content.trim()) {
       return res.status(400).json({ error: 'Текст дневника обязателен' });
     }

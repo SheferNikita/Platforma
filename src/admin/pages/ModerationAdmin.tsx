@@ -11,8 +11,12 @@ interface Attachment {
   originalName: string;
   mimeType: string;
   size: number;
-  url: string;
 }
+
+const getAttachmentUrl = (attachment: Attachment, itemType: 'diary' | 'question' | 'report'): string => {
+  const type = itemType === 'diary' ? 'diary' : 'note';
+  return `/api/public/attachments/${type}/${attachment.id}`;
+};
 
 interface ChatMessage {
   id: string;
@@ -402,30 +406,33 @@ function ChatDialog({
                 {/* Attachments */}
                 {item.attachments && item.attachments.length > 0 && (
                   <div className="mt-3 space-y-2">
-                    {item.attachments.map((att) => (
-                      <div key={att.id}>
-                        {isImageFile(att.mimeType) ? (
-                          <a href={att.url} target="_blank" rel="noopener noreferrer" className="block">
-                            <img 
-                              src={att.url} 
-                              alt={att.originalName}
-                              className="max-w-full rounded-lg max-h-48 object-cover"
-                            />
-                          </a>
-                        ) : (
-                          <a 
-                            href={att.url}
-                            download={att.originalName}
-                            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-lg px-3 py-2 transition-colors"
-                          >
-                            <File className="w-4 h-4" />
-                            <span className="text-sm truncate flex-1">{att.originalName}</span>
-                            <span className="text-xs opacity-70">{formatFileSize(att.size)}</span>
-                            <Download className="w-4 h-4" />
-                          </a>
-                        )}
-                      </div>
-                    ))}
+                    {item.attachments.map((att) => {
+                      const attachmentUrl = getAttachmentUrl(att, item.type);
+                      return (
+                        <div key={att.id}>
+                          {isImageFile(att.mimeType) ? (
+                            <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="block">
+                              <img 
+                                src={attachmentUrl} 
+                                alt={att.originalName}
+                                className="max-w-full rounded-lg max-h-48 object-cover"
+                              />
+                            </a>
+                          ) : (
+                            <a 
+                              href={attachmentUrl}
+                              download={att.originalName}
+                              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-lg px-3 py-2 transition-colors"
+                            >
+                              <File className="w-4 h-4" />
+                              <span className="text-sm truncate flex-1">{att.originalName}</span>
+                              <span className="text-xs opacity-70">{formatFileSize(att.size)}</span>
+                              <Download className="w-4 h-4" />
+                            </a>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

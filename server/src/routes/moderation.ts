@@ -8,6 +8,14 @@ const router = Router();
 router.use(authenticate);
 router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN', 'MODERATOR'));
 
+interface AttachmentInfo {
+  id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+}
+
 interface ModerationItem {
   id: string;
   type: 'diary' | 'question' | 'report';
@@ -21,6 +29,7 @@ interface ModerationItem {
     id: string;
     user: { name: string; email: string };
   };
+  attachments: AttachmentInfo[];
 }
 
 async function getMentorStudentIds(userEmail: string): Promise<string[]> {
@@ -73,9 +82,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       ? { reply: null }
       : {};
 
-    const [diaries, studentNotes] = await Promise.all([
-      type === 'question' || type === 'report' ? Promise.resolve([]) :
-      prisma.diary.findMany({
+    const diaries = (type === 'question' || type === 'report') ? [] :
+      await prisma.diary.findMany({
         where: {
           ...studentFilter,
           ...replyFilter
@@ -87,12 +95,22 @@ router.get('/', async (req: AuthRequest, res: Response) => {
               user: { select: { name: true, email: true } }
             }
           },
-          repliedBy: { select: { name: true } }
+          repliedBy: { select: { name: true } },
+          attachments: {
+            select: {
+              id: true,
+              filename: true,
+              originalName: true,
+              mimeType: true,
+              size: true
+            }
+          }
         },
         orderBy: { createdAt: 'desc' }
-      }),
-      type === 'diary' ? Promise.resolve([]) :
-      prisma.studentNote.findMany({
+      });
+
+    const studentNotes = (type === 'diary') ? [] :
+      await prisma.studentNote.findMany({
         where: {
           ...studentFilter,
           ...replyFilter,
@@ -105,11 +123,19 @@ router.get('/', async (req: AuthRequest, res: Response) => {
               user: { select: { name: true, email: true } }
             }
           },
-          repliedBy: { select: { name: true } }
+          repliedBy: { select: { name: true } },
+          attachments: {
+            select: {
+              id: true,
+              filename: true,
+              originalName: true,
+              mimeType: true,
+              size: true
+            }
+          }
         },
         orderBy: { createdAt: 'desc' }
-      })
-    ]);
+      });
 
     const items: ModerationItem[] = [
       ...diaries.map(d => ({
@@ -121,7 +147,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         repliedBy: d.repliedBy,
         createdAt: d.createdAt,
         lesson: d.lesson,
-        student: d.student
+        student: d.student,
+        attachments: d.attachments
       })),
       ...studentNotes.map(n => ({
         id: n.id,
@@ -132,7 +159,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         repliedBy: n.repliedBy,
         createdAt: n.createdAt,
         lesson: n.lesson,
-        student: n.student
+        student: n.student,
+        attachments: n.attachments
       }))
     ];
 

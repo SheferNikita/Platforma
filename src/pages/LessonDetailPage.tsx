@@ -59,6 +59,15 @@ interface ChatMessage {
   curatorName?: string;
 }
 
+interface AttachmentFromAPI {
+  id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+}
+
 interface StudentNoteFromAPI {
   id: string;
   content: string;
@@ -67,7 +76,21 @@ interface StudentNoteFromAPI {
   repliedAt: string | null;
   repliedBy: { name: string } | null;
   createdAt: string;
+  attachments?: AttachmentFromAPI[];
 }
+
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+  });
+};
 
 export function LessonDetailPage() {
   const { lessonId } = useParams<{ lessonId: string }>();
@@ -281,7 +304,20 @@ export function LessonDetailPage() {
     if (!lessonId) return;
 
     try {
-      const newEntry = await api.post<{ id: string }>(`/public/lessons/${lessonId}/diary`, { content: diary.trim() });
+      const attachments = await Promise.all(
+        diaryFiles.map(async (file) => ({
+          filename: `${Date.now()}_${file.name}`,
+          originalName: file.name,
+          mimeType: file.type,
+          size: file.size,
+          data: await fileToBase64(file)
+        }))
+      );
+
+      const newEntry = await api.post<{ id: string; attachments?: AttachmentFromAPI[] }>(`/public/lessons/${lessonId}/diary`, { 
+        content: diary.trim(),
+        attachments: attachments.length > 0 ? attachments : undefined
+      });
       
       const newMessage: ChatMessage = {
         id: newEntry.id,
@@ -312,7 +348,20 @@ export function LessonDetailPage() {
     if (!lessonId) return;
 
     try {
-      const newEntry = await api.post<{ id: string }>(`/public/lessons/${lessonId}/personal-notes`, { content: notes.trim() });
+      const attachments = await Promise.all(
+        notesFiles.map(async (file) => ({
+          filename: `${Date.now()}_${file.name}`,
+          originalName: file.name,
+          mimeType: file.type,
+          size: file.size,
+          data: await fileToBase64(file)
+        }))
+      );
+
+      const newEntry = await api.post<{ id: string; attachments?: AttachmentFromAPI[] }>(`/public/lessons/${lessonId}/personal-notes`, { 
+        content: notes.trim(),
+        attachments: attachments.length > 0 ? attachments : undefined
+      });
       
       const newMessage: ChatMessage = {
         id: newEntry.id,
@@ -347,9 +396,20 @@ export function LessonDetailPage() {
     }
 
     try {
-      const newNote = await api.post<{ id: string }>(`/public/lessons/${lessonId}/notes`, {
+      const attachments = await Promise.all(
+        attachedFiles.map(async (file) => ({
+          filename: `${Date.now()}_${file.name}`,
+          originalName: file.name,
+          mimeType: file.type,
+          size: file.size,
+          data: await fileToBase64(file)
+        }))
+      );
+
+      const newNote = await api.post<{ id: string; attachments?: AttachmentFromAPI[] }>(`/public/lessons/${lessonId}/notes`, {
         content: feedback.trim(),
-        noteType: 'question'
+        noteType: 'question',
+        attachments: attachments.length > 0 ? attachments : undefined
       });
 
       // Add message to chat history for UI

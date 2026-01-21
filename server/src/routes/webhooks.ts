@@ -2,6 +2,9 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../db';
 import { sendEmail } from '../services/email';
+import { getWelcomeEmailTemplate } from '../templates/welcomeEmail';
+
+const PLATFORM_URL = 'https://schkola-trezvosti.ru';
 
 const router = Router();
 
@@ -283,38 +286,17 @@ router.post('/tilda', async (req: Request, res: Response) => {
     }
 
     if (isNewUser && generatedPassword) {
-      const platformUrl = process.env.PLATFORM_URL || 
-        (process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : '');
-      
-      const emailHtml = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #333;">Добро пожаловать на платформу!</h2>
-          
-          <p>Здравствуйте, ${customerName}!</p>
-          
-          <p>Спасибо за покупку! Для вас создан личный кабинет на нашей платформе.</p>
-          
-          <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0;">Данные для входа:</h3>
-            <p><strong>Email:</strong> ${customerEmail}</p>
-            <p><strong>Пароль:</strong> ${generatedPassword}</p>
-            ${platformUrl ? `<p><a href="${platformUrl}" style="display: inline-block; background: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; margin-top: 10px;">Войти в личный кабинет</a></p>` : ''}
-          </div>
-          
-          <p>Рекомендуем сменить пароль после первого входа в целях безопасности.</p>
-          
-          ${productNames.length > 0 ? `<p><strong>Ваша покупка:</strong> ${productNames.join(', ')}</p>` : ''}
-          
-          <p style="color: #666; font-size: 14px; margin-top: 30px;">
-            Если у вас возникнут вопросы, свяжитесь с нами.
-          </p>
-        </div>
-      `;
+      const emailHtml = getWelcomeEmailTemplate({
+        name: customerName,
+        email: customerEmail,
+        password: generatedPassword,
+        loginUrl: PLATFORM_URL
+      });
 
       try {
         await sendEmail(
           customerEmail,
-          'Добро пожаловать на платформу! Данные для входа',
+          'Добро пожаловать на платформу обучения трезвости',
           emailHtml
         );
         console.log(`Tilda webhook: Sent welcome email`);

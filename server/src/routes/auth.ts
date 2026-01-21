@@ -143,7 +143,8 @@ const surveySchema = z.object({
   city: z.string().min(1, 'Укажите город'),
   gender: z.string().min(1, 'Укажите пол'),
   age: z.number().min(1, 'Укажите возраст').max(120, 'Некорректный возраст'),
-  addictionType: z.string().min(1, 'Укажите тип зависимости')
+  addictionType: z.string().min(1, 'Укажите тип зависимости'),
+  isClergy: z.boolean().optional()
 });
 
 router.post('/survey', authenticate, async (req: AuthRequest, res: Response) => {
@@ -161,6 +162,7 @@ router.post('/survey', authenticate, async (req: AuthRequest, res: Response) => 
         gender: data.gender,
         age: data.age,
         addictionType: data.addictionType,
+        isClergy: data.isClergy ?? false,
         surveyCompleted: true
       }
     });

@@ -26,7 +26,8 @@ export function OnboardingSurvey() {
     city: '',
     gender: '',
     age: '',
-    addictionType: ''
+    addictionTypes: [] as string[],
+    isClergy: ''
   });
 
   // Redirect if not logged in
@@ -48,10 +49,19 @@ export function OnboardingSurvey() {
     );
   }
 
+  const handleAddictionToggle = (value: string) => {
+    setForm(prev => {
+      const types = prev.addictionTypes.includes(value)
+        ? prev.addictionTypes.filter(t => t !== value)
+        : [...prev.addictionTypes, value];
+      return { ...prev, addictionTypes: types };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!form.city || !form.gender || !form.age || !form.addictionType) {
+    if (!form.city || !form.gender || !form.age || form.addictionTypes.length === 0 || !form.isClergy) {
       toast.error('Пожалуйста, заполните все поля');
       return;
     }
@@ -68,7 +78,8 @@ export function OnboardingSurvey() {
         city: form.city,
         gender: form.gender,
         age: age,
-        addictionType: form.addictionType
+        addictionType: form.addictionTypes.join(','),
+        isClergy: form.isClergy === 'yes'
       });
       toast.success('Спасибо за ответы!');
       window.location.href = '/';
@@ -155,30 +166,69 @@ export function OnboardingSurvey() {
 
           <div>
             <label className="block text-sm font-medium text-[#5b4a3f] mb-2">
-              Какая у вас зависимость?
+              Какая у вас зависимость? (можно выбрать несколько)
             </label>
             <div className="grid grid-cols-2 gap-2">
               {ADDICTION_OPTIONS.map((option) => (
                 <label
                   key={option.value}
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-all text-sm ${
-                    form.addictionType === option.value
+                    form.addictionTypes.includes(option.value)
+                      ? 'border-[#a67c52] bg-[#a67c52]/10 text-[#5b4a3f]'
+                      : 'border-[#d4c8b8] bg-white/70 text-[#8b7355] hover:border-[#a67c52]/50'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    value={option.value}
+                    checked={form.addictionTypes.includes(option.value)}
+                    onChange={() => handleAddictionToggle(option.value)}
+                    className="sr-only"
+                  />
+                  <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                    form.addictionTypes.includes(option.value) ? 'border-[#a67c52] bg-[#a67c52]' : 'border-[#d4c8b8]'
+                  }`}>
+                    {form.addictionTypes.includes(option.value) && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </span>
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#5b4a3f] mb-2">
+              Являетесь ли Вы представителем духовенства (или членом семьи духовенства)?
+            </label>
+            <div className="flex gap-4">
+              {[
+                { value: 'yes', label: 'Да' },
+                { value: 'no', label: 'Нет' }
+              ].map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl border cursor-pointer transition-all ${
+                    form.isClergy === option.value
                       ? 'border-[#a67c52] bg-[#a67c52]/10 text-[#5b4a3f]'
                       : 'border-[#d4c8b8] bg-white/70 text-[#8b7355] hover:border-[#a67c52]/50'
                   }`}
                 >
                   <input
                     type="radio"
-                    name="addictionType"
+                    name="isClergy"
                     value={option.value}
-                    checked={form.addictionType === option.value}
-                    onChange={(e) => setForm({ ...form, addictionType: e.target.value })}
+                    checked={form.isClergy === option.value}
+                    onChange={(e) => setForm({ ...form, isClergy: e.target.value })}
                     className="sr-only"
                   />
-                  <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                    form.addictionType === option.value ? 'border-[#a67c52]' : 'border-[#d4c8b8]'
+                  <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                    form.isClergy === option.value ? 'border-[#a67c52]' : 'border-[#d4c8b8]'
                   }`}>
-                    {form.addictionType === option.value && (
+                    {form.isClergy === option.value && (
                       <span className="w-2 h-2 rounded-full bg-[#a67c52]" />
                     )}
                   </span>

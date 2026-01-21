@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = "postgresql://gen_user:9.U82o%7D%3Bs8BX7V@31.130.150.167:5432/Platform"
 }
 
 model User {
@@ -17,9 +17,9 @@ model User {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   adminLogs          AdminLog[]
+  diaryReplies       Diary[]       @relation("DiaryReplies")
   sessions           Session[]
   student            Student?
-  diaryReplies       Diary[]       @relation("DiaryReplies")
   studentNoteReplies StudentNote[] @relation("StudentNoteReplies")
 }
 
@@ -45,6 +45,7 @@ model Student {
   surveyCompleted Boolean           @default(false)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+  isClergy        Boolean?          @default(false)
   diaries         Diary[]
   enrollments     Enrollment[]
   progress        LessonProgress[]
@@ -103,9 +104,9 @@ model Lesson {
   order       Int                @default(0)
   isPublished Boolean            @default(false)
   isTextOnly  Boolean            @default(false)
-  publishAt   DateTime?
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
+  publishAt   DateTime?
   diaries     Diary[]
   module      Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   attachments LessonAttachment[]
@@ -161,8 +162,8 @@ model Diary {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   repliedBy   User?     @relation("DiaryReplies", fields: [repliedById], references: [id])
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
 
 model StudentNote {
@@ -177,8 +178,8 @@ model StudentNote {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   repliedBy   User?     @relation("StudentNoteReplies", fields: [repliedById], references: [id])
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
 
 model LibraryItem {

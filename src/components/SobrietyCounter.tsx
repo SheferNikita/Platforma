@@ -3,7 +3,13 @@ import { Calendar, Check, Award } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { api } from '../lib/api';
 
+interface ProfileData {
+  id: string;
+  sobrietyDate: string | null;
+}
+
 export function SobrietyCounter() {
+  const [userId, setUserId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<string | null>(null);
   const [lastCheckIn, setLastCheckIn] = useState<string | null>(null);
   const [days, setDays] = useState(0);
@@ -14,17 +20,23 @@ export function SobrietyCounter() {
   const buttonRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const getStorageKey = (id: string) => `sobrietyData_${id}`;
+
   useEffect(() => {
-    // Load sobriety date from API profile first
     const loadFromProfile = async () => {
       try {
-        const profile = await api.get<{ sobrietyDate: string | null }>('/public/profile');
+        const profile = await api.get<ProfileData>('/public/profile');
+        const currentUserId = profile.id;
+        setUserId(currentUserId);
+        
+        // Clear old shared localStorage key (migration from old system)
+        localStorage.removeItem('sobrietyData');
+        
         if (profile.sobrietyDate) {
           const dateStr = new Date(profile.sobrietyDate).toISOString().split('T')[0];
           setStartDate(dateStr);
           calculateDays(dateStr);
-          // Sync with localStorage
-          const saved = localStorage.getItem('sobrietyData');
+          const saved = localStorage.getItem(getStorageKey(currentUserId));
           if (saved) {
             const data = JSON.parse(saved);
             setLastCheckIn(data.lastCheckIn);
@@ -32,18 +44,18 @@ export function SobrietyCounter() {
           setShowSetup(false);
           return;
         }
+        
+        const saved = localStorage.getItem(getStorageKey(currentUserId));
+        if (saved) {
+          const data = JSON.parse(saved);
+          setStartDate(data.startDate);
+          setLastCheckIn(data.lastCheckIn);
+          calculateDays(data.startDate);
+        } else {
+          setShowSetup(true);
+        }
       } catch (error) {
-        console.log('Could not load profile, using localStorage');
-      }
-      
-      // Fallback to localStorage
-      const saved = localStorage.getItem('sobrietyData');
-      if (saved) {
-        const data = JSON.parse(saved);
-        setStartDate(data.startDate);
-        setLastCheckIn(data.lastCheckIn);
-        calculateDays(data.startDate);
-      } else {
+        console.log('Could not load profile');
         setShowSetup(true);
       }
     };
@@ -84,41 +96,52 @@ export function SobrietyCounter() {
     setDays(diffDays);
   };
 
-  const handleStart = () => {
+  const saveToServer = async (date: string) => {
+    try {
+      await api.put('/public/profile', { sobrietyDate: date });
+    } catch (error) {
+      console.error('Failed to sync sobriety date to server:', error);
+    }
+  };
+
+  const handleStart = async () => {
+    if (!userId) return;
     const today = new Date().toISOString().split('T')[0];
     setStartDate(today);
     setLastCheckIn(today);
     setDays(0);
-    localStorage.setItem('sobrietyData', JSON.stringify({
+    localStorage.setItem(getStorageKey(userId), JSON.stringify({
       startDate: today,
       lastCheckIn: today
     }));
     setShowSetup(false);
+    await saveToServer(today);
   };
 
   const handleCheckIn = () => {
+    if (!userId || !startDate) return;
     const today = new Date().toISOString().split('T')[0];
     setLastCheckIn(today);
-    if (startDate) {
-      calculateDays(startDate);
-      localStorage.setItem('sobrietyData', JSON.stringify({
-        startDate,
-        lastCheckIn: today
-      }));
-    }
+    calculateDays(startDate);
+    localStorage.setItem(getStorageKey(userId), JSON.stringify({
+      startDate,
+      lastCheckIn: today
+    }));
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    if (!userId) return;
     if (confirm('Вы уверены, что хотите сбросить счетчик?')) {
       const today = new Date().toISOString().split('T')[0];
       setStartDate(today);
       setLastCheckIn(today);
       setDays(0);
-      localStorage.setItem('sobrietyData', JSON.stringify({
+      localStorage.setItem(getStorageKey(userId), JSON.stringify({
         startDate: today,
         lastCheckIn: today
       }));
       setIsMenuOpen(false);
+      await saveToServer(today);
     }
   };
 

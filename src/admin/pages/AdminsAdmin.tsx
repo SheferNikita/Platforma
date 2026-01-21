@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, Shield, User } from 'lucide-react';
+import { Plus, Edit, Trash2, Shield, User, Shuffle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../lib/auth';
 
@@ -277,12 +277,27 @@ function AdminModal({ admin, onSave, onClose, canAssignSuperAdmin }: { admin: Ad
             <label className="block text-sm font-medium text-[#3d3527] mb-1">
               Пароль {admin && '(оставьте пустым, чтобы не менять)'}
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 pr-12 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                  let pwd = '';
+                  for (let i = 0; i < 10; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+                  setPassword(pwd);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-[#f5f3ed] rounded-lg transition-colors"
+                title="Сгенерировать пароль"
+              >
+                <Shuffle className="w-4 h-4 text-[#a67c52]" />
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-[#3d3527] mb-1">Роль</label>

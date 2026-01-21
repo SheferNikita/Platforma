@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks, Shuffle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface MiniGroupMembership {
@@ -424,12 +424,27 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
           {!student && (
             <div>
               <label className="block text-sm font-medium text-[#3d3527] mb-1">Пароль</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-2 pr-12 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+                    let pwd = '';
+                    for (let i = 0; i < 10; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+                    setPassword(pwd);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-[#f5f3ed] rounded-lg transition-colors"
+                  title="Сгенерировать пароль"
+                >
+                  <Shuffle className="w-4 h-4 text-[#a67c52]" />
+                </button>
+              </div>
             </div>
           )}
           <div>

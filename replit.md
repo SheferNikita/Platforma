@@ -30,6 +30,7 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
     -   **Financials:** Product creation with pricing and email templates, payment CRM with history and statuses.
     -   **Email System:** Individual and mass email sending with customizable templates.
     -   **Rich Text Editor:** Lessons support rich text content via TipTap, Kinescope video integration, and file attachments.
+    -   **Scheduled Lesson Publishing:** Lessons can be scheduled for future publication with date/time picker. When the scheduled time arrives, the lesson is automatically published and email notifications are sent to students with module access.
     -   **Content Reordering:** Manual reordering functionality for modules, lessons, library items, and contacts.
 -   **User Roles:** Granular access control with roles: `SUPER_ADMIN`, `ADMIN`, `CURATOR`, `MENTOR`, `MODERATOR`, and `STUDENT`.
     -   `SUPER_ADMIN`: Full access to all sections including audit logs and admin management

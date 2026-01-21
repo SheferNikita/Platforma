@@ -393,10 +393,10 @@ function ChatDialog({
           ref={chatContainerRef}
           className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 min-h-[200px] max-h-[40vh] bg-gradient-to-b from-[#f9f8f5] to-white"
         >
-          {/* Student Message */}
-          <div className="flex justify-end">
+          {/* Student Message - left side (incoming) */}
+          <div className="flex justify-start">
             <div className="max-w-[85%] md:max-w-[75%]">
-              <div className="bg-gradient-to-br from-[#8b9abc] to-[#a5b0cc] text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-sm">
+              <div className="bg-gradient-to-br from-[#8b9abc] to-[#a5b0cc] text-white rounded-2xl rounded-tl-md px-4 py-3 shadow-sm">
                 <p className="whitespace-pre-wrap text-sm md:text-base">{item.content}</p>
                 
                 {/* Attachments */}
@@ -429,7 +429,7 @@ function ChatDialog({
                   </div>
                 )}
               </div>
-              <div className="flex items-center justify-end gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-[#3d3527]/50">{item.student.user.name}</span>
                 <span className="text-xs text-[#3d3527]/40">
                   {formatDistanceToNow(new Date(item.createdAt), { locale: ru, addSuffix: true })}
@@ -438,14 +438,14 @@ function ChatDialog({
             </div>
           </div>
 
-          {/* Mentor Reply (if exists) */}
+          {/* Mentor Reply (if exists) - right side (outgoing) */}
           {item.reply && (
-            <div className="flex justify-start">
+            <div className="flex justify-end">
               <div className="max-w-[85%] md:max-w-[75%]">
-                <div className="bg-white border border-[#d4c9b0]/40 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm">
-                  <p className="whitespace-pre-wrap text-sm md:text-base text-[#3d3527]">{item.reply}</p>
+                <div className="bg-gradient-to-br from-[#a67c52] to-[#c4a57b] text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-sm">
+                  <p className="whitespace-pre-wrap text-sm md:text-base">{item.reply}</p>
                 </div>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center justify-end gap-2 mt-1">
                   <span className="text-xs text-[#3d3527]/50">{item.repliedBy?.name || 'Наставник'}</span>
                   {item.repliedAt && (
                     <span className="text-xs text-[#3d3527]/40">

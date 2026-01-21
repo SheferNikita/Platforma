@@ -39,9 +39,9 @@ const router = Router();
 router.use(authenticate);
 
 const adminOnly = requireRole('SUPER_ADMIN', 'ADMIN');
-const contentRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'MODERATOR');
+const contentRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN', 'MODERATOR');
 const moderatorRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'MODERATOR');
-const groupRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR');
+const groupRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN');
 
 const moduleSchema = z.object({
   title: z.string().min(1, 'Название обязательно'),
@@ -517,7 +517,7 @@ router.get('/mini-groups', groupRoles, async (req: AuthRequest, res: Response) =
     let where: any = {};
     
     // MENTOR can only see groups where they are the curator (matched by email)
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const contact = await prisma.contact.findFirst({
         where: { email: req.user!.email }
       });
@@ -568,7 +568,7 @@ router.put('/mini-groups/:id', groupRoles, async (req: AuthRequest & Request<IdP
     const id = req.params.id;
     
     // MENTOR can only edit their own groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const group = await prisma.miniGroup.findUnique({
         where: { id },
         include: { curator: true }
@@ -599,7 +599,7 @@ router.delete('/mini-groups/:id', groupRoles, async (req: AuthRequest & Request<
     const id = req.params.id;
     
     // MENTOR can only delete their own groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const group = await prisma.miniGroup.findUnique({
         where: { id },
         include: { curator: true }
@@ -630,7 +630,7 @@ router.get('/mini-groups/:groupId/events', groupRoles, async (req: AuthRequest &
     const { groupId } = req.params;
     
     // MENTOR can only access their own groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
       if (!hasAccess) {
         return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
@@ -653,7 +653,7 @@ router.post('/mini-groups/:groupId/events', groupRoles, async (req: AuthRequest 
     const { groupId } = req.params;
     
     // MENTOR can only add events to their own groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
       if (!hasAccess) {
         return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
@@ -681,7 +681,7 @@ router.put('/mini-groups/:groupId/events/:eventId', groupRoles, async (req: Auth
     const { groupId, eventId } = req.params;
     
     // MENTOR can only update events in their own groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
       if (!hasAccess) {
         return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
@@ -716,7 +716,7 @@ router.delete('/mini-groups/:groupId/events/:eventId', groupRoles, async (req: A
     const { groupId, eventId } = req.params;
     
     // MENTOR can only delete events in their own groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
       if (!hasAccess) {
         return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
@@ -745,7 +745,7 @@ router.get('/mini-groups/:groupId/members', groupRoles, async (req: AuthRequest 
     const { groupId } = req.params;
     
     // MENTOR can only access their own groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
       if (!hasAccess) {
         return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
@@ -773,7 +773,7 @@ router.post('/mini-groups/:groupId/members', groupRoles, async (req: AuthRequest
     const { groupId } = req.params;
     
     // MENTOR can only add members to their own groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
       if (!hasAccess) {
         return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
@@ -804,7 +804,7 @@ router.delete('/mini-groups/:groupId/members/:memberId', groupRoles, async (req:
     const { groupId, memberId } = req.params;
     
     // MENTOR can only remove members from their own groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
       if (!hasAccess) {
         return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });

@@ -67,6 +67,7 @@ const roleLabels: Record<string, string> = {
   'ADMIN': 'Администратор',
   'CURATOR': 'Куратор',
   'MENTOR': 'Наставник',
+  'INTERN': 'Стажер',
   'MODERATOR': 'Модератор',
   'CONTENT_MANAGER': 'Контент-менеджер',
   'SUPPORT': 'Поддержка',

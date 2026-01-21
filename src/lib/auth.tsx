@@ -5,7 +5,7 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: 'SUPER_ADMIN' | 'CONTENT_MANAGER' | 'SUPPORT' | 'FINANCE' | 'STUDENT';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'CURATOR' | 'MENTOR' | 'INTERN' | 'MODERATOR' | 'STUDENT';
   surveyCompleted?: boolean;
 }
 

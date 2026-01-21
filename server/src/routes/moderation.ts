@@ -6,7 +6,7 @@ import { z } from 'zod';
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'MODERATOR'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN', 'MODERATOR'));
 
 interface ModerationItem {
   id: string;
@@ -59,7 +59,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     
     let studentFilter: { studentId?: { in: string[] } } = {};
     
-    if (user.role === 'MENTOR') {
+    if (user.role === 'MENTOR' || user.role === 'INTERN') {
       const studentIds = await getMentorStudentIds(user.email);
       if (studentIds.length === 0) {
         return res.json([]);
@@ -151,7 +151,7 @@ router.get('/count', async (req: AuthRequest, res: Response) => {
     
     let studentFilter: { studentId?: { in: string[] } } = {};
     
-    if (user.role === 'MENTOR') {
+    if (user.role === 'MENTOR' || user.role === 'INTERN') {
       const studentIds = await getMentorStudentIds(user.email);
       if (studentIds.length === 0) {
         return res.json({ count: 0 });

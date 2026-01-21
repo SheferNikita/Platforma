@@ -13,7 +13,7 @@ const router = Router();
 router.use(authenticate);
 router.use(requireRole('SUPER_ADMIN', 'ADMIN'));
 
-const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'MODERATOR'] as const;
+const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN', 'MODERATOR'] as const;
 
 const createAdminSchema = z.object({
   email: z.string().email('Некорректный email'),
@@ -33,7 +33,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const admins = await prisma.user.findMany({
       where: {
-        role: { in: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'MODERATOR'] }
+        role: { in: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN', 'MODERATOR'] }
       },
       select: {
         id: true,

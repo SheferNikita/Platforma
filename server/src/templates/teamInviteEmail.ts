@@ -3,6 +3,7 @@ const ROLE_NAMES: Record<string, string> = {
   ADMIN: 'Администратор',
   CURATOR: 'Куратор',
   MENTOR: 'Наставник',
+  INTERN: 'Стажер',
   MODERATOR: 'Модератор'
 };
 

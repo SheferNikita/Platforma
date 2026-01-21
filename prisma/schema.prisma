@@ -386,6 +386,7 @@ enum UserRole {
   ADMIN
   CURATOR
   MENTOR
+  INTERN
   MODERATOR
   STUDENT
 }

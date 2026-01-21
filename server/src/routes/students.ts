@@ -9,7 +9,7 @@ import { getWelcomeEmailTemplate } from '../templates/welcomeEmail';
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN'));
 
 const createStudentSchema = z.object({
   email: z.string().email('Некорректный email'),
@@ -67,7 +67,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     };
 
     // MENTOR can only see students from their mini-groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const contact = await prisma.contact.findFirst({
         where: { email: req.user!.email }
       });
@@ -160,7 +160,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     // MENTOR can only access students from their mini-groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const studentRecord = await prisma.student.findFirst({
         where: { userId: id }
       });
@@ -296,7 +296,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
     const data = updateStudentSchema.parse(req.body);
 
     // MENTOR can only update students from their mini-groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const studentRecord = await prisma.student.findFirst({
         where: { userId: id }
       });
@@ -350,7 +350,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
 
     // MENTOR can only delete students from their mini-groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const studentRecord = await prisma.student.findFirst({
         where: { userId: id }
       });
@@ -397,7 +397,7 @@ router.get('/:userId/access', async (req: AuthRequest, res: Response) => {
     }
     
     // MENTOR can only access students from their mini-groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const allowedStudentIds = await getMentorStudentIds(req.user!.email);
       if (!allowedStudentIds.includes(user.student.id)) {
         return res.status(403).json({ error: 'Нет доступа к этому ученику' });
@@ -452,7 +452,7 @@ router.post('/:userId/access', async (req: AuthRequest, res: Response) => {
     }
     
     // MENTOR can only modify access for students from their mini-groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const allowedStudentIds = await getMentorStudentIds(req.user!.email);
       if (!allowedStudentIds.includes(user.student.id)) {
         return res.status(403).json({ error: 'Нет доступа к этому ученику' });
@@ -499,7 +499,7 @@ router.delete('/:userId/access/:moduleId', async (req: AuthRequest, res: Respons
     }
     
     // MENTOR can only delete access for students from their mini-groups
-    if (req.user!.role === 'MENTOR') {
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
       const allowedStudentIds = await getMentorStudentIds(req.user!.email);
       if (!allowedStudentIds.includes(user.student.id)) {
         return res.status(403).json({ error: 'Нет доступа к этому ученику' });

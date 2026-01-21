@@ -338,7 +338,17 @@ router.get('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
         studentId: student.studentId
       },
       include: {
-        repliedBy: { select: { name: true } }
+        repliedBy: { select: { name: true } },
+        attachments: {
+          select: {
+            id: true,
+            filename: true,
+            originalName: true,
+            mimeType: true,
+            size: true,
+            createdAt: true
+          }
+        }
       },
       orderBy: { createdAt: 'asc' }
     });
@@ -359,7 +369,7 @@ router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
     }
 
     const lessonId = req.params.lessonId as string;
-    const { content } = req.body;
+    const { content, attachments } = req.body;
 
     if (!content || !content.trim()) {
       return res.status(400).json({ error: 'Текст дневника обязателен' });
@@ -371,12 +381,33 @@ router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Урок не найден' });
     }
 
-    // Create new diary entry (chat style)
+    // Create new diary entry with attachments (chat style)
     const diary = await prisma.diary.create({
       data: {
         content: content.trim(),
         studentId: student.studentId,
-        lessonId
+        lessonId,
+        attachments: attachments?.length ? {
+          create: attachments.map((att: { filename: string; originalName: string; mimeType: string; size: number; data: string }) => ({
+            filename: att.filename,
+            originalName: att.originalName,
+            mimeType: att.mimeType,
+            size: att.size,
+            data: att.data
+          }))
+        } : undefined
+      },
+      include: {
+        attachments: {
+          select: {
+            id: true,
+            filename: true,
+            originalName: true,
+            mimeType: true,
+            size: true,
+            createdAt: true
+          }
+        }
       }
     });
 
@@ -404,7 +435,17 @@ router.get('/lessons/:lessonId/personal-notes', async (req: Request, res: Respon
         noteType: 'personal'
       },
       include: {
-        repliedBy: { select: { name: true } }
+        repliedBy: { select: { name: true } },
+        attachments: {
+          select: {
+            id: true,
+            filename: true,
+            originalName: true,
+            mimeType: true,
+            size: true,
+            createdAt: true
+          }
+        }
       },
       orderBy: { createdAt: 'asc' }
     });
@@ -425,7 +466,7 @@ router.post('/lessons/:lessonId/personal-notes', async (req: Request, res: Respo
     }
 
     const lessonId = req.params.lessonId as string;
-    const { content } = req.body;
+    const { content, attachments } = req.body;
 
     if (!content || !content.trim()) {
       return res.status(400).json({ error: 'Текст конспекта обязателен' });
@@ -437,13 +478,34 @@ router.post('/lessons/:lessonId/personal-notes', async (req: Request, res: Respo
       return res.status(404).json({ error: 'Урок не найден' });
     }
 
-    // Create new note entry (chat style)
+    // Create new note entry with attachments (chat style)
     const note = await prisma.studentNote.create({
       data: {
         content: content.trim(),
         noteType: 'personal',
         studentId: student.studentId,
-        lessonId
+        lessonId,
+        attachments: attachments?.length ? {
+          create: attachments.map((att: { filename: string; originalName: string; mimeType: string; size: number; data: string }) => ({
+            filename: att.filename,
+            originalName: att.originalName,
+            mimeType: att.mimeType,
+            size: att.size,
+            data: att.data
+          }))
+        } : undefined
+      },
+      include: {
+        attachments: {
+          select: {
+            id: true,
+            filename: true,
+            originalName: true,
+            mimeType: true,
+            size: true,
+            createdAt: true
+          }
+        }
       }
     });
 
@@ -475,6 +537,16 @@ router.get('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
       include: {
         repliedBy: {
           select: { name: true }
+        },
+        attachments: {
+          select: {
+            id: true,
+            filename: true,
+            originalName: true,
+            mimeType: true,
+            size: true,
+            createdAt: true
+          }
         }
       },
       orderBy: { createdAt: 'asc' }
@@ -497,7 +569,7 @@ router.post('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
     }
 
     const lessonId = req.params.lessonId as string;
-    const { content, noteType } = req.body;
+    const { content, noteType, attachments } = req.body;
 
     if (!content || !content.trim()) {
       return res.status(400).json({ error: 'Текст сообщения обязателен' });
@@ -517,7 +589,28 @@ router.post('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
         content: content.trim(),
         noteType: noteType || 'question',
         studentId: student.studentId,
-        lessonId
+        lessonId,
+        attachments: attachments?.length ? {
+          create: attachments.map((att: { filename: string; originalName: string; mimeType: string; size: number; data: string }) => ({
+            filename: att.filename,
+            originalName: att.originalName,
+            mimeType: att.mimeType,
+            size: att.size,
+            data: att.data
+          }))
+        } : undefined
+      },
+      include: {
+        attachments: {
+          select: {
+            id: true,
+            filename: true,
+            originalName: true,
+            mimeType: true,
+            size: true,
+            createdAt: true
+          }
+        }
       }
     });
 
@@ -738,6 +831,50 @@ router.get('/my-materials-count', async (req: Request, res: Response) => {
     res.json({ diariesCount, notesCount });
   } catch (error) {
     console.error('Get materials count error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Download diary attachment
+router.get('/attachments/diary/:id', async (req: Request, res: Response) => {
+  try {
+    const attachment = await prisma.diaryAttachment.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!attachment) {
+      return res.status(404).json({ error: 'Вложение не найдено' });
+    }
+
+    const buffer = Buffer.from(attachment.data, 'base64');
+    res.setHeader('Content-Type', attachment.mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(attachment.originalName)}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Download diary attachment error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Download note attachment
+router.get('/attachments/note/:id', async (req: Request, res: Response) => {
+  try {
+    const attachment = await prisma.noteAttachment.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!attachment) {
+      return res.status(404).json({ error: 'Вложение не найдено' });
+    }
+
+    const buffer = Buffer.from(attachment.data, 'base64');
+    res.setHeader('Content-Type', attachment.mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(attachment.originalName)}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Download note attachment error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

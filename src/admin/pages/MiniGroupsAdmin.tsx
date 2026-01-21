@@ -49,6 +49,7 @@ interface MiniGroup {
   chatLink: string | null;
   curatorId: string | null;
   curator: Contact | null;
+  mentorIds: string[];
   isPublished: boolean;
   events: ScheduleEvent[];
   _count?: { members: number };
@@ -262,8 +263,9 @@ function MiniGroupForm({ group, mentors, onSave, onClose }: {
   const [title, setTitle] = useState(group?.title || '');
   const [description, setDescription] = useState(group?.description || '');
   const [selectedMentorIds, setSelectedMentorIds] = useState<string[]>(() => {
-    if (group?.curatorId) {
-      return group.curatorId.split(',').filter(Boolean);
+    // mentorIds comes from backend transformation
+    if (group?.mentorIds && Array.isArray(group.mentorIds)) {
+      return group.mentorIds;
     }
     return [];
   });
@@ -382,8 +384,9 @@ function MiniGroupSettings({ group, mentors, onSave, onClose, onRefresh, onDelet
   const [title, setTitle] = useState(group.title);
   const [description, setDescription] = useState(group.description || '');
   const [selectedMentorIds, setSelectedMentorIds] = useState<string[]>(() => {
-    if (group.curatorId) {
-      return group.curatorId.split(',').filter(Boolean);
+    // mentorIds comes from backend transformation
+    if (group.mentorIds && Array.isArray(group.mentorIds)) {
+      return group.mentorIds;
     }
     return [];
   });

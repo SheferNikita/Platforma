@@ -512,25 +512,27 @@ router.delete('/communities/:id', moderatorRoles, async (req: AuthRequest & Requ
   }
 });
 
+// Helper to parse chatLink JSON and extract mentorIds
+function parseMiniGroupData(group: any) {
+  let chatLink = null;
+  let mentorIds: string[] = [];
+  try {
+    const chatData = JSON.parse(group.chatLink || '{}');
+    chatLink = chatData.link || null;
+    mentorIds = chatData.mentorIds || [];
+  } catch {
+    // If not JSON, treat as plain link (legacy data)
+    chatLink = group.chatLink;
+  }
+  return { ...group, chatLink, mentorIds };
+}
+
 router.get('/mini-groups', groupRoles, async (req: AuthRequest, res: Response) => {
   try {
-    let where: any = {};
-    
-    // MENTOR can only see groups where they are the curator (matched by email)
-    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
-      const contact = await prisma.contact.findFirst({
-        where: { email: req.user!.email }
-      });
-      if (contact) {
-        where.curatorId = contact.id;
-      } else {
-        // No matching contact found, return empty array
-        return res.json([]);
-      }
-    }
+    const userId = req.user!.id;
+    const userRole = req.user!.role;
     
     const groups = await prisma.miniGroup.findMany({
-      where,
       orderBy: { title: 'asc' },
       include: { 
         curator: true,
@@ -538,7 +540,16 @@ router.get('/mini-groups', groupRoles, async (req: AuthRequest, res: Response) =
         _count: { select: { members: true } }
       }
     });
-    res.json(groups);
+    
+    // Transform chatLink JSON to separate fields
+    let transformedGroups = groups.map(parseMiniGroupData);
+    
+    // MENTOR/INTERN can only see groups where they are one of the mentors
+    if (userRole === 'MENTOR' || userRole === 'INTERN') {
+      transformedGroups = transformedGroups.filter(g => g.mentorIds.includes(userId));
+    }
+    
+    res.json(transformedGroups);
   } catch (error) {
     console.error('Get mini-groups error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -547,16 +558,29 @@ router.get('/mini-groups', groupRoles, async (req: AuthRequest, res: Response) =
 
 router.post('/mini-groups', groupRoles, async (req: AuthRequest, res: Response) => {
   try {
-    const { chatLink, ...rest } = req.body;
+    const { chatLink, curatorId, title, description } = req.body;
+    const mentorIds = curatorId ? curatorId.split(',').filter(Boolean) : [];
+    // Store mentorIds in chatLink as JSON: {"link": "...", "mentorIds": [...]}
+    const chatLinkData = JSON.stringify({
+      link: chatLink ? normalizeTelegramLink(chatLink) : null,
+      mentorIds
+    });
     const group = await prisma.miniGroup.create({ 
       data: {
-        ...rest,
-        chatLink: chatLink ? normalizeTelegramLink(chatLink) : null,
+        title,
+        description,
+        chatLink: chatLinkData,
+        curatorId: null,
         isPublished: true
       },
       include: { curator: true, events: true }
     });
-    res.status(201).json(group);
+    // Return with parsed chatLink and mentorIds
+    res.status(201).json({
+      ...group,
+      chatLink: chatLink ? normalizeTelegramLink(chatLink) : null,
+      mentorIds
+    });
   } catch (error) {
     console.error('Create mini-group error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -567,27 +591,46 @@ router.put('/mini-groups/:id', groupRoles, async (req: AuthRequest & Request<IdP
   try {
     const id = req.params.id;
     
-    // MENTOR can only edit their own groups
+    // MENTOR/INTERN can only edit their own groups
     if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
-      const group = await prisma.miniGroup.findUnique({
-        where: { id },
-        include: { curator: true }
-      });
-      if (!group || group.curator?.email !== req.user!.email) {
+      const group = await prisma.miniGroup.findUnique({ where: { id } });
+      if (!group) {
+        return res.status(404).json({ error: 'Мини-группа не найдена' });
+      }
+      // Check if user is one of the mentors
+      let mentorIds: string[] = [];
+      try {
+        const chatData = JSON.parse(group.chatLink || '{}');
+        mentorIds = chatData.mentorIds || [];
+      } catch {}
+      if (!mentorIds.includes(req.user!.id)) {
         return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
       }
     }
     
-    const { chatLink, ...rest } = req.body;
-    const data = chatLink !== undefined 
-      ? { ...rest, chatLink: chatLink ? normalizeTelegramLink(chatLink) : null }
-      : rest;
+    const { chatLink, curatorId, title, description } = req.body;
+    const mentorIds = curatorId ? curatorId.split(',').filter(Boolean) : [];
+    // Store mentorIds in chatLink as JSON
+    const chatLinkData = JSON.stringify({
+      link: chatLink ? normalizeTelegramLink(chatLink) : null,
+      mentorIds
+    });
     const group = await prisma.miniGroup.update({ 
       where: { id }, 
-      data,
+      data: {
+        title,
+        description,
+        chatLink: chatLinkData,
+        curatorId: null
+      },
       include: { curator: true, events: true }
     });
-    res.json(group);
+    // Return with parsed chatLink and mentorIds
+    res.json({
+      ...group,
+      chatLink: chatLink ? normalizeTelegramLink(chatLink) : null,
+      mentorIds
+    });
   } catch (error) {
     console.error('Update mini-group error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -598,13 +641,19 @@ router.delete('/mini-groups/:id', groupRoles, async (req: AuthRequest & Request<
   try {
     const id = req.params.id;
     
-    // MENTOR can only delete their own groups
+    // MENTOR/INTERN can only delete their own groups
     if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
-      const group = await prisma.miniGroup.findUnique({
-        where: { id },
-        include: { curator: true }
-      });
-      if (!group || group.curator?.email !== req.user!.email) {
+      const group = await prisma.miniGroup.findUnique({ where: { id } });
+      if (!group) {
+        return res.status(404).json({ error: 'Мини-группа не найдена' });
+      }
+      // Check if user is one of the mentors
+      let mentorIds: string[] = [];
+      try {
+        const chatData = JSON.parse(group.chatLink || '{}');
+        mentorIds = chatData.mentorIds || [];
+      } catch {}
+      if (!mentorIds.includes(req.user!.id)) {
         return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });
       }
     }

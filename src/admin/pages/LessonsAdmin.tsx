@@ -372,15 +372,30 @@ export function LessonsAdmin() {
                       )}
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-[#3d3527] text-sm md:text-base truncate">{lesson.title}</p>
-                        <p className="text-xs md:text-sm text-[#3d3527]/60">{lesson.duration}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs md:text-sm text-[#3d3527]/60">{lesson.duration}</p>
+                          {lesson.publishAt && new Date(lesson.publishAt) > new Date() && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">
+                              <Clock className="w-3 h-3" />
+                              {new Date(lesson.publishAt).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
                       <button
                         onClick={() => togglePublish('lesson', lesson.id, lesson.isPublished)}
                         className="p-1.5 md:p-2 hover:bg-white rounded-lg"
+                        title={lesson.publishAt && new Date(lesson.publishAt) > new Date() ? 'Запланирована публикация' : (lesson.isPublished ? 'Опубликован' : 'Скрыт')}
                       >
-                        {lesson.isPublished ? <Eye className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-600" /> : <EyeOff className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />}
+                        {lesson.publishAt && new Date(lesson.publishAt) > new Date() ? (
+                          <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-500" />
+                        ) : lesson.isPublished ? (
+                          <Eye className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-600" />
+                        ) : (
+                          <EyeOff className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />
+                        )}
                       </button>
                       <button
                         onClick={() => { setEditingLesson({ lesson, moduleId: module.id }); setShowLessonModal(true); }}

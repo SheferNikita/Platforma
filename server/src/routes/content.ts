@@ -2,6 +2,9 @@ import { Router, Response, Request } from 'express';
 import { prisma } from '../db';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
+import { startScheduledPublishJob } from '../services/scheduledPublish';
+
+startScheduledPublishJob();
 
 interface IdParams {
   id: string;

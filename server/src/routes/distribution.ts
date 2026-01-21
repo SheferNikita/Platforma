@@ -19,6 +19,7 @@ router.get('/unassigned', async (req: AuthRequest, res: Response) => {
         gender: true,
         age: true,
         addictionType: true,
+        isClergy: true,
         surveyCompleted: true,
         createdAt: true,
         user: { select: { id: true, name: true, email: true, createdAt: true } },

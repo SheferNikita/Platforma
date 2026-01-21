@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Users2, UserPlus, Check, RefreshCw, Search, ChevronRight, MapPin, User, Calendar, AlertCircle } from 'lucide-react';
+import { Users2, UserPlus, Check, RefreshCw, Search, ChevronRight, MapPin, User, Calendar, AlertCircle, Church } from 'lucide-react';
 import { toast } from 'sonner';
 
 const GENDER_LABELS: Record<string, string> = {
@@ -17,12 +17,18 @@ const ADDICTION_LABELS: Record<string, string> = {
   other: 'Другая'
 };
 
+function formatAddictionTypes(addictionType: string | null): string[] {
+  if (!addictionType) return [];
+  return addictionType.split(',').map(t => t.trim()).filter(Boolean);
+}
+
 interface Student {
   id: string;
   city: string | null;
   gender: string | null;
   age: number | null;
   addictionType: string | null;
+  isClergy: boolean | null;
   surveyCompleted: boolean;
   user: { id: string; name: string; email: string; createdAt: string };
   payments: Array<{ product: { name: string } }>;
@@ -284,11 +290,17 @@ export function DistributionAdmin() {
                           {student.age} лет
                         </span>
                       )}
-                      {student.addictionType && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs">
-                          {ADDICTION_LABELS[student.addictionType] || student.addictionType}
+                      {student.isClergy && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs">
+                          <Church className="w-3 h-3" />
+                          Духовенство
                         </span>
                       )}
+                      {formatAddictionTypes(student.addictionType).map((type, idx) => (
+                        <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs">
+                          {ADDICTION_LABELS[type] || type}
+                        </span>
+                      ))}
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 mt-3 ml-8 md:ml-9 text-amber-600 text-xs">

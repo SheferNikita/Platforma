@@ -56,6 +56,7 @@ const lessonSchema = z.object({
   order: z.number().optional(),
   isPublished: z.boolean().optional(),
   isTextOnly: z.boolean().optional(),
+  publishAt: z.string().nullable().optional(),
   videos: z.array(z.object({
     id: z.string().optional(),
     title: z.string().optional(),
@@ -200,11 +201,12 @@ router.get('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdPar
 router.post('/lessons', contentRoles, async (req: AuthRequest, res: Response) => {
   try {
     const data = lessonSchema.parse(req.body);
-    const { videos, ...lessonData } = data;
+    const { videos, publishAt, ...lessonData } = data;
     
     const lesson = await prisma.lesson.create({ 
       data: {
         ...lessonData,
+        publishAt: publishAt ? new Date(publishAt) : null,
         videos: videos && videos.length > 0 ? {
           create: videos.map((v, i) => ({
             title: v.title || null,
@@ -244,7 +246,7 @@ router.put('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdPar
   try {
     const id = req.params.id;
     const data = lessonSchema.partial().parse(req.body);
-    const { videos, ...lessonData } = data;
+    const { videos, publishAt, ...lessonData } = data;
     
     if (videos !== undefined) {
       await prisma.lessonVideo.deleteMany({ where: { lessonId: id } });
@@ -263,7 +265,10 @@ router.put('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdPar
     
     const lesson = await prisma.lesson.update({ 
       where: { id }, 
-      data: lessonData,
+      data: {
+        ...lessonData,
+        ...(publishAt !== undefined && { publishAt: publishAt ? new Date(publishAt) : null })
+      },
       include: {
         videos: {
           orderBy: { order: 'asc' }

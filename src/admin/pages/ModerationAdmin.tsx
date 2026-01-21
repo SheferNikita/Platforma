@@ -1,9 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
-import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye } from 'lucide-react';
+import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye, Paperclip, Image, File, Download } from 'lucide-react';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
+
+interface Attachment {
+  id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+}
+
+interface ChatMessage {
+  id: string;
+  type: 'student' | 'mentor';
+  content: string;
+  createdAt: string;
+  author?: { name: string };
+  attachments?: Attachment[];
+}
 
 interface ModerationItem {
   id: string;
@@ -18,6 +36,7 @@ interface ModerationItem {
     id: string;
     user: { name: string; email: string };
   };
+  attachments?: Attachment[];
 }
 
 const typeConfig = {
@@ -286,93 +305,206 @@ export function ModerationAdmin() {
       </div>
 
       {selectedItem && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto my-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-[#3d3527]">
-                {typeConfig[selectedItem.type]?.label || 'Запись'} от ученика
+        <ChatDialog
+          item={selectedItem}
+          replyText={replyText}
+          setReplyText={setReplyText}
+          submitting={submitting}
+          onClose={() => {
+            setSelectedItem(null);
+            setReplyText('');
+          }}
+          onSubmitReply={submitReply}
+          onMarkAsViewed={markAsViewed}
+        />
+      )}
+    </div>
+  );
+}
+
+function ChatDialog({
+  item,
+  replyText,
+  setReplyText,
+  submitting,
+  onClose,
+  onSubmitReply,
+  onMarkAsViewed
+}: {
+  item: ModerationItem;
+  replyText: string;
+  setReplyText: (text: string) => void;
+  submitting: boolean;
+  onClose: () => void;
+  onSubmitReply: () => void;
+  onMarkAsViewed: () => void;
+}) {
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const TypeIcon = typeConfig[item.type]?.icon || BookOpen;
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [item]);
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  const isImageFile = (mimeType: string) => mimeType.startsWith('image/');
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col my-8">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 md:p-6 border-b border-[#d4c9b0]/30">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center">
+              <TypeIcon className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-[#3d3527]">
+                {typeConfig[item.type]?.label || 'Запись'} к уроку
               </h2>
-              <button onClick={() => setSelectedItem(null)} className="p-2 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
+              <p className="text-sm text-[#3d3527]/60 truncate max-w-[200px] md:max-w-none">
+                {item.lesson.title}
+              </p>
             </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-            <div className="space-y-4">
-              <div className="bg-[#f5f3ed] rounded-xl p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center">
-                    <User className="w-5 h-5 text-white" />
+        {/* Description */}
+        <div className="px-4 md:px-6 py-3 bg-[#f5f3ed]/50 border-b border-[#d4c9b0]/20">
+          <p className="text-sm text-[#3d3527]/70">
+            {item.type === 'diary' && 'Запишите свои мысли, эмоции и впечатления от пройденного урока'}
+            {item.type === 'question' && 'Вопрос от ученика по содержанию урока'}
+            {item.type === 'report' && 'Отчет ученика о выполнении задания'}
+          </p>
+        </div>
+
+        {/* Chat Messages Area */}
+        <div 
+          ref={chatContainerRef}
+          className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 min-h-[200px] max-h-[40vh] bg-gradient-to-b from-[#f9f8f5] to-white"
+        >
+          {/* Student Message */}
+          <div className="flex justify-end">
+            <div className="max-w-[85%] md:max-w-[75%]">
+              <div className="bg-gradient-to-br from-[#8b9abc] to-[#a5b0cc] text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-sm">
+                <p className="whitespace-pre-wrap text-sm md:text-base">{item.content}</p>
+                
+                {/* Attachments */}
+                {item.attachments && item.attachments.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {item.attachments.map((att) => (
+                      <div key={att.id}>
+                        {isImageFile(att.mimeType) ? (
+                          <a href={att.url} target="_blank" rel="noopener noreferrer" className="block">
+                            <img 
+                              src={att.url} 
+                              alt={att.originalName}
+                              className="max-w-full rounded-lg max-h-48 object-cover"
+                            />
+                          </a>
+                        ) : (
+                          <a 
+                            href={att.url}
+                            download={att.originalName}
+                            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-lg px-3 py-2 transition-colors"
+                          >
+                            <File className="w-4 h-4" />
+                            <span className="text-sm truncate flex-1">{att.originalName}</span>
+                            <span className="text-xs opacity-70">{formatFileSize(att.size)}</span>
+                            <Download className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  <div>
-                    <p className="font-medium text-[#3d3527]">{selectedItem.student.user.name}</p>
-                    <p className="text-sm text-[#3d3527]/60">{selectedItem.student.user.email}</p>
-                  </div>
-                </div>
-                <p className="text-sm text-[#3d3527]/60 mb-2">
-                  Урок: <span className="font-medium">{selectedItem.lesson.title}</span>
-                </p>
-                <p className="text-sm text-[#3d3527]/60">
-                  {format(new Date(selectedItem.createdAt), 'd MMMM yyyy в HH:mm', { locale: ru })}
-                </p>
+                )}
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#3d3527] mb-2">Текст ученика:</label>
-                <div className="bg-white border border-[#d4c9b0] rounded-xl p-4 whitespace-pre-wrap">
-                  {selectedItem.content}
-                </div>
+              <div className="flex items-center justify-end gap-2 mt-1">
+                <span className="text-xs text-[#3d3527]/50">{item.student.user.name}</span>
+                <span className="text-xs text-[#3d3527]/40">
+                  {formatDistanceToNow(new Date(item.createdAt), { locale: ru, addSuffix: true })}
+                </span>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#3d3527] mb-2">
-                  {selectedItem.reply ? 'Ваш ответ:' : 'Напишите ответ:'}
-                </label>
-                <textarea
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  rows={4}
-                  className="w-full px-4 py-3 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] resize-none"
-                  placeholder="Введите ваш ответ..."
-                />
-              </div>
-
-              {selectedItem.repliedAt && selectedItem.repliedBy && (
-                <p className="text-sm text-[#3d3527]/60">
-                  Ответил: {selectedItem.repliedBy.name} • {format(new Date(selectedItem.repliedAt), 'd MMM yyyy в HH:mm', { locale: ru })}
-                </p>
-              )}
             </div>
+          </div>
 
-            <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 mt-6">
-              <button 
-                onClick={() => setSelectedItem(null)} 
-                className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl order-last sm:order-first"
-              >
-                Закрыть
-              </button>
-              {!selectedItem.reply && (
-                <button
-                  onClick={markAsViewed}
-                  disabled={submitting}
-                  className="flex items-center justify-center gap-2 px-4 py-2 border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed] rounded-xl disabled:opacity-50 text-sm md:text-base"
-                >
-                  <Eye className="w-4 h-4" />
-                  <span className="hidden sm:inline">{submitting ? 'Отметка...' : 'Отметить просмотренным'}</span>
-                  <span className="sm:hidden">{submitting ? 'Отметка...' : 'Просмотрено'}</span>
-                </button>
-              )}
+          {/* Mentor Reply (if exists) */}
+          {item.reply && (
+            <div className="flex justify-start">
+              <div className="max-w-[85%] md:max-w-[75%]">
+                <div className="bg-white border border-[#d4c9b0]/40 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm">
+                  <p className="whitespace-pre-wrap text-sm md:text-base text-[#3d3527]">{item.reply}</p>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-[#3d3527]/50">{item.repliedBy?.name || 'Наставник'}</span>
+                  {item.repliedAt && (
+                    <span className="text-xs text-[#3d3527]/40">
+                      {formatDistanceToNow(new Date(item.repliedAt), { locale: ru, addSuffix: true })}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Reply Input Area */}
+        <div className="p-4 md:p-6 border-t border-[#d4c9b0]/30 bg-white rounded-b-2xl">
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <textarea
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] resize-none text-sm md:text-base"
+                placeholder={item.reply ? 'Обновить ваш ответ...' : 'Опишите, что вы узнали сегодня, какие мысли вызвал урок, что вы чувствуете...'}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
               <button
-                onClick={submitReply}
+                onClick={onSubmitReply}
                 disabled={!replyText.trim() || submitting}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl disabled:opacity-50 text-sm md:text-base"
+                className="p-3 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl disabled:opacity-50 hover:shadow-lg transition-all"
+                title={item.reply ? 'Обновить ответ' : 'Отправить ответ'}
               >
-                <Send className="w-4 h-4" />
-                {submitting ? 'Отправка...' : selectedItem.reply ? 'Обновить' : 'Отправить'}
+                <Send className="w-5 h-5" />
               </button>
             </div>
           </div>
+          
+          {/* Action buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+            <button 
+              onClick={onClose} 
+              className="text-sm text-[#3d3527]/60 hover:text-[#3d3527] transition-colors"
+            >
+              Закрыть
+            </button>
+            <div className="flex gap-2">
+              {!item.reply && (
+                <button
+                  onClick={onMarkAsViewed}
+                  disabled={submitting}
+                  className="flex items-center gap-2 px-4 py-2 border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed] rounded-xl disabled:opacity-50 text-sm transition-colors"
+                >
+                  <Eye className="w-4 h-4" />
+                  {submitting ? 'Отметка...' : 'Отметить просмотренным'}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

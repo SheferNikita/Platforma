@@ -152,34 +152,60 @@ model LessonProgress {
 }
 
 model Diary {
-  id          String    @id @default(uuid())
+  id          String            @id @default(uuid())
   studentId   String
   lessonId    String
   content     String
   reply       String?
   repliedAt   DateTime?
   repliedById String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  repliedBy   User?     @relation("DiaryReplies", fields: [repliedById], references: [id])
-  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  lesson      Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  repliedBy   User?             @relation("DiaryReplies", fields: [repliedById], references: [id])
+  student     Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  attachments DiaryAttachment[]
 }
 
 model StudentNote {
-  id          String    @id @default(uuid())
+  id          String            @id @default(uuid())
   studentId   String
   lessonId    String
   content     String
-  noteType    String    @default("question")
+  noteType    String            @default("question")
   reply       String?
   repliedAt   DateTime?
   repliedById String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  repliedBy   User?     @relation("StudentNoteReplies", fields: [repliedById], references: [id])
-  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  lesson      Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  repliedBy   User?             @relation("StudentNoteReplies", fields: [repliedById], references: [id])
+  student     Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  attachments NoteAttachment[]
+}
+
+model DiaryAttachment {
+  id           String   @id @default(uuid())
+  diaryId      String
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  data         String   @db.Text
+  createdAt    DateTime @default(now())
+  diary        Diary    @relation(fields: [diaryId], references: [id], onDelete: Cascade)
+}
+
+model NoteAttachment {
+  id           String      @id @default(uuid())
+  noteId       String
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  data         String      @db.Text
+  createdAt    DateTime    @default(now())
+  note         StudentNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
 }
 
 model LibraryItem {

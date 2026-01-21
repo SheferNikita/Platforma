@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, ArrowUp, ArrowDown, Move, Check, X, Video, FileText, Upload, File } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, ArrowUp, ArrowDown, Move, Check, X, Video, FileText, Upload, File, Clock, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { RichTextEditor } from '../../components/RichTextEditor';
 import { KinescopePlayer } from '../../components/KinescopePlayer';
@@ -21,6 +21,7 @@ interface Lesson {
   order: number;
   isPublished: boolean;
   isTextOnly: boolean;
+  publishAt: string | null;
   videos: LessonVideo[];
 }
 
@@ -491,6 +492,21 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
   const [isTextOnly, setIsTextOnly] = useState(lesson?.isTextOnly || false);
   const [isPublished, setIsPublished] = useState(lesson?.isPublished ?? true);
   const [videos, setVideos] = useState<LessonVideo[]>(lesson?.videos || []);
+  const [schedulePublish, setSchedulePublish] = useState(!!lesson?.publishAt);
+  const [publishDate, setPublishDate] = useState(() => {
+    if (lesson?.publishAt) {
+      const date = new Date(lesson.publishAt);
+      return date.toISOString().split('T')[0];
+    }
+    return '';
+  });
+  const [publishTime, setPublishTime] = useState(() => {
+    if (lesson?.publishAt) {
+      const date = new Date(lesson.publishAt);
+      return date.toTimeString().slice(0, 5);
+    }
+    return '09:00';
+  });
 
   const addVideo = () => {
     setVideos([...videos, { url: '', title: '', order: videos.length }]);
@@ -519,7 +535,22 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
       ...v,
       order: i
     }));
-    onSave({ title, description, content, duration, isTextOnly, isPublished, videos: videosToSave });
+    
+    let publishAt: string | null = null;
+    if (schedulePublish && publishDate) {
+      publishAt = new Date(`${publishDate}T${publishTime || '09:00'}:00`).toISOString();
+    }
+    
+    onSave({ 
+      title, 
+      description, 
+      content, 
+      duration, 
+      isTextOnly, 
+      isPublished: schedulePublish ? false : isPublished, 
+      publishAt,
+      videos: videosToSave 
+    });
   };
 
   return (
@@ -565,18 +596,72 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
                 Текстовый урок (без видео)
               </span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isPublished}
-                onChange={(e) => setIsPublished(e.target.checked)}
-                className="w-4 h-4 sm:w-5 sm:h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
-              />
-              <span className="flex items-center gap-2 text-[#3d3527] text-sm sm:text-base">
-                <Eye className="w-4 h-4" />
-                Опубликован (виден ученикам)
-              </span>
-            </label>
+            {!schedulePublish && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPublished}
+                  onChange={(e) => setIsPublished(e.target.checked)}
+                  className="w-4 h-4 sm:w-5 sm:h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                />
+                <span className="flex items-center gap-2 text-[#3d3527] text-sm sm:text-base">
+                  <Eye className="w-4 h-4" />
+                  Опубликован (виден ученикам)
+                </span>
+              </label>
+            )}
+          </div>
+
+          <div className="space-y-3 py-2">
+            <button
+              type="button"
+              onClick={() => {
+                setSchedulePublish(!schedulePublish);
+                if (!schedulePublish && !publishDate) {
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  setPublishDate(tomorrow.toISOString().split('T')[0]);
+                }
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${
+                schedulePublish 
+                  ? 'bg-[#a67c52] text-white' 
+                  : 'bg-[#f5f3ed] text-[#3d3527] hover:bg-[#e8e4d9]'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+              {schedulePublish ? 'Отложенная публикация активна' : 'Открыть урок позже'}
+            </button>
+            
+            {schedulePublish && (
+              <div className="flex flex-col sm:flex-row gap-3 p-4 bg-[#f5f3ed] rounded-xl">
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-[#3d3527] mb-1">
+                    <Calendar className="w-4 h-4 inline mr-1" />
+                    Дата публикации
+                  </label>
+                  <input
+                    type="date"
+                    value={publishDate}
+                    onChange={(e) => setPublishDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg focus:outline-none focus:border-[#a67c52]"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm font-medium text-[#3d3527] mb-1">
+                    <Clock className="w-4 h-4 inline mr-1" />
+                    Время публикации
+                  </label>
+                  <input
+                    type="time"
+                    value={publishTime}
+                    onChange={(e) => setPublishTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg focus:outline-none focus:border-[#a67c52]"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {!isTextOnly && (

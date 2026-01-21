@@ -474,7 +474,7 @@ function ChatDialog({
                 onChange={(e) => setReplyText(e.target.value)}
                 rows={3}
                 className="w-full px-4 py-3 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] resize-none text-sm md:text-base"
-                placeholder={item.reply ? 'Обновить ваш ответ...' : 'Опишите, что вы узнали сегодня, какие мысли вызвал урок, что вы чувствуете...'}
+                placeholder={item.reply ? 'Обновить ваш ответ...' : 'Напишите ответ студенту...'}
               />
             </div>
             <div className="flex flex-col gap-2">

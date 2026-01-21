@@ -377,7 +377,7 @@ export function LessonsAdmin() {
                           {lesson.publishAt && new Date(lesson.publishAt) > new Date() && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs rounded-full">
                               <Clock className="w-3 h-3" />
-                              {new Date(lesson.publishAt).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              {new Date(new Date(lesson.publishAt).getTime() + 3 * 60 * 60 * 1000).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} МСК
                             </span>
                           )}
                         </div>
@@ -510,15 +510,19 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
   const [schedulePublish, setSchedulePublish] = useState(!!lesson?.publishAt);
   const [publishDate, setPublishDate] = useState(() => {
     if (lesson?.publishAt) {
-      const date = new Date(lesson.publishAt);
-      return date.toISOString().split('T')[0];
+      // Convert UTC to Moscow time (UTC+3) for display
+      const utcDate = new Date(lesson.publishAt);
+      const moscowDate = new Date(utcDate.getTime() + 3 * 60 * 60 * 1000);
+      return moscowDate.toISOString().split('T')[0];
     }
     return '';
   });
   const [publishTime, setPublishTime] = useState(() => {
     if (lesson?.publishAt) {
-      const date = new Date(lesson.publishAt);
-      return date.toTimeString().slice(0, 5);
+      // Convert UTC to Moscow time (UTC+3) for display
+      const utcDate = new Date(lesson.publishAt);
+      const moscowDate = new Date(utcDate.getTime() + 3 * 60 * 60 * 1000);
+      return moscowDate.toISOString().slice(11, 16);
     }
     return '09:00';
   });
@@ -553,7 +557,9 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
     
     let publishAt: string | null = null;
     if (schedulePublish && publishDate) {
-      publishAt = new Date(`${publishDate}T${publishTime || '09:00'}:00`).toISOString();
+      // Interpret time as Moscow time (UTC+3) and convert to UTC
+      const moscowDateStr = `${publishDate}T${publishTime || '09:00'}:00+03:00`;
+      publishAt = new Date(moscowDateStr).toISOString();
     }
     
     onSave({ 
@@ -666,7 +672,7 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-[#3d3527] mb-1">
                     <Clock className="w-4 h-4 inline mr-1" />
-                    Время публикации
+                    Время публикации (МСК)
                   </label>
                   <input
                     type="time"

@@ -71,11 +71,14 @@ export function AdminsAdmin() {
     MODERATOR: { label: 'Модератор', color: 'bg-orange-100 text-orange-700', description: 'Уроки, библиотека, общины, расписание, email' }
   };
 
-  if (user?.role !== 'SUPER_ADMIN') {
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isAdmin = user?.role === 'ADMIN';
+
+  if (!isSuperAdmin && !isAdmin) {
     return (
       <div className="text-center py-12">
         <Shield className="w-16 h-16 text-[#3d3527]/20 mx-auto mb-4" />
-        <p className="text-[#3d3527]/60">Доступ только для супер-администраторов</p>
+        <p className="text-[#3d3527]/60">Доступ только для администраторов</p>
       </div>
     );
   }
@@ -117,13 +120,15 @@ export function AdminsAdmin() {
                   </div>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
-                  <button
-                    onClick={() => { setEditingAdmin(admin); setShowModal(true); }}
-                    className="p-2 hover:bg-[#f5f3ed] rounded-lg"
-                  >
-                    <Edit className="w-4 h-4 text-[#3d3527]" />
-                  </button>
-                  {admin.id !== user?.id && (
+                  {(isSuperAdmin || admin.role !== 'SUPER_ADMIN') && (
+                    <button
+                      onClick={() => { setEditingAdmin(admin); setShowModal(true); }}
+                      className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                    >
+                      <Edit className="w-4 h-4 text-[#3d3527]" />
+                    </button>
+                  )}
+                  {admin.id !== user?.id && (isSuperAdmin || admin.role !== 'SUPER_ADMIN') && (
                     <button
                       onClick={() => deleteAdmin(admin.id)}
                       className="p-2 hover:bg-red-50 rounded-lg"
@@ -201,13 +206,15 @@ export function AdminsAdmin() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => { setEditingAdmin(admin); setShowModal(true); }}
-                        className="p-2 hover:bg-[#f5f3ed] rounded-lg"
-                      >
-                        <Edit className="w-4 h-4 text-[#3d3527]" />
-                      </button>
-                      {admin.id !== user?.id && (
+                      {(isSuperAdmin || admin.role !== 'SUPER_ADMIN') && (
+                        <button
+                          onClick={() => { setEditingAdmin(admin); setShowModal(true); }}
+                          className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                        >
+                          <Edit className="w-4 h-4 text-[#3d3527]" />
+                        </button>
+                      )}
+                      {admin.id !== user?.id && (isSuperAdmin || admin.role !== 'SUPER_ADMIN') && (
                         <button
                           onClick={() => deleteAdmin(admin.id)}
                           className="p-2 hover:bg-red-50 rounded-lg"
@@ -229,13 +236,14 @@ export function AdminsAdmin() {
           admin={editingAdmin}
           onSave={saveAdmin}
           onClose={() => { setShowModal(false); setEditingAdmin(null); }}
+          canAssignSuperAdmin={isSuperAdmin}
         />
       )}
     </div>
   );
 }
 
-function AdminModal({ admin, onSave, onClose }: { admin: Admin | null; onSave: (data: any) => void; onClose: () => void }) {
+function AdminModal({ admin, onSave, onClose, canAssignSuperAdmin }: { admin: Admin | null; onSave: (data: any) => void; onClose: () => void; canAssignSuperAdmin: boolean }) {
   const [name, setName] = useState(admin?.name || '');
   const [email, setEmail] = useState(admin?.email || '');
   const [password, setPassword] = useState('');
@@ -283,12 +291,14 @@ function AdminModal({ admin, onSave, onClose }: { admin: Admin | null; onSave: (
               onChange={(e) => setRole(e.target.value)}
               className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
             >
+              {canAssignSuperAdmin && <option value="SUPER_ADMIN">Супер-администратор</option>}
               <option value="ADMIN">Администратор</option>
               <option value="CURATOR">Куратор наставников</option>
               <option value="MENTOR">Наставник</option>
               <option value="MODERATOR">Модератор</option>
             </select>
             <p className="text-xs text-[#3d3527]/60 mt-1">
+              {role === 'SUPER_ADMIN' && 'Полный доступ ко всему, включая историю изменений'}
               {role === 'ADMIN' && 'Полный доступ к админке, кроме удаления супер-админа'}
               {role === 'CURATOR' && 'Полный доступ кроме «Продукты» и «CRM»'}
               {role === 'MENTOR' && 'Видит только свои мини-группы и своих учеников'}

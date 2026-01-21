@@ -3,6 +3,10 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '../db';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
+import { sendEmail } from '../services/email';
+import { getTeamInviteEmailTemplate } from '../templates/teamInviteEmail';
+
+const PLATFORM_URL = 'https://schkola-trezvosti.ru';
 
 const router = Router();
 
@@ -93,6 +97,24 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         details: { email: admin.email, role: admin.role }
       }
     });
+
+    try {
+      const emailHtml = getTeamInviteEmailTemplate({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        role: data.role,
+        loginUrl: `${PLATFORM_URL}/admin`
+      });
+
+      await sendEmail(
+        data.email,
+        'Приглашение в команду платформы обучения трезвости',
+        emailHtml
+      );
+    } catch (emailError) {
+      console.error('Failed to send team invite email:', emailError);
+    }
 
     res.status(201).json(admin);
   } catch (error) {

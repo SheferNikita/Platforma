@@ -1,86 +1,137 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Check, X } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Bell, Check, X, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 
 interface Notification {
-  id: number;
+  id: string;
   title: string;
   message: string;
-  time: string;
+  createdAt: string;
   isRead: boolean;
-  type: 'lesson' | 'event' | 'community' | 'system';
-  link: string;
+  type: string;
+  link: string | null;
+}
+
+function formatTimeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'только что';
+  if (diffMins < 60) return `${diffMins} мин. назад`;
+  if (diffHours < 24) return `${diffHours} ч. назад`;
+  if (diffDays === 1) return 'Вчера';
+  if (diffDays < 7) return `${diffDays} дн. назад`;
+  return date.toLocaleDateString('ru-RU');
+}
+
+function getAuthHeaders(): HeadersInit {
+  const token = localStorage.getItem('token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
 export function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, right: 0 });
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: 1,
-      title: 'Новый урок доступен',
-      message: 'Урок 4: "Работа с эмоциями" теперь открыт для изучения',
-      time: '5 минут назад',
-      isRead: false,
-      type: 'lesson',
-      link: '/lesson/4',
-    },
-    {
-      id: 2,
-      title: 'Предстоящее мероприятие',
-      message: 'Групповая встреча "Поддержка и мотивация" начнется через 2 часа',
-      time: '1 час назад',
-      isRead: false,
-      type: 'event',
-      link: '/schedule',
-    },
-    {
-      id: 3,
-      title: 'Поздравляем!',
-      message: 'Вы достигли 7 дней трезвости! Продолжайте в том же духе',
-      time: '2 часа назад',
-      isRead: false,
-      type: 'system',
-      link: '/',
-    },
-    {
-      id: 4,
-      title: 'Новое сообщение в общине',
-      message: 'В вашей общине появилось новое обсуждение',
-      time: 'Вчера',
-      isRead: true,
-      type: 'community',
-      link: '/communities',
-    },
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch('/api/notifications', {
+        credentials: 'include',
+        headers: getAuthHeaders()
+      });
+      if (!res.ok) {
+        if (res.status === 401) {
+          setNotifications([]);
+          return;
+        }
+        throw new Error('Failed to fetch notifications');
+      }
+      const data = await res.json();
+      setNotifications(data);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setError('Не удалось загрузить уведомления');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const markAsRead = (id: number) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, isRead: true } : n
-    ));
+  const markAsRead = async (id: string) => {
+    try {
+      await fetch(`/api/notifications/${id}/read`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: getAuthHeaders()
+      });
+      setNotifications(notifications.map(n => 
+        n.id === id ? { ...n, isRead: true } : n
+      ));
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+  const markAllAsRead = async () => {
+    try {
+      await fetch('/api/notifications/read-all', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: getAuthHeaders()
+      });
+      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    } catch (err) {
+      console.error('Error marking all notifications as read:', err);
+    }
   };
 
-  const deleteNotification = (id: number) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+  const deleteNotification = async (id: string) => {
+    try {
+      await fetch(`/api/notifications/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: getAuthHeaders()
+      });
+      setNotifications(notifications.filter(n => n.id !== id));
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+    }
   };
 
   const getNotificationColor = (type: string) => {
     switch (type) {
-      case 'lesson':
+      case 'NEW_LESSON':
+      case 'MENTOR_REPLY':
         return 'from-[var(--button-lavender-light)]/10 to-[var(--button-lavender-dark)]/10 border-[var(--button-lavender-light)]/30';
-      case 'event':
+      case 'NEW_EVENT':
+      case 'EVENT_REMINDER_24H':
+      case 'EVENT_REMINDER_1H':
+      case 'EVENT_CHANGED':
         return 'from-[var(--sky-light)]/10 to-[var(--sky-blue)]/10 border-[var(--sky-light)]/30';
-      case 'community':
+      case 'NEW_LIBRARY_ITEM':
+      case 'NEW_COMMUNITY_POST':
         return 'from-[var(--divine-gold)]/10 to-[var(--celestial-gold)]/10 border-[var(--divine-gold)]/30';
-      case 'system':
+      case 'NEW_MODULE_ACCESS':
+      case 'SOBRIETY_MILESTONE':
+      case 'PROGRESS_ACHIEVEMENT':
         return 'from-[var(--success-green)]/10 to-[var(--success-green)]/10 border-[var(--success-green)]/30';
       default:
         return 'from-white/50 to-white/30 border-[var(--sky-light)]/30';
@@ -95,7 +146,9 @@ export function NotificationBell() {
     setTimeout(() => {
       setIsOpen(false);
       setIsClosing(false);
-      navigate(notification.link);
+      if (notification.link) {
+        navigate(notification.link);
+      }
     }, 300);
   };
 
@@ -103,21 +156,18 @@ export function NotificationBell() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Расчет позиции меню при открытии
   useEffect(() => {
     if (isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
       const isMobile = window.innerWidth < 768;
       
       if (isMobile) {
-        // На мобильных - фиксированное позиционирование с отступами
         setMenuPosition({
           top: rect.bottom,
           left: 16,
           right: 16
         });
       } else {
-        // На десктопе - выравнивание по правому краю кнопки
         setMenuPosition({
           top: rect.bottom,
           left: 0,
@@ -132,7 +182,6 @@ export function NotificationBell() {
 
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      // Проверяем клик вне контейнера И вне меню в портале
       if (
         containerRef.current && 
         !containerRef.current.contains(target) &&
@@ -147,7 +196,6 @@ export function NotificationBell() {
       }
     };
 
-    // Небольшая задержка, чтобы избежать немедленного закрытия при открытии
     const timeoutId = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('touchstart', handleClickOutside as any);
@@ -160,18 +208,23 @@ export function NotificationBell() {
     };
   }, [isOpen]);
 
+  const handleOpenChange = () => {
+    if (!isOpen) {
+      fetchNotifications();
+    }
+    setIsOpen(!isOpen);
+  };
+
   return (
     <div className="relative" ref={containerRef}>
-      {/* Bell Button */}
       <button
         ref={buttonRef}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleOpenChange}
         className="relative p-2.5 rounded-xl bg-white/60 border-2 border-[var(--sky-light)]/50 hover:bg-white/80 hover:border-[var(--button-lavender-dark)]/50 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-[0_2px_8px_var(--book-shadow)]"
         aria-label="Уведомления"
       >
         <Bell className="w-5 h-5 text-[var(--icon-lavender)]" />
         
-        {/* Unread Badge */}
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white text-xs rounded-full flex items-center justify-center shadow-[0_2px_8px_rgba(139,149,188,0.5)] animate-pulse-subtle">
             {unreadCount}
@@ -179,10 +232,8 @@ export function NotificationBell() {
         )}
       </button>
 
-      {/* Dropdown Menu */}
       {isOpen && createPortal(
         <>
-          {/* Overlay */}
           <div 
             className="fixed inset-0 z-[100]" 
             onClick={() => {
@@ -194,7 +245,6 @@ export function NotificationBell() {
             }}
           ></div>
           
-          {/* Notification Panel */}
           <div 
             ref={menuRef}
             className={`fixed w-auto bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-sm rounded-2xl shadow-[0_12px_32px_var(--ethereal-shadow),0_4px_12px_var(--book-shadow)] border-2 border-[var(--sky-light)]/50 z-[9999] overflow-hidden ${isClosing ? 'animate-fade-out' : 'animate-fade-in'}`}
@@ -205,7 +255,6 @@ export function NotificationBell() {
               maxWidth: window.innerWidth < 768 ? `calc(100vw - 32px)` : '384px'
             }}
           >
-            {/* Header */}
             <div className="p-4 border-b-2 border-[var(--sky-light)]/30 bg-gradient-to-r from-[var(--sky-soft)]/30 to-transparent">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-lg">Уведомления</h3>
@@ -226,9 +275,17 @@ export function NotificationBell() {
               )}
             </div>
 
-            {/* Notifications List */}
             <div className="max-h-96 overflow-y-auto">
-              {notifications.length === 0 ? (
+              {loading ? (
+                <div className="p-8 text-center">
+                  <Loader2 className="w-8 h-8 mx-auto mb-3 text-[var(--icon-lavender)] animate-spin" />
+                  <p className="text-sm opacity-60">Загрузка...</p>
+                </div>
+              ) : error ? (
+                <div className="p-8 text-center">
+                  <p className="text-sm text-red-500">{error}</p>
+                </div>
+              ) : notifications.length === 0 ? (
                 <div className="p-8 text-center">
                   <Bell className="w-12 h-12 mx-auto mb-3 text-[var(--icon-lavender)]/30" />
                   <p className="text-sm opacity-60">Нет уведомлений</p>
@@ -277,7 +334,7 @@ export function NotificationBell() {
                         {notification.message}
                       </p>
                       <p className="text-xs opacity-50">
-                        {notification.time}
+                        {formatTimeAgo(notification.createdAt)}
                       </p>
                     </div>
                   ))}
@@ -285,10 +342,19 @@ export function NotificationBell() {
               )}
             </div>
 
-            {/* Footer */}
             {notifications.length > 0 && (
               <div className="p-3 border-t-2 border-[var(--sky-light)]/30 bg-gradient-to-r from-[var(--sky-soft)]/20 to-transparent">
-                <button className="w-full text-xs text-[var(--button-lavender-dark)] hover:text-[var(--button-lavender)] transition-colors text-center">
+                <button 
+                  onClick={() => {
+                    setIsClosing(true);
+                    setTimeout(() => {
+                      setIsOpen(false);
+                      setIsClosing(false);
+                      navigate('/notifications');
+                    }, 300);
+                  }}
+                  className="w-full text-xs text-[var(--button-lavender-dark)] hover:text-[var(--button-lavender)] transition-colors text-center"
+                >
                   Посмотреть все уведомления
                 </button>
               </div>

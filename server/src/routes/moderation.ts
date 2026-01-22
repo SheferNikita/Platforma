@@ -219,10 +219,50 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
     const id = req.params.id as string;
     const { reply } = replySchema.parse(req.body);
 
+    const existingDiary = await prisma.diary.findUnique({
+      where: { id },
+      select: { reply: true }
+    });
+
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string }> = [];
+    
+    if (existingDiary?.reply) {
+      try {
+        const parsed = JSON.parse(existingDiary.reply);
+        if (Array.isArray(parsed)) {
+          replyHistory = parsed;
+        } else {
+          replyHistory = [{ 
+            text: existingDiary.reply, 
+            authorId: 'legacy', 
+            authorName: 'Наставник',
+            authorRole: 'MENTOR',
+            createdAt: new Date().toISOString() 
+          }];
+        }
+      } catch {
+        replyHistory = [{ 
+          text: existingDiary.reply, 
+          authorId: 'legacy', 
+          authorName: 'Наставник',
+          authorRole: 'MENTOR',
+          createdAt: new Date().toISOString() 
+        }];
+      }
+    }
+
+    replyHistory.push({
+      text: reply,
+      authorId: req.user!.id,
+      authorName: req.user!.name,
+      authorRole: req.user!.role,
+      createdAt: new Date().toISOString()
+    });
+
     const diary = await prisma.diary.update({
       where: { id },
       data: {
-        reply,
+        reply: JSON.stringify(replyHistory),
         repliedAt: new Date(),
         repliedById: req.user!.id
       },
@@ -255,10 +295,50 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
     const id = req.params.id as string;
     const { reply } = replySchema.parse(req.body);
 
+    const existingNote = await prisma.studentNote.findUnique({
+      where: { id },
+      select: { reply: true }
+    });
+
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string }> = [];
+    
+    if (existingNote?.reply) {
+      try {
+        const parsed = JSON.parse(existingNote.reply);
+        if (Array.isArray(parsed)) {
+          replyHistory = parsed;
+        } else {
+          replyHistory = [{ 
+            text: existingNote.reply, 
+            authorId: 'legacy', 
+            authorName: 'Наставник',
+            authorRole: 'MENTOR',
+            createdAt: new Date().toISOString() 
+          }];
+        }
+      } catch {
+        replyHistory = [{ 
+          text: existingNote.reply, 
+          authorId: 'legacy', 
+          authorName: 'Наставник',
+          authorRole: 'MENTOR',
+          createdAt: new Date().toISOString() 
+        }];
+      }
+    }
+
+    replyHistory.push({
+      text: reply,
+      authorId: req.user!.id,
+      authorName: req.user!.name,
+      authorRole: req.user!.role,
+      createdAt: new Date().toISOString()
+    });
+
     const note = await prisma.studentNote.update({
       where: { id },
       data: {
-        reply,
+        reply: JSON.stringify(replyHistory),
         repliedAt: new Date(),
         repliedById: req.user!.id
       },

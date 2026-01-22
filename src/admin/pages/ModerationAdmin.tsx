@@ -27,6 +27,28 @@ interface ChatMessage {
   attachments?: Attachment[];
 }
 
+interface ReplyMessage {
+  text: string;
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  createdAt: string;
+}
+
+function parseReplyHistory(reply: string | null): ReplyMessage[] {
+  if (!reply) return [];
+  try {
+    const parsed = JSON.parse(reply);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    return [{ text: reply, authorId: 'legacy', authorName: 'Наставник', authorRole: 'MENTOR', createdAt: new Date().toISOString() }];
+  } catch {
+    if (reply === '[Просмотрено]') return [];
+    return [{ text: reply, authorId: 'legacy', authorName: 'Наставник', authorRole: 'MENTOR', createdAt: new Date().toISOString() }];
+  }
+}
+
 interface ModerationItem {
   id: string;
   type: 'diary' | 'question' | 'report';
@@ -87,10 +109,10 @@ export function ModerationAdmin() {
         ? `/public/moderation/diary/${selectedItem.id}/reply`
         : `/public/moderation/note/${selectedItem.id}/reply`;
       
-      await api.post(endpoint, { reply: replyText });
-      toast.success('Ответ отправлен');
-      setSelectedItem(null);
+      const updatedItem = await api.post<ModerationItem>(endpoint, { reply: replyText });
+      toast.success('Сообщение отправлено');
       setReplyText('');
+      setSelectedItem({ ...selectedItem, reply: updatedItem.reply, repliedAt: updatedItem.repliedAt });
       loadItems();
     } catch (error) {
       toast.error('Ошибка отправки');
@@ -209,7 +231,7 @@ export function ModerationAdmin() {
                       <button
                         onClick={() => {
                           setSelectedItem(item);
-                          setReplyText(item.reply || '');
+                          setReplyText('');
                         }}
                         className="p-2 hover:bg-[#f5f3ed] rounded-lg"
                       >
@@ -290,7 +312,7 @@ export function ModerationAdmin() {
                           <button
                             onClick={() => {
                               setSelectedItem(item);
-                              setReplyText(item.reply || '');
+                              setReplyText('');
                             }}
                             className="p-2 hover:bg-[#f5f3ed] rounded-lg"
                             title={item.reply ? 'Просмотреть' : 'Ответить'}
@@ -445,24 +467,22 @@ function ChatDialog({
             </div>
           </div>
 
-          {/* Mentor Reply (if exists) - right side (outgoing) */}
-          {item.reply && (
-            <div className="flex justify-end">
+          {/* Mentor Replies (chat history) - right side (outgoing) */}
+          {parseReplyHistory(item.reply).map((msg, index) => (
+            <div key={index} className="flex justify-end">
               <div className="max-w-[85%] md:max-w-[75%]">
                 <div className="bg-gradient-to-br from-[#a67c52] to-[#c4a57b] text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-sm">
-                  <p className="whitespace-pre-wrap text-sm md:text-base">{item.reply}</p>
+                  <p className="whitespace-pre-wrap text-sm md:text-base">{msg.text}</p>
                 </div>
                 <div className="flex items-center justify-end gap-2 mt-1">
-                  <span className="text-xs text-[#3d3527]/50">{item.repliedBy?.name || 'Наставник'}</span>
-                  {item.repliedAt && (
-                    <span className="text-xs text-[#3d3527]/40">
-                      {formatDistanceToNow(new Date(item.repliedAt), { locale: ru, addSuffix: true })}
-                    </span>
-                  )}
+                  <span className="text-xs text-[#3d3527]/50">{msg.authorName}</span>
+                  <span className="text-xs text-[#3d3527]/40">
+                    {formatDistanceToNow(new Date(msg.createdAt), { locale: ru, addSuffix: true })}
+                  </span>
                 </div>
               </div>
             </div>
-          )}
+          ))}
         </div>
 
         {/* Reply Input Area */}
@@ -474,7 +494,7 @@ function ChatDialog({
                 onChange={(e) => setReplyText(e.target.value)}
                 rows={3}
                 className="w-full px-4 py-3 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] resize-none text-sm md:text-base"
-                placeholder={item.reply ? 'Обновить ваш ответ...' : 'Напишите ответ студенту...'}
+                placeholder="Напишите сообщение..."
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -482,7 +502,7 @@ function ChatDialog({
                 onClick={onSubmitReply}
                 disabled={!replyText.trim() || submitting}
                 className="p-3 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl disabled:opacity-50 hover:shadow-lg transition-all"
-                title={item.reply ? 'Обновить ответ' : 'Отправить ответ'}
+                title="Отправить сообщение"
               >
                 <Send className="w-5 h-5" />
               </button>

@@ -30,7 +30,7 @@ function formatTimeAgo(dateString: string): string {
 }
 
 function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 

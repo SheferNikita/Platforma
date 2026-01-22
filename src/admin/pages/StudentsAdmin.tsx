@@ -409,23 +409,6 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
   const [notes, setNotes] = useState(student?.student?.notes || '');
   const [sendCredentials, setSendCredentials] = useState(true);
   const [tariff, setTariff] = useState((student?.student as any)?.tariff || 'WITH_MENTOR');
-  const [assignedPsychologistId, setAssignedPsychologistId] = useState((student?.student as any)?.assignedPsychologistId || '');
-  const [psychologists, setPsychologists] = useState<{id: string; name: string; email: string}[]>([]);
-
-  useEffect(() => {
-    if (tariff === 'INDIVIDUAL_PSYCHOLOGIST') {
-      loadPsychologists();
-    }
-  }, [tariff]);
-
-  async function loadPsychologists() {
-    try {
-      const data = await api.get<{id: string; name: string; email: string}[]>('/students/psychologists');
-      setPsychologists(data);
-    } catch (error) {
-      console.error('Failed to load psychologists');
-    }
-  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -508,21 +491,6 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
               {TARIFF_OPTIONS.find(o => o.value === tariff)?.description}
             </p>
           </div>
-          {tariff === 'INDIVIDUAL_PSYCHOLOGIST' && (
-            <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Назначенный психолог</label>
-              <select
-                value={assignedPsychologistId}
-                onChange={(e) => setAssignedPsychologistId(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-              >
-                <option value="">Выберите психолога...</option>
-                {psychologists.map(p => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.email})</option>
-                ))}
-              </select>
-            </div>
-          )}
           {!student && (
             <label className="flex items-center gap-3 p-3 bg-[#f5f3ed] rounded-xl cursor-pointer">
               <input
@@ -544,8 +512,7 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
             onClick={() => onSave({ 
               name, email, password, phone, notes, 
               sendCredentials: !student && sendCredentials,
-              tariff,
-              assignedPsychologistId: tariff === 'INDIVIDUAL_PSYCHOLOGIST' ? assignedPsychologistId : null
+              tariff
             })}
             className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
           >

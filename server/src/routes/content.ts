@@ -42,7 +42,7 @@ router.use(authenticate);
 const adminOnly = requireRole('SUPER_ADMIN', 'ADMIN');
 const contentRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN', 'MODERATOR');
 const moderatorRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'MODERATOR');
-const groupRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN');
+const groupRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN');
 
 const moduleSchema = z.object({
   title: z.string().min(1, 'Название обязательно'),
@@ -567,8 +567,8 @@ router.get('/mini-groups', groupRoles, async (req: AuthRequest, res: Response) =
     // Transform chatLink JSON to separate fields
     let transformedGroups = groups.map(parseMiniGroupData);
     
-    // MENTOR/INTERN can only see groups where they are one of the mentors
-    if (userRole === 'MENTOR' || userRole === 'INTERN') {
+    // MENTOR/INTERN/PSYCHOLOGIST can only see groups where they are one of the mentors
+    if (userRole === 'MENTOR' || userRole === 'INTERN' || userRole === 'PSYCHOLOGIST') {
       transformedGroups = transformedGroups.filter(g => g.mentorIds.includes(userId));
     }
     
@@ -614,8 +614,8 @@ router.put('/mini-groups/:id', groupRoles, async (req: AuthRequest & Request<IdP
   try {
     const id = req.params.id;
     
-    // MENTOR/INTERN can only edit their own groups
-    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
+    // MENTOR/INTERN/PSYCHOLOGIST can only edit their own groups
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN' || req.user!.role === 'PSYCHOLOGIST') {
       const group = await prisma.miniGroup.findUnique({ where: { id } });
       if (!group) {
         return res.status(404).json({ error: 'Мини-группа не найдена' });
@@ -664,8 +664,8 @@ router.delete('/mini-groups/:id', groupRoles, async (req: AuthRequest & Request<
   try {
     const id = req.params.id;
     
-    // MENTOR/INTERN can only delete their own groups
-    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
+    // MENTOR/INTERN/PSYCHOLOGIST can only delete their own groups
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN' || req.user!.role === 'PSYCHOLOGIST') {
       const group = await prisma.miniGroup.findUnique({ where: { id } });
       if (!group) {
         return res.status(404).json({ error: 'Мини-группа не найдена' });
@@ -787,8 +787,8 @@ router.delete('/mini-groups/:groupId/events/:eventId', groupRoles, async (req: A
   try {
     const { groupId, eventId } = req.params;
     
-    // MENTOR can only delete events in their own groups
-    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
+    // MENTOR/PSYCHOLOGIST can only delete events in their own groups
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN' || req.user!.role === 'PSYCHOLOGIST') {
       const hasAccess = await verifyMentorGroupAccess(groupId, req.user!.email);
       if (!hasAccess) {
         return res.status(403).json({ error: 'Нет доступа к этой мини-группе' });

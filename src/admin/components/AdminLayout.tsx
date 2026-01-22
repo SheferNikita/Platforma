@@ -43,7 +43,7 @@ const navItems: {
   { path: '/admin/schedule', label: 'Расписание', icon: Calendar, roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] },
   { path: '/admin/contacts', label: 'Контакты', icon: Phone, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { path: '/admin/communities', label: 'Общины', icon: Building, roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] },
-  { path: '/admin/mini-groups', label: 'Мини-группы', icon: Users2, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN'] },
+  { path: '/admin/mini-groups', label: 'Мини-группы', icon: Users2, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN'] },
   { path: '/admin/students', label: 'Ученики', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN'] },
   { path: '/admin/distribution', label: 'Распределение', icon: UserPlus, showDistributionBadge: true, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR'] },
   { path: '/admin/moderation', label: 'Модерация', icon: MessageCircle, showBadge: true, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR'] },

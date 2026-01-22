@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { sendEmail } from './email';
 import { getNewLessonEmailTemplate } from '../templates/newLessonEmail';
+import { notificationService } from './notificationService';
 
 const prisma = new PrismaClient();
 const PLATFORM_URL = 'https://schkola-trezvosti.ru';
@@ -74,6 +75,13 @@ export async function publishScheduledLessons(): Promise<number> {
             student.user.email,
             `Открыт новый урок: ${lesson.title}`,
             emailHtml
+          );
+
+          await notificationService.createForNewLesson(
+            student.userId,
+            lesson.title,
+            lesson.id,
+            lesson.module.title
           );
         } catch (emailError) {
           console.error(`[ScheduledPublish] Failed to send email to ${student.user.email}:`, emailError);

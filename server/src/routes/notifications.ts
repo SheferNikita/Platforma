@@ -56,7 +56,7 @@ router.get('/count', async (req: AuthRequest, res: Response) => {
 
 router.patch('/:id/read', async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const userId = req.user!.id;
 
     const notification = await prisma.notification.findFirst({
@@ -97,7 +97,7 @@ router.patch('/read-all', async (req: AuthRequest, res: Response) => {
 
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const userId = req.user!.id;
 
     const notification = await prisma.notification.findFirst({

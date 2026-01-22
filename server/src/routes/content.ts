@@ -3,6 +3,7 @@ import { prisma } from '../db';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
 import { startScheduledPublishJob } from '../services/scheduledPublish';
+import { notificationService } from '../services/notificationService';
 
 startScheduledPublishJob();
 
@@ -334,6 +335,17 @@ router.get('/library', moderatorRoles, async (req: AuthRequest, res: Response) =
 router.post('/library', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const item = await prisma.libraryItem.create({ data: req.body });
+
+    const activeStudents = await prisma.student.findMany({
+      where: { user: { isActive: true } },
+      select: { userId: true }
+    });
+    await Promise.all(
+      activeStudents.map(s => 
+        notificationService.createForNewLibraryItem(s.userId, item.title, item.id)
+      )
+    );
+
     res.status(201).json(item);
   } catch (error) {
     console.error('Create library item error:', error);
@@ -384,6 +396,17 @@ router.post('/schedule', moderatorRoles, async (req: AuthRequest, res: Response)
       data: { ...rest, date: isoDate, isPublished: true },
       include: { miniGroup: true }
     });
+
+    const activeStudents = await prisma.student.findMany({
+      where: { user: { isActive: true } },
+      select: { userId: true }
+    });
+    await Promise.all(
+      activeStudents.map(s => 
+        notificationService.createForNewEvent(s.userId, event.title, event.id)
+      )
+    );
+
     res.status(201).json(event);
   } catch (error) {
     console.error('Create schedule event error:', error);

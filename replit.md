@@ -33,6 +33,14 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
     -   **Diary and Notes Attachments:** Students can attach files (images, documents, audio) to diary entries, personal notes, and questions. Files are stored as base64 in the TimeWeb PostgreSQL database (DiaryAttachment, NoteAttachment models). Attachments are displayed in the moderation chat interface with image preview and file download support.
     -   **Scheduled Lesson Publishing:** Lessons can be scheduled for future publication with date/time picker. When the scheduled time arrives, the lesson is automatically published and email notifications are sent to students with module access.
     -   **Content Reordering:** Manual reordering functionality for modules, lessons, library items, and contacts.
+    -   **In-App Notification System:** Real-time notifications for students stored in the Notification model. Triggers include:
+        - Mentor replies to diary entries and notes (MENTOR_REPLY type)
+        - New lessons published (NEW_LESSON type) 
+        - Module access granted (MODULE_ACCESS type)
+        - New library items (NEW_LIBRARY_ITEM type)
+        - New schedule events (NEW_EVENT type)
+        - API endpoints: GET /api/notifications, PATCH /api/notifications/:id/read, PATCH /api/notifications/read-all, DELETE /api/notifications/:id
+        - NotificationService (`server/src/services/notificationService.ts`) provides centralized notification creation
 -   **User Roles:** Granular access control with roles: `SUPER_ADMIN`, `ADMIN`, `CURATOR`, `MENTOR`, `MODERATOR`, and `STUDENT`.
     -   `SUPER_ADMIN`: Full access to all sections including audit logs and admin management
     -   `ADMIN`: Full access to all sections except audit logs; cannot create/edit/delete super-admins

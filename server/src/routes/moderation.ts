@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { prisma } from '../db';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
+import { notificationService } from '../services/notificationService';
 
 const router = Router();
 
@@ -215,7 +216,7 @@ const replySchema = z.object({
 
 router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { reply } = replySchema.parse(req.body);
 
     const diary = await prisma.diary.update({
@@ -224,8 +225,20 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
         reply,
         repliedAt: new Date(),
         repliedById: req.user!.id
+      },
+      include: {
+        student: { select: { userId: true } },
+        lesson: { select: { id: true, title: true } }
       }
     });
+
+    if (diary.student && diary.lesson) {
+      await notificationService.createForMentorReply(
+        diary.student.userId,
+        diary.lesson.title,
+        diary.lesson.id
+      );
+    }
 
     res.json(diary);
   } catch (error) {
@@ -239,7 +252,7 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
 
 router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { reply } = replySchema.parse(req.body);
 
     const note = await prisma.studentNote.update({
@@ -248,8 +261,20 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
         reply,
         repliedAt: new Date(),
         repliedById: req.user!.id
+      },
+      include: {
+        student: { select: { userId: true } },
+        lesson: { select: { id: true, title: true } }
       }
     });
+
+    if (note.student && note.lesson) {
+      await notificationService.createForMentorReply(
+        note.student.userId,
+        note.lesson.title,
+        note.lesson.id
+      );
+    }
 
     res.json(note);
   } catch (error) {
@@ -264,7 +289,7 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
 // Mark diary as viewed (without reply)
 router.post('/diary/:id/view', async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const diary = await prisma.diary.update({
       where: { id },
@@ -285,7 +310,7 @@ router.post('/diary/:id/view', async (req: AuthRequest, res: Response) => {
 // Mark note as viewed (without reply)
 router.post('/note/:id/view', async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const note = await prisma.studentNote.update({
       where: { id },

@@ -5,6 +5,7 @@ import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
 import { sendEmail } from '../services/email';
 import { getWelcomeEmailTemplate } from '../templates/welcomeEmail';
+import { notificationService } from '../services/notificationService';
 
 const router = Router();
 
@@ -459,6 +460,15 @@ router.post('/:userId/access', async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const existingAccess = await prisma.moduleAccess.findUnique({
+      where: {
+        studentId_moduleId: {
+          studentId: user.student.id,
+          moduleId
+        }
+      }
+    });
+
     const access = await prisma.moduleAccess.upsert({
       where: {
         studentId_moduleId: {
@@ -475,8 +485,17 @@ router.post('/:userId/access', async (req: AuthRequest, res: Response) => {
       update: {
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         isActive: isActive ?? true
-      }
+      },
+      include: { module: true }
     });
+
+    if (!existingAccess && isActive !== false) {
+      await notificationService.createForNewModuleAccess(
+        userId,
+        access.module.title,
+        moduleId
+      );
+    }
 
     res.json(access);
   } catch (error) {

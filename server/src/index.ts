@@ -14,6 +14,7 @@ import emailRoutes from './routes/email';
 import publicRoutes from './routes/public';
 import uploadsRoutes from './routes/uploads';
 import webhooksRoutes from './routes/webhooks';
+import notificationsRoutes from './routes/notifications';
 
 export const prisma = new PrismaClient();
 
@@ -40,6 +41,7 @@ app.use('/api/email', emailRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/uploads', uploadsRoutes);
 app.use('/api/webhooks', webhooksRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

@@ -58,7 +58,7 @@ export function NotificationBell() {
         throw new Error('Failed to fetch notifications');
       }
       const data = await res.json();
-      setNotifications(data);
+      setNotifications(data.notifications || []);
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError('Не удалось загрузить уведомления');

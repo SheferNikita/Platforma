@@ -1,8 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { PageWrapper } from '../components/PageWrapper';
-import { BookOpen, Calendar, ArrowLeft, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { BookOpen, Calendar, ArrowLeft, ChevronDown, ChevronUp, Loader2, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+
+interface ReplyHistoryItem {
+  text: string;
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  createdAt: string;
+}
+
+function parseReplyHistory(reply: string | null | undefined): ReplyHistoryItem[] {
+  if (!reply) return [];
+  try {
+    const parsed = JSON.parse(reply);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    return [{ text: reply, authorId: 'legacy', authorName: 'Наставник', authorRole: 'MENTOR', createdAt: new Date().toISOString() }];
+  } catch {
+    return [{ text: reply, authorId: 'legacy', authorName: 'Наставник', authorRole: 'MENTOR', createdAt: new Date().toISOString() }];
+  }
+}
+
+function formatDateTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
 
 interface DiaryEntry {
   id: string;
@@ -150,11 +176,21 @@ export function MyDiariesPage() {
                 </div>
 
                 {diary.reply && expandedId === diary.id && (
-                  <div className="mt-4 p-4 bg-[var(--button-lavender-light)]/10 border border-[var(--button-lavender)]/20 rounded-xl">
-                    <div className="text-xs font-medium text-[var(--button-lavender-dark)] mb-2">
-                      Ответ куратора {diary.repliedAt && `• ${new Date(diary.repliedAt).toLocaleDateString('ru-RU')}`}
-                    </div>
-                    <div className="text-sm opacity-80 whitespace-pre-line">{diary.reply}</div>
+                  <div className="mt-4 space-y-3">
+                    {parseReplyHistory(diary.reply).map((replyItem, idx) => (
+                      <div key={idx} className="flex gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center flex-shrink-0">
+                          <User className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="flex-1 bg-[var(--button-lavender-light)]/10 border border-[var(--button-lavender)]/20 rounded-xl p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium text-[var(--button-lavender-dark)]">{replyItem.authorName}</span>
+                            <span className="text-xs opacity-50">{formatDateTime(replyItem.createdAt)}</span>
+                          </div>
+                          <div className="text-sm opacity-80 whitespace-pre-line">{replyItem.text}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 

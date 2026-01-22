@@ -79,6 +79,27 @@ interface StudentNoteFromAPI {
   attachments?: AttachmentFromAPI[];
 }
 
+interface ReplyHistoryItem {
+  text: string;
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  createdAt: string;
+}
+
+function parseReplyHistory(reply: string | null): ReplyHistoryItem[] {
+  if (!reply) return [];
+  try {
+    const parsed = JSON.parse(reply);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    return [{ text: reply, authorId: 'legacy', authorName: 'Наставник', authorRole: 'MENTOR', createdAt: new Date().toISOString() }];
+  } catch {
+    return [{ text: reply, authorId: 'legacy', authorName: 'Наставник', authorRole: 'MENTOR', createdAt: new Date().toISOString() }];
+  }
+}
+
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -185,14 +206,17 @@ export function LessonDetailPage() {
               timestamp: new Date(note.createdAt)
             });
             
-            // Add curator reply if exists
-            if (note.reply && note.repliedAt) {
-              messages.push({
-                id: `${note.id}-reply`,
-                text: note.reply,
-                author: 'curator',
-                timestamp: new Date(note.repliedAt),
-                curatorName: note.repliedBy?.name
+            // Add curator replies if exists
+            if (note.reply) {
+              const replyHistory = parseReplyHistory(note.reply);
+              replyHistory.forEach((replyItem, idx) => {
+                messages.push({
+                  id: `${note.id}-reply-${idx}`,
+                  text: replyItem.text,
+                  author: 'curator',
+                  timestamp: new Date(replyItem.createdAt),
+                  curatorName: replyItem.authorName
+                });
               });
             }
           });
@@ -214,13 +238,16 @@ export function LessonDetailPage() {
               author: 'student',
               timestamp: new Date(entry.createdAt)
             });
-            if (entry.reply && entry.repliedAt) {
-              diaryMessages.push({
-                id: `${entry.id}-reply`,
-                text: entry.reply,
-                author: 'curator',
-                timestamp: new Date(entry.repliedAt),
-                curatorName: entry.repliedBy?.name
+            if (entry.reply) {
+              const replyHistory = parseReplyHistory(entry.reply);
+              replyHistory.forEach((replyItem, idx) => {
+                diaryMessages.push({
+                  id: `${entry.id}-reply-${idx}`,
+                  text: replyItem.text,
+                  author: 'curator',
+                  timestamp: new Date(replyItem.createdAt),
+                  curatorName: replyItem.authorName
+                });
               });
             }
           });
@@ -240,13 +267,16 @@ export function LessonDetailPage() {
               author: 'student',
               timestamp: new Date(entry.createdAt)
             });
-            if (entry.reply && entry.repliedAt) {
-              notesMessages.push({
-                id: `${entry.id}-reply`,
-                text: entry.reply,
-                author: 'curator',
-                timestamp: new Date(entry.repliedAt),
-                curatorName: entry.repliedBy?.name
+            if (entry.reply) {
+              const replyHistory = parseReplyHistory(entry.reply);
+              replyHistory.forEach((replyItem, idx) => {
+                notesMessages.push({
+                  id: `${entry.id}-reply-${idx}`,
+                  text: replyItem.text,
+                  author: 'curator',
+                  timestamp: new Date(replyItem.createdAt),
+                  curatorName: replyItem.authorName
+                });
               });
             }
           });

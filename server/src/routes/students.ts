@@ -10,7 +10,7 @@ import { notificationService } from '../services/notificationService';
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN'));
 
 const createStudentSchema = z.object({
   email: z.string().email('Некорректный email'),

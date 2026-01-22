@@ -68,6 +68,7 @@ export function AdminsAdmin() {
     ADMIN: { label: 'Администратор', color: 'bg-blue-100 text-blue-700', description: 'Полный доступ к админке, кроме удаления супер-админа' },
     CURATOR: { label: 'Куратор наставников', color: 'bg-teal-100 text-teal-700', description: 'Полный доступ кроме «Продукты» и «CRM»' },
     MENTOR: { label: 'Наставник', color: 'bg-green-100 text-green-700', description: 'Видит только свои мини-группы и своих учеников' },
+    PSYCHOLOGIST: { label: 'Психолог', color: 'bg-pink-100 text-pink-700', description: 'Индивидуальная работа с учениками, без мини-групп' },
     INTERN: { label: 'Стажер', color: 'bg-lime-100 text-lime-700', description: 'Такие же права как у наставника' },
     MODERATOR: { label: 'Модератор', color: 'bg-orange-100 text-orange-700', description: 'Уроки, библиотека, общины, расписание, email' }
   };
@@ -311,6 +312,7 @@ function AdminModal({ admin, onSave, onClose, canAssignSuperAdmin }: { admin: Ad
               <option value="ADMIN">Администратор</option>
               <option value="CURATOR">Куратор наставников</option>
               <option value="MENTOR">Наставник</option>
+              <option value="PSYCHOLOGIST">Психолог</option>
               <option value="INTERN">Стажер</option>
               <option value="MODERATOR">Модератор</option>
             </select>
@@ -319,6 +321,7 @@ function AdminModal({ admin, onSave, onClose, canAssignSuperAdmin }: { admin: Ad
               {role === 'ADMIN' && 'Полный доступ к админке, кроме удаления супер-админа'}
               {role === 'CURATOR' && 'Полный доступ кроме «Продукты» и «CRM»'}
               {role === 'MENTOR' && 'Видит только свои мини-группы и своих учеников'}
+              {role === 'PSYCHOLOGIST' && 'Индивидуальная работа с учениками, без мини-групп'}
               {role === 'INTERN' && 'Такие же права как у наставника'}
               {role === 'MODERATOR' && 'Уроки, библиотека, общины, расписание, email'}
             </p>

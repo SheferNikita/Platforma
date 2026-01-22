@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 
-type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'CURATOR' | 'MENTOR' | 'INTERN' | 'MODERATOR' | 'STUDENT';
+type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'CURATOR' | 'MENTOR' | 'PSYCHOLOGIST' | 'INTERN' | 'MODERATOR' | 'STUDENT';
 
 const navItems: {
   path: string;
@@ -38,15 +38,15 @@ const navItems: {
   roles?: UserRole[];
 }[] = [
   { path: '/admin', label: 'Дашборд', icon: LayoutDashboard, end: true, roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { path: '/admin/lessons', label: 'Уроки', icon: BookOpen, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN', 'MODERATOR'] },
+  { path: '/admin/lessons', label: 'Уроки', icon: BookOpen, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR'] },
   { path: '/admin/library', label: 'Библиотека', icon: Library, roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] },
   { path: '/admin/schedule', label: 'Расписание', icon: Calendar, roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] },
   { path: '/admin/contacts', label: 'Контакты', icon: Phone, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { path: '/admin/communities', label: 'Общины', icon: Building, roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] },
   { path: '/admin/mini-groups', label: 'Мини-группы', icon: Users2, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN'] },
-  { path: '/admin/students', label: 'Ученики', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN'] },
+  { path: '/admin/students', label: 'Ученики', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN'] },
   { path: '/admin/distribution', label: 'Распределение', icon: UserPlus, showDistributionBadge: true, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR'] },
-  { path: '/admin/moderation', label: 'Модерация', icon: MessageCircle, showBadge: true, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN', 'MODERATOR'] },
+  { path: '/admin/moderation', label: 'Модерация', icon: MessageCircle, showBadge: true, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR'] },
   { path: '/admin/products', label: 'Продукты', icon: ShoppingBag, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { path: '/admin/crm', label: 'CRM', icon: ClipboardList, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { path: '/admin/payments', label: 'Платежи', icon: CreditCard, roles: ['SUPER_ADMIN', 'ADMIN'] },

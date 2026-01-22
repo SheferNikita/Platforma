@@ -1,10 +1,14 @@
 import { Router, Response } from 'express';
+import express from 'express';
 import { prisma } from '../db';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
 import { notificationService } from '../services/notificationService';
 
 const router = Router();
+
+// Увеличенный лимит для голосовых сообщений (50MB)
+router.use(express.json({ limit: '50mb' }));
 
 router.use(authenticate);
 router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'INTERN', 'MODERATOR'));

@@ -10,6 +10,8 @@ interface ReplyHistoryItem {
   authorName: string;
   authorRole: string;
   createdAt: string;
+  audioData?: string;
+  audioDuration?: number;
 }
 
 function parseReplyHistory(reply: string | null | undefined): ReplyHistoryItem[] {
@@ -187,7 +189,22 @@ export function MyDiariesPage() {
                             <span className="text-xs font-medium text-[var(--button-lavender-dark)]">{replyItem.authorName}</span>
                             <span className="text-xs opacity-50">{formatDateTime(replyItem.createdAt)}</span>
                           </div>
-                          <div className="text-sm opacity-80 whitespace-pre-line">{replyItem.text}</div>
+                          {replyItem.audioData ? (
+                            <div className="flex items-center gap-2">
+                              <audio 
+                                src={`data:audio/webm;base64,${replyItem.audioData}`} 
+                                controls 
+                                className="h-8 max-w-full"
+                              />
+                              {replyItem.audioDuration && (
+                                <span className="text-xs opacity-60">
+                                  {Math.floor(replyItem.audioDuration / 60)}:{(replyItem.audioDuration % 60).toString().padStart(2, '0')}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-sm opacity-80 whitespace-pre-line">{replyItem.text}</div>
+                          )}
                         </div>
                       </div>
                     ))}

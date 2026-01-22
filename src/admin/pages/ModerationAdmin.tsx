@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
-import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye, Paperclip, Image, File, Download } from 'lucide-react';
+import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye, Paperclip, Image, File, Download, Mic, Square, Play, Pause } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -33,6 +33,8 @@ interface ReplyMessage {
   authorName: string;
   authorRole: string;
   createdAt: string;
+  audioData?: string;
+  audioDuration?: number;
 }
 
 function parseReplyHistory(reply: string | null): ReplyMessage[] {
@@ -116,6 +118,30 @@ export function ModerationAdmin() {
       loadItems();
     } catch (error) {
       toast.error('Ошибка отправки');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submitAudioReply(audioData: string, duration: number) {
+    if (!selectedItem) return;
+    
+    setSubmitting(true);
+    try {
+      const endpoint = selectedItem.type === 'diary' 
+        ? `/public/moderation/diary/${selectedItem.id}/reply`
+        : `/public/moderation/note/${selectedItem.id}/reply`;
+      
+      const updatedItem = await api.post<ModerationItem>(endpoint, { 
+        reply: '',
+        audioData,
+        audioDuration: duration
+      });
+      toast.success('Голосовое сообщение отправлено');
+      setSelectedItem({ ...selectedItem, reply: updatedItem.reply, repliedAt: updatedItem.repliedAt });
+      loadItems();
+    } catch (error) {
+      toast.error('Ошибка отправки голосового сообщения');
     } finally {
       setSubmitting(false);
     }
@@ -341,6 +367,7 @@ export function ModerationAdmin() {
             setReplyText('');
           }}
           onSubmitReply={submitReply}
+          onSubmitAudioReply={submitAudioReply}
           onMarkAsViewed={markAsViewed}
         />
       )}
@@ -355,6 +382,7 @@ function ChatDialog({
   submitting,
   onClose,
   onSubmitReply,
+  onSubmitAudioReply,
   onMarkAsViewed
 }: {
   item: ModerationItem;
@@ -363,16 +391,99 @@ function ChatDialog({
   submitting: boolean;
   onClose: () => void;
   onSubmitReply: () => void;
+  onSubmitAudioReply: (audioData: string, duration: number) => void;
   onMarkAsViewed: () => void;
 }) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const TypeIcon = typeConfig[item.type]?.icon || BookOpen;
+  
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [item]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    };
+  }, [audioUrl]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(blob);
+        setAudioUrl(URL.createObjectURL(blob));
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      timerRef.current = setInterval(() => {
+        setRecordingTime(t => t + 1);
+      }, 1000);
+    } catch (err) {
+      toast.error('Не удалось получить доступ к микрофону');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  };
+
+  const cancelRecording = () => {
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setRecordingTime(0);
+  };
+
+  const sendAudioMessage = async () => {
+    if (!audioBlob) return;
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      onSubmitAudioReply(base64, recordingTime);
+      cancelRecording();
+    };
+    reader.readAsDataURL(audioBlob);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
@@ -472,7 +583,22 @@ function ChatDialog({
             <div key={index} className="flex justify-end">
               <div className="max-w-[85%] md:max-w-[75%]">
                 <div className="bg-gradient-to-br from-[#a67c52] to-[#c4a57b] text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-sm">
-                  <p className="whitespace-pre-wrap text-sm md:text-base">{msg.text}</p>
+                  {msg.audioData ? (
+                    <div className="flex items-center gap-2">
+                      <audio 
+                        src={`data:audio/webm;base64,${msg.audioData}`} 
+                        controls 
+                        className="h-8 max-w-[200px]"
+                      />
+                      {msg.audioDuration && (
+                        <span className="text-xs opacity-80">
+                          {Math.floor(msg.audioDuration / 60)}:{(msg.audioDuration % 60).toString().padStart(2, '0')}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap text-sm md:text-base">{msg.text}</p>
+                  )}
                 </div>
                 <div className="flex items-center justify-end gap-2 mt-1">
                   <span className="text-xs text-[#3d3527]/50">{msg.authorName}</span>
@@ -487,27 +613,76 @@ function ChatDialog({
 
         {/* Reply Input Area */}
         <div className="p-4 md:p-6 border-t border-[#d4c9b0]/30 bg-white rounded-b-2xl">
-          <div className="flex items-end gap-3">
-            <div className="flex-1">
-              <textarea
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                rows={3}
-                className="w-full px-4 py-3 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] resize-none text-sm md:text-base"
-                placeholder="Напишите сообщение..."
-              />
-            </div>
-            <div className="flex flex-col gap-2">
+          {/* Recording UI */}
+          {isRecording && (
+            <div className="flex items-center gap-3 mb-4 p-3 bg-red-50 rounded-xl border border-red-200">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+              <span className="text-red-600 font-medium">Запись: {formatTime(recordingTime)}</span>
+              <div className="flex-1" />
               <button
-                onClick={onSubmitReply}
-                disabled={!replyText.trim() || submitting}
-                className="p-3 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl disabled:opacity-50 hover:shadow-lg transition-all"
-                title="Отправить сообщение"
+                onClick={stopRecording}
+                className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                title="Остановить запись"
               >
-                <Send className="w-5 h-5" />
+                <Square className="w-4 h-4" />
               </button>
             </div>
-          </div>
+          )}
+
+          {/* Recorded Audio Preview */}
+          {audioUrl && !isRecording && (
+            <div className="flex items-center gap-3 mb-4 p-3 bg-[#f5f3ed] rounded-xl border border-[#d4c9b0]">
+              <audio src={audioUrl} controls className="flex-1 h-10" />
+              <span className="text-sm text-[#3d3527]/60">{formatTime(recordingTime)}</span>
+              <button
+                onClick={cancelRecording}
+                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                title="Отменить"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <button
+                onClick={sendAudioMessage}
+                disabled={submitting}
+                className="p-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-lg disabled:opacity-50 hover:shadow-lg transition-all"
+                title="Отправить голосовое сообщение"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Text Input */}
+          {!audioUrl && !isRecording && (
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] resize-none text-sm md:text-base"
+                  placeholder="Напишите сообщение..."
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={startRecording}
+                  className="p-3 bg-[#f5f3ed] text-[#a67c52] rounded-xl hover:bg-[#ebe7dd] transition-all border border-[#d4c9b0]"
+                  title="Записать голосовое сообщение"
+                >
+                  <Mic className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={onSubmitReply}
+                  disabled={!replyText.trim() || submitting}
+                  className="p-3 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl disabled:opacity-50 hover:shadow-lg transition-all"
+                  title="Отправить сообщение"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
           
           {/* Action buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">

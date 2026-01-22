@@ -55,6 +55,7 @@ interface ChatMessage {
   timestamp: Date;
   files?: { name: string; type: string; url?: string }[];
   hasAudio?: boolean;
+  audioData?: string;
   audioDuration?: number;
   curatorName?: string;
 }
@@ -85,6 +86,8 @@ interface ReplyHistoryItem {
   authorName: string;
   authorRole: string;
   createdAt: string;
+  audioData?: string;
+  audioDuration?: number;
 }
 
 function parseReplyHistory(reply: string | null): ReplyHistoryItem[] {
@@ -215,7 +218,10 @@ export function LessonDetailPage() {
                   text: replyItem.text,
                   author: 'curator',
                   timestamp: new Date(replyItem.createdAt),
-                  curatorName: replyItem.authorName
+                  curatorName: replyItem.authorName,
+                  audioData: replyItem.audioData,
+                  audioDuration: replyItem.audioDuration,
+                  hasAudio: !!replyItem.audioData
                 });
               });
             }
@@ -246,7 +252,10 @@ export function LessonDetailPage() {
                   text: replyItem.text,
                   author: 'curator',
                   timestamp: new Date(replyItem.createdAt),
-                  curatorName: replyItem.authorName
+                  curatorName: replyItem.authorName,
+                  audioData: replyItem.audioData,
+                  audioDuration: replyItem.audioDuration,
+                  hasAudio: !!replyItem.audioData
                 });
               });
             }
@@ -275,7 +284,10 @@ export function LessonDetailPage() {
                   text: replyItem.text,
                   author: 'curator',
                   timestamp: new Date(replyItem.createdAt),
-                  curatorName: replyItem.authorName
+                  curatorName: replyItem.authorName,
+                  audioData: replyItem.audioData,
+                  audioDuration: replyItem.audioDuration,
+                  hasAudio: !!replyItem.audioData
                 });
               });
             }
@@ -779,9 +791,24 @@ export function LessonDetailPage() {
                         : 'bg-white/90 border border-[var(--sky-light)]/40 rounded-bl-md'
                     } shadow-sm`}
                   >
-                    <p className={`text-xs md:text-sm leading-snug ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
-                      {message.text}
-                    </p>
+                    {message.audioData ? (
+                      <div className="flex items-center gap-2">
+                        <audio 
+                          src={`data:audio/webm;base64,${message.audioData}`} 
+                          controls 
+                          className="h-8 max-w-full"
+                        />
+                        {message.audioDuration && (
+                          <span className="text-[10px] opacity-60">
+                            {Math.floor(message.audioDuration / 60)}:{(message.audioDuration % 60).toString().padStart(2, '0')}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <p className={`text-xs md:text-sm leading-snug ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
+                        {message.text}
+                      </p>
+                    )}
                     {/* Attached files */}
                     {message.files && message.files.length > 0 && (
                       <div className="mt-1 md:mt-1.5 space-y-1">
@@ -916,9 +943,24 @@ export function LessonDetailPage() {
                         : 'bg-white/90 border border-[var(--sky-light)]/40 rounded-bl-md'
                     } shadow-sm`}
                   >
-                    <p className={`text-xs md:text-sm leading-snug ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
-                      {message.text}
-                    </p>
+                    {message.audioData ? (
+                      <div className="flex items-center gap-2">
+                        <audio 
+                          src={`data:audio/webm;base64,${message.audioData}`} 
+                          controls 
+                          className="h-8 max-w-full"
+                        />
+                        {message.audioDuration && (
+                          <span className="text-[10px] opacity-60">
+                            {Math.floor(message.audioDuration / 60)}:{(message.audioDuration % 60).toString().padStart(2, '0')}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <p className={`text-xs md:text-sm leading-snug ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
+                        {message.text}
+                      </p>
+                    )}
                     {/* Attached files */}
                     {message.files && message.files.length > 0 && (
                       <div className="mt-1 md:mt-1.5 space-y-1">
@@ -1053,8 +1095,21 @@ export function LessonDetailPage() {
                         : 'bg-white/90 border border-[var(--sky-light)]/40 rounded-bl-md'
                     } shadow-sm`}
                   >
-                    {/* Message text */}
-                    {message.text && (
+                    {/* Audio message */}
+                    {message.audioData ? (
+                      <div className="flex items-center gap-2">
+                        <audio 
+                          src={`data:audio/webm;base64,${message.audioData}`} 
+                          controls 
+                          className="h-8 max-w-full"
+                        />
+                        {message.audioDuration && (
+                          <span className="text-[10px] opacity-60">
+                            {Math.floor(message.audioDuration / 60)}:{(message.audioDuration % 60).toString().padStart(2, '0')}
+                          </span>
+                        )}
+                      </div>
+                    ) : message.text && (
                       <p className={`text-xs md:text-sm leading-snug ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
                         {message.text}
                       </p>

@@ -211,20 +211,26 @@ router.get('/count', async (req: AuthRequest, res: Response) => {
 });
 
 const replySchema = z.object({
-  reply: z.string().min(1, 'Ответ обязателен')
+  reply: z.string(),
+  audioData: z.string().optional(),
+  audioDuration: z.number().optional()
 });
 
 router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { reply } = replySchema.parse(req.body);
+    const { reply, audioData, audioDuration } = replySchema.parse(req.body);
+
+    if (!reply.trim() && !audioData) {
+      return res.status(400).json({ error: 'Необходим текст или голосовое сообщение' });
+    }
 
     const existingDiary = await prisma.diary.findUnique({
       where: { id },
       select: { reply: true }
     });
 
-    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string }> = [];
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number }> = [];
     
     if (existingDiary?.reply) {
       try {
@@ -251,13 +257,20 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    replyHistory.push({
-      text: reply,
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number } = {
+      text: audioData ? '🎤 Голосовое сообщение' : reply,
       authorId: req.user!.id,
       authorName: req.user!.name,
       authorRole: req.user!.role,
       createdAt: new Date().toISOString()
-    });
+    };
+
+    if (audioData) {
+      newMessage.audioData = audioData;
+      newMessage.audioDuration = audioDuration;
+    }
+
+    replyHistory.push(newMessage);
 
     const diary = await prisma.diary.update({
       where: { id },
@@ -293,14 +306,18 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
 router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { reply } = replySchema.parse(req.body);
+    const { reply, audioData, audioDuration } = replySchema.parse(req.body);
+
+    if (!reply.trim() && !audioData) {
+      return res.status(400).json({ error: 'Необходим текст или голосовое сообщение' });
+    }
 
     const existingNote = await prisma.studentNote.findUnique({
       where: { id },
       select: { reply: true }
     });
 
-    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string }> = [];
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number }> = [];
     
     if (existingNote?.reply) {
       try {
@@ -327,13 +344,20 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    replyHistory.push({
-      text: reply,
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number } = {
+      text: audioData ? '🎤 Голосовое сообщение' : reply,
       authorId: req.user!.id,
       authorName: req.user!.name,
       authorRole: req.user!.role,
       createdAt: new Date().toISOString()
-    });
+    };
+
+    if (audioData) {
+      newMessage.audioData = audioData;
+      newMessage.audioDuration = audioDuration;
+    }
+
+    replyHistory.push(newMessage);
 
     const note = await prisma.studentNote.update({
       where: { id },

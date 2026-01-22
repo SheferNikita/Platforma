@@ -251,6 +251,14 @@ router.post('/tilda', async (req: Request, res: Response) => {
               });
             }
             console.log(`Tilda webhook: Granted access to ${dbProduct.modules.length} modules for product ${dbProduct.name}`);
+            
+            if (dbProduct.defaultTariff) {
+              await prisma.student.update({
+                where: { id: existingUser.student.id },
+                data: { tariff: dbProduct.defaultTariff }
+              });
+              console.log(`Tilda webhook: Updated student tariff to ${dbProduct.defaultTariff}`);
+            }
           }
         } else {
           console.warn(`Tilda webhook: No matching product found for "${productName}"`);

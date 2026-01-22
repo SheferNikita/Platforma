@@ -49,10 +49,19 @@ export function MyDiariesPage() {
   const [diaries, setDiaries] = useState<DiaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userTariff, setUserTariff] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDiaries = async () => {
       try {
+        const meResponse = await api.get('/auth/me') as { user: { tariff?: string } };
+        const tariff = meResponse.user?.tariff || 'WITH_MENTOR';
+        if (tariff === 'BASIC' || tariff === 'FAMILY') {
+          navigate('/lessons');
+          return;
+        }
+        setUserTariff(tariff);
+
         const data = await api.get('/public/my-diaries') as DiaryEntry[];
         setDiaries(data);
       } catch (err: any) {
@@ -62,7 +71,7 @@ export function MyDiariesPage() {
       }
     };
     fetchDiaries();
-  }, []);
+  }, [navigate]);
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);

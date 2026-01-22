@@ -2,10 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { PageWrapper } from '../components/PageWrapper';
-import { ArrowLeft, ArrowRight, List, CheckCircle, ArrowUp, MessageCircle, HelpCircle, BookOpen, Mic, Paperclip, Image, Video, File, X, StopCircle, FileText, NotebookPen, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, List, CheckCircle, ArrowUp, MessageCircle, HelpCircle, BookOpen, Mic, Paperclip, Image, Video, File, X, StopCircle, FileText, NotebookPen, Download, Loader2, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../lib/api';
 import { KinescopeMultiPlayer } from '../components/KinescopePlayer';
+
+type StudentTariff = 'BASIC' | 'FAMILY' | 'WITH_MENTOR' | 'WITH_PSYCHOLOGIST' | 'INDIVIDUAL_PSYCHOLOGIST';
+
+const canAccessMentorFeatures = (tariff: StudentTariff | null): boolean => {
+  if (!tariff) return false;
+  const fullAccessTariffs: StudentTariff[] = ['WITH_MENTOR', 'WITH_PSYCHOLOGIST', 'INDIVIDUAL_PSYCHOLOGIST'];
+  return fullAccessTariffs.includes(tariff);
+};
 
 interface LessonVideo {
   id: string;
@@ -152,6 +160,9 @@ export function LessonDetailPage() {
   
   // Image modal state
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  
+  // User tariff state
+  const [userTariff, setUserTariff] = useState<StudentTariff | null>(null);
   
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -305,6 +316,21 @@ export function LessonDetailPage() {
     }
     fetchLesson();
   }, [lessonId]);
+
+  // Fetch user tariff from API
+  useEffect(() => {
+    async function fetchUserTariff() {
+      try {
+        const { user } = await api.get<{ user: { tariff?: StudentTariff } }>('/auth/me');
+        if (user.tariff) {
+          setUserTariff(user.tariff);
+        }
+      } catch (err) {
+        console.error('Error fetching user tariff:', err);
+      }
+    }
+    fetchUserTariff();
+  }, []);
 
   // Navigation helpers
   const currentLessonIndex = moduleLessons?.lessons.findIndex(l => l.id === lessonId) ?? -1;
@@ -762,7 +788,25 @@ export function LessonDetailPage() {
           </button>
         </div>
 
+        {/* Info message for basic tariffs */}
+        {!canAccessMentorFeatures(userTariff) && userTariff && (
+          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-[var(--sky-soft)]/30 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
+                <Info className="w-5 h-5 text-[var(--icon-lavender)]" />
+              </div>
+              <div className="flex-1">
+                <h3 className="mb-2 text-lg">Расширенные возможности</h3>
+                <p className="text-sm opacity-70 leading-relaxed">
+                  Задавать вопросы и вести дневник доступно на тарифах с наставником или психологом
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Форма дневника с чатом */}
+        {canAccessMentorFeatures(userTariff) && (
         <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
           <div className="flex items-start gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
@@ -913,8 +957,10 @@ export function LessonDetailPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
           </button>
         </div>
+        )}
 
         {/* Форма конспекта с чатом */}
+        {canAccessMentorFeatures(userTariff) && (
         <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
           <div className="flex items-start gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
@@ -1065,8 +1111,10 @@ export function LessonDetailPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
           </button>
         </div>
+        )}
 
         {/* Окно обратной связи */}
+        {canAccessMentorFeatures(userTariff) && (
         <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm">
           <div className="flex items-start gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
@@ -1277,6 +1325,7 @@ export function LessonDetailPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
           </button>
         </div>
+        )}
 
         {/* Дублирование навигации */}
         <div className="mb-10 flex justify-center">

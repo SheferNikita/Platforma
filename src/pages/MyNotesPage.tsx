@@ -21,10 +21,19 @@ export function MyNotesPage() {
   const [notes, setNotes] = useState<NoteEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userTariff, setUserTariff] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchNotes = async () => {
       try {
+        const meResponse = await api.get('/auth/me') as { user: { tariff?: string } };
+        const tariff = meResponse.user?.tariff || 'WITH_MENTOR';
+        if (tariff === 'BASIC' || tariff === 'FAMILY') {
+          navigate('/lessons');
+          return;
+        }
+        setUserTariff(tariff);
+
         const data = await api.get('/public/my-notes') as NoteEntry[];
         setNotes(data);
       } catch (err: any) {
@@ -34,7 +43,7 @@ export function MyNotesPage() {
       }
     };
     fetchNotes();
-  }, []);
+  }, [navigate]);
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);

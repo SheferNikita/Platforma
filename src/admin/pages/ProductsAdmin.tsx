@@ -185,12 +185,22 @@ function PaymentLinkButton({ productId }: { productId: string }) {
   );
 }
 
+const TARIFF_OPTIONS = [
+  { value: '', label: 'Не задан' },
+  { value: 'BASIC', label: 'Базовый', description: 'Только просмотр уроков' },
+  { value: 'FAMILY', label: 'Для родственников', description: 'Только просмотр уроков' },
+  { value: 'WITH_MENTOR', label: 'С наставником', description: 'Полный доступ + мини-группы' },
+  { value: 'WITH_PSYCHOLOGIST', label: 'С психологом', description: 'Полный доступ + мини-группы' },
+  { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивидуально с психологом', description: 'Полный доступ, без мини-групп' },
+];
+
 function ProductModal({ product, onSave, onClose }: { product: Product | null; onSave: (data: any) => void; onClose: () => void }) {
   const [name, setName] = useState(product?.name || '');
   const [description, setDescription] = useState(product?.description || '');
   const [startDate, setStartDate] = useState(product?.startDate?.split('T')[0] || '');
   const [accessExpiresAt, setAccessExpiresAt] = useState(product?.accessExpiresAt?.split('T')[0] || '');
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
+  const [defaultTariff, setDefaultTariff] = useState((product as any)?.defaultTariff || '');
   const [selectedModuleIds, setSelectedModuleIds] = useState<string[]>(
     product?.modules?.map(m => m.module.id) || []
   );
@@ -219,7 +229,8 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
       accessDurationType: accessExpiresAt ? 'date' : 'unlimited',
       accessExpiresAt: accessExpiresAt || null,
       isActive,
-      moduleIds: selectedModuleIds
+      moduleIds: selectedModuleIds,
+      defaultTariff: defaultTariff || null
     });
   };
 
@@ -266,6 +277,22 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
               />
               <p className="text-xs text-[#3d3527]/60 mt-1">Оставьте пустым для бессрочного доступа</p>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Тариф по умолчанию</label>
+            <select
+              value={defaultTariff}
+              onChange={(e) => setDefaultTariff(e.target.value)}
+              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+            >
+              {TARIFF_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <p className="text-xs text-[#3d3527]/60 mt-1">
+              {TARIFF_OPTIONS.find(o => o.value === defaultTariff)?.description || 'При покупке ученику будет назначен этот тариф'}
+            </p>
           </div>
 
           <div className="border-t border-[#d4c9b0]/30 pt-4">

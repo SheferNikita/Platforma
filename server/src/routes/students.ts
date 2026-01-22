@@ -12,6 +12,8 @@ const router = Router();
 router.use(authenticate);
 router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN'));
 
+const studentTariffs = ['BASIC', 'FAMILY', 'WITH_MENTOR', 'WITH_PSYCHOLOGIST', 'INDIVIDUAL_PSYCHOLOGIST'] as const;
+
 const createStudentSchema = z.object({
   email: z.string().email('Некорректный email'),
   password: z.string().min(6, 'Пароль должен содержать минимум 6 символов'),
@@ -19,7 +21,9 @@ const createStudentSchema = z.object({
   phone: z.string().optional(),
   sobrietyDate: z.string().optional(),
   notes: z.string().optional(),
-  sendCredentials: z.boolean().optional()
+  sendCredentials: z.boolean().optional(),
+  tariff: z.enum(studentTariffs).optional(),
+  assignedPsychologistId: z.string().optional()
 });
 
 const updateStudentSchema = z.object({
@@ -27,7 +31,9 @@ const updateStudentSchema = z.object({
   phone: z.string().optional(),
   sobrietyDate: z.string().optional(),
   notes: z.string().optional(),
-  isActive: z.boolean().optional()
+  isActive: z.boolean().optional(),
+  tariff: z.enum(studentTariffs).optional(),
+  assignedPsychologistId: z.string().nullable().optional()
 });
 
 async function getMentorStudentIds(userEmail: string): Promise<string[]> {
@@ -57,6 +63,27 @@ async function getMentorStudentIds(userEmail: string): Promise<string[]> {
 
   return Array.from(studentIds);
 }
+
+router.get('/psychologists', async (req: AuthRequest, res: Response) => {
+  try {
+    const psychologists = await prisma.user.findMany({
+      where: {
+        role: 'PSYCHOLOGIST',
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true
+      },
+      orderBy: { name: 'asc' }
+    });
+    res.json(psychologists);
+  } catch (error) {
+    console.error('Get psychologists error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
@@ -130,6 +157,9 @@ router.get('/', async (req: AuthRequest, res: Response) => {
               },
               miniGroups: {
                 include: { miniGroup: true }
+              },
+              assignedPsychologist: {
+                select: { id: true, name: true, email: true }
               }
             }
           }
@@ -201,6 +231,9 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
             studentNotes: {
               include: { lesson: true },
               orderBy: { createdAt: 'desc' }
+            },
+            assignedPsychologist: {
+              select: { id: true, name: true, email: true }
             }
           }
         }
@@ -242,11 +275,19 @@ router.post('/', async (req: AuthRequest, res: Response) => {
           create: {
             phone: data.phone,
             sobrietyDate: data.sobrietyDate ? new Date(data.sobrietyDate) : undefined,
-            notes: data.notes
+            notes: data.notes,
+            tariff: data.tariff || 'WITH_MENTOR',
+            assignedPsychologistId: data.tariff === 'INDIVIDUAL_PSYCHOLOGIST' ? data.assignedPsychologistId : undefined
           }
         }
       },
-      include: { student: true }
+      include: { 
+        student: {
+          include: {
+            assignedPsychologist: { select: { id: true, name: true, email: true } }
+          }
+        }
+      }
     });
 
     await prisma.adminLog.create({
@@ -319,11 +360,21 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
           update: {
             phone: data.phone,
             sobrietyDate: data.sobrietyDate ? new Date(data.sobrietyDate) : undefined,
-            notes: data.notes
+            notes: data.notes,
+            tariff: data.tariff,
+            assignedPsychologistId: data.tariff === 'INDIVIDUAL_PSYCHOLOGIST' 
+              ? data.assignedPsychologistId 
+              : (data.tariff ? null : undefined)
           }
         }
       },
-      include: { student: true }
+      include: { 
+        student: {
+          include: {
+            assignedPsychologist: { select: { id: true, name: true, email: true } }
+          }
+        }
+      }
     });
 
     await prisma.adminLog.create({

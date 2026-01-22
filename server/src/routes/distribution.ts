@@ -11,7 +11,8 @@ router.get('/unassigned', async (req: AuthRequest, res: Response) => {
   try {
     const students = await prisma.student.findMany({
       where: {
-        miniGroups: { none: {} }
+        miniGroups: { none: {} },
+        tariff: { not: 'INDIVIDUAL_PSYCHOLOGIST' }
       },
       select: {
         id: true,
@@ -44,7 +45,8 @@ router.get('/unassigned/count', async (req: AuthRequest, res: Response) => {
   try {
     const count = await prisma.student.count({
       where: {
-        miniGroups: { none: {} }
+        miniGroups: { none: {} },
+        tariff: { not: 'INDIVIDUAL_PSYCHOLOGIST' }
       }
     });
 
@@ -139,6 +141,106 @@ router.post('/assign-multiple', async (req: AuthRequest, res: Response) => {
     });
   } catch (error) {
     console.error('Assign multiple students error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/individual', async (req: AuthRequest, res: Response) => {
+  try {
+    const students = await prisma.student.findMany({
+      where: {
+        tariff: 'INDIVIDUAL_PSYCHOLOGIST'
+      },
+      select: {
+        id: true,
+        tariff: true,
+        city: true,
+        gender: true,
+        age: true,
+        addictionType: true,
+        isClergy: true,
+        surveyCompleted: true,
+        createdAt: true,
+        assignedPsychologistId: true,
+        user: { select: { id: true, name: true, email: true, createdAt: true } },
+        assignedPsychologist: { select: { id: true, name: true, email: true } },
+        payments: {
+          where: { status: 'COMPLETED' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          include: { product: { select: { name: true } } }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(students);
+  } catch (error) {
+    console.error('Get individual students error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/assign-psychologist', async (req: AuthRequest, res: Response) => {
+  try {
+    const { studentId, psychologistId } = req.body;
+
+    if (!studentId || !psychologistId) {
+      return res.status(400).json({ error: 'ID ученика и психолога обязательны' });
+    }
+
+    const student = await prisma.student.findUnique({ where: { id: studentId } });
+    if (!student) {
+      return res.status(404).json({ error: 'Ученик не найден' });
+    }
+
+    const psychologist = await prisma.user.findFirst({
+      where: { id: psychologistId, role: 'PSYCHOLOGIST', isActive: true }
+    });
+    if (!psychologist) {
+      return res.status(404).json({ error: 'Психолог не найден' });
+    }
+
+    await prisma.student.update({
+      where: { id: studentId },
+      data: { assignedPsychologistId: psychologistId }
+    });
+
+    await prisma.adminLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'ASSIGN_PSYCHOLOGIST',
+        entity: 'STUDENT',
+        entityId: studentId,
+        details: { psychologistId, psychologistName: psychologist.name }
+      }
+    });
+
+    res.json({ success: true, message: 'Психолог назначен' });
+  } catch (error) {
+    console.error('Assign psychologist error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/psychologists', async (req: AuthRequest, res: Response) => {
+  try {
+    const psychologists = await prisma.user.findMany({
+      where: {
+        role: 'PSYCHOLOGIST',
+        isActive: true
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        _count: { select: { assignedStudents: true } }
+      },
+      orderBy: { name: 'asc' }
+    });
+    res.json(psychologists);
+  } catch (error) {
+    console.error('Get psychologists error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

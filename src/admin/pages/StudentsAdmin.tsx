@@ -24,6 +24,9 @@ interface Student {
     progress: any[];
     enrollments: any[];
     miniGroups: MiniGroupMembership[];
+    tariff?: string;
+    assignedPsychologistId?: string;
+    assignedPsychologist?: { id: string; name: string; email: string };
   };
 }
 
@@ -390,6 +393,14 @@ export function StudentsAdmin() {
   );
 }
 
+const TARIFF_OPTIONS = [
+  { value: 'BASIC', label: 'Базовый', description: 'Только просмотр уроков' },
+  { value: 'FAMILY', label: 'Для родственников', description: 'Только просмотр уроков' },
+  { value: 'WITH_MENTOR', label: 'С наставником', description: 'Полный доступ + мини-группы' },
+  { value: 'WITH_PSYCHOLOGIST', label: 'С психологом', description: 'Полный доступ + мини-группы' },
+  { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивидуально с психологом', description: 'Полный доступ, без мини-групп' },
+];
+
 function StudentModal({ student, onSave, onClose }: { student: Student | null; onSave: (data: any) => void; onClose: () => void }) {
   const [name, setName] = useState(student?.name || '');
   const [email, setEmail] = useState(student?.email || '');
@@ -397,6 +408,24 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
   const [phone, setPhone] = useState(student?.student?.phone || '');
   const [notes, setNotes] = useState(student?.student?.notes || '');
   const [sendCredentials, setSendCredentials] = useState(true);
+  const [tariff, setTariff] = useState((student?.student as any)?.tariff || 'WITH_MENTOR');
+  const [assignedPsychologistId, setAssignedPsychologistId] = useState((student?.student as any)?.assignedPsychologistId || '');
+  const [psychologists, setPsychologists] = useState<{id: string; name: string; email: string}[]>([]);
+
+  useEffect(() => {
+    if (tariff === 'INDIVIDUAL_PSYCHOLOGIST') {
+      loadPsychologists();
+    }
+  }, [tariff]);
+
+  async function loadPsychologists() {
+    try {
+      const data = await api.get<{id: string; name: string; email: string}[]>('/students/psychologists');
+      setPsychologists(data);
+    } catch (error) {
+      console.error('Failed to load psychologists');
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -464,6 +493,36 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
               rows={3}
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Тариф</label>
+            <select
+              value={tariff}
+              onChange={(e) => setTariff(e.target.value)}
+              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+            >
+              {TARIFF_OPTIONS.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+            <p className="text-xs text-[#3d3527]/60 mt-1">
+              {TARIFF_OPTIONS.find(o => o.value === tariff)?.description}
+            </p>
+          </div>
+          {tariff === 'INDIVIDUAL_PSYCHOLOGIST' && (
+            <div>
+              <label className="block text-sm font-medium text-[#3d3527] mb-1">Назначенный психолог</label>
+              <select
+                value={assignedPsychologistId}
+                onChange={(e) => setAssignedPsychologistId(e.target.value)}
+                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              >
+                <option value="">Выберите психолога...</option>
+                {psychologists.map(p => (
+                  <option key={p.id} value={p.id}>{p.name} ({p.email})</option>
+                ))}
+              </select>
+            </div>
+          )}
           {!student && (
             <label className="flex items-center gap-3 p-3 bg-[#f5f3ed] rounded-xl cursor-pointer">
               <input
@@ -482,7 +541,12 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
         <div className="flex justify-end gap-3 mt-6">
           <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
           <button
-            onClick={() => onSave({ name, email, password, phone, notes, sendCredentials: !student && sendCredentials })}
+            onClick={() => onSave({ 
+              name, email, password, phone, notes, 
+              sendCredentials: !student && sendCredentials,
+              tariff,
+              assignedPsychologistId: tariff === 'INDIVIDUAL_PSYCHOLOGIST' ? assignedPsychologistId : null
+            })}
             className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
           >
             Сохранить

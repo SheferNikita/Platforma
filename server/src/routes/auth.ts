@@ -135,16 +135,17 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
     if (req.user?.role === 'STUDENT') {
       const student = await prisma.student.findFirst({
         where: { userId: req.user.id },
-        select: { surveyCompleted: true }
+        select: { surveyCompleted: true, tariff: true }
       });
       return res.json({ 
         user: { 
           ...req.user, 
-          surveyCompleted: student?.surveyCompleted || false 
+          surveyCompleted: student?.surveyCompleted || false,
+          tariff: student?.tariff || 'WITH_MENTOR'
         } 
       });
     }
-    res.json({ user: { ...req.user, surveyCompleted: true } });
+    res.json({ user: { ...req.user, surveyCompleted: true, tariff: null } });
   } catch (error) {
     console.error('Get me error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

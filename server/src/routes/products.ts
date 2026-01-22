@@ -8,6 +8,8 @@ const router = Router();
 router.use(authenticate);
 router.use(requireRole('SUPER_ADMIN', 'ADMIN'));
 
+const studentTariffs = ['BASIC', 'FAMILY', 'WITH_MENTOR', 'WITH_PSYCHOLOGIST', 'INDIVIDUAL_PSYCHOLOGIST'] as const;
+
 const productSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
   description: z.string().optional(),
@@ -21,7 +23,8 @@ const productSchema = z.object({
   emailTemplate: z.string().optional(),
   offerUrl: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
-  moduleIds: z.array(z.string()).optional()
+  moduleIds: z.array(z.string()).optional(),
+  defaultTariff: z.enum(studentTariffs).optional().nullable()
 });
 
 router.get('/', async (req: AuthRequest, res: Response) => {

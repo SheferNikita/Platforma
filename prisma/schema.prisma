@@ -22,6 +22,7 @@ model User {
   sessions           Session[]
   student            Student?
   studentNoteReplies StudentNote[]  @relation("StudentNoteReplies")
+  assignedStudents   Student[]      @relation("AssignedPsychologist")
 }
 
 model Session {
@@ -34,27 +35,30 @@ model Session {
 }
 
 model Student {
-  id              String            @id @default(uuid())
-  userId          String            @unique
-  phone           String?
-  sobrietyDate    DateTime?
-  notes           String?
-  city            String?
-  gender          String?
-  age             Int?
-  addictionType   String?
-  surveyCompleted Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  isClergy        Boolean?          @default(false)
-  diaries         Diary[]
-  enrollments     Enrollment[]
-  progress        LessonProgress[]
-  miniGroups      MiniGroupMember[]
-  moduleAccess    ModuleAccess[]
-  payments        Payment[]
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  studentNotes    StudentNote[]
+  id                     String            @id @default(uuid())
+  userId                 String            @unique
+  phone                  String?
+  sobrietyDate           DateTime?
+  notes                  String?
+  city                   String?
+  gender                 String?
+  age                    Int?
+  addictionType          String?
+  surveyCompleted        Boolean           @default(false)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  isClergy               Boolean?          @default(false)
+  tariff                 StudentTariff     @default(WITH_MENTOR)
+  assignedPsychologistId String?
+  diaries                Diary[]
+  enrollments            Enrollment[]
+  progress               LessonProgress[]
+  miniGroups             MiniGroupMember[]
+  moduleAccess           ModuleAccess[]
+  payments               Payment[]
+  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentNotes           StudentNote[]
+  assignedPsychologist   User?             @relation("AssignedPsychologist", fields: [assignedPsychologistId], references: [id])
 }
 
 model ModuleAccess {
@@ -307,6 +311,7 @@ model Product {
   accessDurationType String          @default("unlimited")
   accessExpiresAt    DateTime?
   offerUrl           String?
+  defaultTariff      StudentTariff?
   enrollments        Enrollment[]
   orders             Order[]
   payments           Payment[]
@@ -417,6 +422,14 @@ enum UserRole {
   INTERN
   MODERATOR
   STUDENT
+}
+
+enum StudentTariff {
+  BASIC                    // Базовый тариф (только уроки)
+  FAMILY                   // Для родственников (только уроки)
+  WITH_MENTOR              // С наставником (полный доступ + мини-группы)
+  WITH_PSYCHOLOGIST        // С психологом (полный доступ + мини-группы)
+  INDIVIDUAL_PSYCHOLOGIST  // Индивидуально с психологом (без мини-групп)
 }
 
 enum PaymentStatus {

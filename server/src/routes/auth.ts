@@ -155,7 +155,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
 const surveySchema = z.object({
   city: z.string().min(1, 'Укажите город'),
   gender: z.string().min(1, 'Укажите пол'),
-  age: z.number().min(1, 'Укажите возраст').max(120, 'Некорректный возраст'),
+  age: z.string().min(1, 'Укажите возраст'),
   addictionType: z.string().min(1, 'Укажите тип зависимости'),
   isClergy: z.boolean().optional()
 });
@@ -167,13 +167,23 @@ router.post('/survey', authenticate, async (req: AuthRequest, res: Response) => 
     }
 
     const data = surveySchema.parse(req.body);
+    
+    // Convert age range to approximate number for DB compatibility
+    const ageMap: Record<string, number> = {
+      '18-25': 22,
+      '26-35': 30,
+      '36-45': 40,
+      '46-55': 50,
+      '56+': 60
+    };
+    const ageNumber = ageMap[data.age] || 30;
 
     const student = await prisma.student.update({
       where: { userId: req.user.id },
       data: {
         city: data.city,
         gender: data.gender,
-        age: data.age,
+        age: ageNumber,
         addictionType: data.addictionType,
         isClergy: data.isClergy ?? false,
         surveyCompleted: true

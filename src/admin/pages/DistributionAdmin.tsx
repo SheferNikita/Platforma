@@ -18,7 +18,7 @@ const ADDICTION_LABELS: Record<string, string> = {
   drugs: 'Наркотическая',
   gambling: 'Игровая',
   food: 'Пищевая',
-  codependency: 'Созавис.',
+  codependency: 'Зав. у родств.',
   other: 'Другая'
 };
 
@@ -27,7 +27,7 @@ const ADDICTION_OPTIONS = [
   { value: 'drugs', label: 'Наркотическая' },
   { value: 'gambling', label: 'Игровая' },
   { value: 'food', label: 'Пищевая' },
-  { value: 'codependency', label: 'Созависимость' },
+  { value: 'codependency', label: 'Зависимость у родственника' },
   { value: 'other', label: 'Другая' }
 ];
 

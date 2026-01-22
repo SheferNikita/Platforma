@@ -5,8 +5,9 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: 'SUPER_ADMIN' | 'ADMIN' | 'CURATOR' | 'MENTOR' | 'INTERN' | 'MODERATOR' | 'STUDENT';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'CURATOR' | 'MENTOR' | 'PSYCHOLOGIST' | 'INTERN' | 'MODERATOR' | 'STUDENT';
   surveyCompleted?: boolean;
+  tariff?: string;
 }
 
 interface AuthContextType {

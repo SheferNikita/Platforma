@@ -14,8 +14,16 @@ const ADDICTION_OPTIONS = [
   { value: 'drugs', label: 'Наркотическая' },
   { value: 'gambling', label: 'Игровая' },
   { value: 'food', label: 'Пищевая' },
-  { value: 'codependency', label: 'Созависимость' },
+  { value: 'codependency', label: 'Зависимость у родственника' },
   { value: 'other', label: 'Другая' }
+];
+
+const AGE_OPTIONS = [
+  { value: '18-25', label: '18-25' },
+  { value: '26-35', label: '26-35' },
+  { value: '36-45', label: '36-45' },
+  { value: '46-55', label: '46-55' },
+  { value: '56+', label: '56+' }
 ];
 
 export function OnboardingSurvey() {
@@ -35,8 +43,13 @@ export function OnboardingSurvey() {
     return <Navigate to="/login" replace />;
   }
 
-  // Redirect if survey already completed
+  // Redirect if survey already completed or tariff is BASIC/FAMILY (no survey needed)
   if (!authLoading && user?.surveyCompleted) {
+    return <Navigate to="/" replace />;
+  }
+  
+  // Skip survey for BASIC and FAMILY tariffs
+  if (!authLoading && user && (user.tariff === 'BASIC' || user.tariff === 'FAMILY')) {
     return <Navigate to="/" replace />;
   }
 
@@ -66,18 +79,12 @@ export function OnboardingSurvey() {
       return;
     }
 
-    const age = parseInt(form.age);
-    if (isNaN(age) || age < 1 || age > 120) {
-      toast.error('Укажите корректный возраст');
-      return;
-    }
-
     setLoading(true);
     try {
       await api.post('/auth/survey', {
         city: form.city,
         gender: form.gender,
-        age: age,
+        age: form.age,
         addictionType: form.addictionTypes.join(','),
         isClergy: form.isClergy === 'yes'
       });
@@ -97,7 +104,7 @@ export function OnboardingSurvey() {
           Добро пожаловать!
         </h1>
         <p className="text-[#8b7355] text-center mb-6">
-          Пожалуйста, ответьте на несколько вопросов, чтобы мы могли лучше вам помочь
+          После ответа на эти вопросы, мы найдем для вас наставника и к началу курса откроем доступ ко всем материалам
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -153,15 +160,28 @@ export function OnboardingSurvey() {
             <label className="block text-sm font-medium text-[#5b4a3f] mb-2">
               Ваш возраст
             </label>
-            <input
-              type="number"
-              min="1"
-              max="120"
-              value={form.age}
-              onChange={(e) => setForm({ ...form, age: e.target.value })}
-              placeholder="Введите возраст"
-              className="w-full px-4 py-3 rounded-xl border border-[#d4c8b8] bg-white/70 focus:outline-none focus:ring-2 focus:ring-[#a67c52]/30 text-[#5b4a3f]"
-            />
+            <div className="grid grid-cols-5 gap-2">
+              {AGE_OPTIONS.map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex items-center justify-center px-2 py-3 rounded-xl border cursor-pointer transition-all text-sm ${
+                    form.age === option.value
+                      ? 'border-[#a67c52] bg-[#a67c52]/10 text-[#5b4a3f]'
+                      : 'border-[#d4c8b8] bg-white/70 text-[#8b7355] hover:border-[#a67c52]/50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="age"
+                    value={option.value}
+                    checked={form.age === option.value}
+                    onChange={(e) => setForm({ ...form, age: e.target.value })}
+                    className="sr-only"
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
           </div>
 
           <div>

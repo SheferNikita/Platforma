@@ -41,11 +41,12 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
         - New schedule events (NEW_EVENT type)
         - API endpoints: GET /api/notifications, PATCH /api/notifications/:id/read, PATCH /api/notifications/read-all, DELETE /api/notifications/:id
         - NotificationService (`server/src/services/notificationService.ts`) provides centralized notification creation
--   **User Roles:** Granular access control with roles: `SUPER_ADMIN`, `ADMIN`, `CURATOR`, `MENTOR`, `MODERATOR`, and `STUDENT`.
+-   **User Roles:** Granular access control with roles: `SUPER_ADMIN`, `ADMIN`, `CURATOR`, `MENTOR`, `PSYCHOLOGIST`, `MODERATOR`, and `STUDENT`.
     -   `SUPER_ADMIN`: Full access to all sections including audit logs and admin management
     -   `ADMIN`: Full access to all sections except audit logs; cannot create/edit/delete super-admins
     -   `CURATOR`: Access to students, mini-groups, distribution, moderation, and lessons
     -   `MENTOR`: Access to their own mini-groups and students (scoped by email→Contact→curatorId mapping), moderation for their students only, and lessons (view)
+    -   `PSYCHOLOGIST`: Individual work with students, access to lessons, students, moderation; NO access to mini-groups
     -   `MODERATOR`: Access to lessons, library, schedule, communities, and moderation
 -   **Module Access Control:** System for managing student access to specific modules, including expiration dates.
 -   **Mini-Groups:** Enhanced management of mini-groups, including curator assignment, chat links, and dedicated scheduling within group settings.

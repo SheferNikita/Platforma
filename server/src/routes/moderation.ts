@@ -266,7 +266,7 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
     };
 
     if (audioData) {
-      newMessage.audioData = audioData;
+      newMessage.audioData = audioData.includes(',') ? audioData.split(',')[1] : audioData;
       newMessage.audioDuration = audioDuration;
     }
 
@@ -353,7 +353,7 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
     };
 
     if (audioData) {
-      newMessage.audioData = audioData;
+      newMessage.audioData = audioData.includes(',') ? audioData.split(',')[1] : audioData;
       newMessage.audioDuration = audioDuration;
     }
 

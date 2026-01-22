@@ -8,19 +8,20 @@ datasource db {
 }
 
 model User {
-  id                 String        @id @default(uuid())
-  email              String        @unique
+  id                 String         @id @default(uuid())
+  email              String         @unique
   password           String
   name               String
-  role               UserRole      @default(STUDENT)
-  isActive           Boolean       @default(true)
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  role               UserRole       @default(STUDENT)
+  isActive           Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
   adminLogs          AdminLog[]
-  diaryReplies       Diary[]       @relation("DiaryReplies")
+  diaryReplies       Diary[]        @relation("DiaryReplies")
+  notifications      Notification[]
   sessions           Session[]
   student            Student?
-  studentNoteReplies StudentNote[] @relation("StudentNoteReplies")
+  studentNoteReplies StudentNote[]  @relation("StudentNoteReplies")
 }
 
 model Session {
@@ -428,4 +429,45 @@ enum OrderStatus {
   NEW
   PAID
   CANCELLED
+}
+
+enum NotificationType {
+  MENTOR_REPLY
+  NEW_LESSON
+  NEW_MODULE_ACCESS
+  EVENT_REMINDER_24H
+  EVENT_REMINDER_1H
+  EVENT_CHANGED
+  NEW_EVENT
+  ACCESS_EXPIRES_14D
+  ACCESS_EXPIRES_7D
+  ACCESS_EXPIRES_1D
+  ADDED_TO_GROUP
+  MENTOR_CHANGED
+  PROGRESS_25
+  PROGRESS_50
+  PROGRESS_75
+  PROGRESS_100
+  SOBRIETY_WEEK
+  SOBRIETY_MONTH
+  SOBRIETY_YEAR
+  WELCOME
+  NEW_LIBRARY_ITEM
+  INCOMPLETE_LESSON
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  link      String?
+  relatedId String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
 }

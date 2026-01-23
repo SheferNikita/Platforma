@@ -83,7 +83,10 @@ router.post('/tilda', async (req: Request, res: Response) => {
       phone,
       tranid,
       orderid,
-      products
+      products,
+      utm_source,
+      utm_medium,
+      utm_campaign
     } = req.body;
 
     if (!email) {
@@ -288,10 +291,16 @@ router.post('/tilda', async (req: Request, res: Response) => {
           status: 'PAID',
           amount: totalAmount,
           paidAt: new Date(),
-          robokassaInvId: orderHash
+          robokassaInvId: orderHash,
+          source: 'TILDA',
+          tildaTranId: tranid || null,
+          tildaOrderId: orderid || null,
+          utmSource: utm_source || null,
+          utmMedium: utm_medium || null,
+          utmCampaign: utm_campaign || null
         }
       });
-      console.log(`Tilda webhook: Created order, amount: ${totalAmount}`);
+      console.log(`Tilda webhook: Created order, amount: ${totalAmount}, tranId: ${tranid}, orderId: ${orderid}`);
     } else if (matchedProducts.length === 0) {
       console.log(`Tilda webhook: No order created - no matching products found`);
     }

@@ -150,7 +150,8 @@ router.get('/admin/list', async (req: AuthRequest, res: Response) => {
       orderDateFrom,
       orderDateTo,
       paidDateFrom,
-      paidDateTo
+      paidDateTo,
+      source
     } = req.query;
 
     const where: any = {};
@@ -178,6 +179,10 @@ router.get('/admin/list', async (req: AuthRequest, res: Response) => {
     
     if (productId) {
       where.productId = productId as string;
+    }
+    
+    if (source && source !== 'all') {
+      where.source = source as string;
     }
     
     if (amountMin || amountMax) {
@@ -214,7 +219,47 @@ router.get('/admin/list', async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    res.json(orders);
+    const ordersWithStudentData = await Promise.all(orders.map(async (order) => {
+      const user = await prisma.user.findUnique({
+        where: { email: order.email },
+        include: {
+          student: {
+            include: {
+              progress: { where: { isCompleted: true } },
+              miniGroupMemberships: {
+                include: {
+                  miniGroup: {
+                    include: {
+                      mentors: { include: { user: { select: { id: true, name: true } } } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      return {
+        ...order,
+        student: user?.student ? {
+          id: user.student.id,
+          tariff: user.student.tariff,
+          lastLoginAt: user.lastLoginAt,
+          completedLessons: user.student.progress.length,
+          miniGroup: user.student.miniGroupMemberships[0]?.miniGroup ? {
+            id: user.student.miniGroupMemberships[0].miniGroup.id,
+            name: user.student.miniGroupMemberships[0].miniGroup.name,
+            mentors: user.student.miniGroupMemberships[0].miniGroup.mentors.map(m => ({
+              id: m.user.id,
+              name: m.user.name
+            }))
+          } : null
+        } : null
+      };
+    }));
+
+    res.json(ordersWithStudentData);
   } catch (error) {
     console.error('Get orders error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -374,6 +419,198 @@ async function processSuccessfulPayment(orderId: string) {
     }
   }
 }
+
+// Export orders to CSV
+router.get('/admin/export', async (req: AuthRequest, res: Response) => {
+  try {
+    const orders = await prisma.order.findMany({
+      include: {
+        product: { select: { name: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const csvHeader = 'ID,Имя,Фамилия,Email,Телефон,Продукт,Сумма,Статус,Источник,Tilda ID,Дата создания,Дата оплаты,UTM Source,UTM Medium,UTM Campaign,Комментарий\n';
+    const csvRows = orders.map(order => {
+      return [
+        order.id,
+        order.firstName,
+        order.lastName,
+        order.email,
+        order.phone,
+        order.product?.name || '',
+        order.amount,
+        order.status,
+        order.source || 'MANUAL',
+        order.tildaTranId || '',
+        order.createdAt.toISOString(),
+        order.paidAt?.toISOString() || '',
+        order.utmSource || '',
+        order.utmMedium || '',
+        order.utmCampaign || '',
+        order.comment || ''
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+    }).join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=orders.csv');
+    res.send('\uFEFF' + csvHeader + csvRows);
+  } catch (error) {
+    console.error('Export orders error:', error);
+    res.status(500).json({ error: 'Ошибка экспорта' });
+  }
+});
+
+// Bulk update tariff for multiple students
+router.post('/admin/bulk/tariff', async (req: AuthRequest, res: Response) => {
+  try {
+    const { orderIds, tariff } = req.body;
+    
+    if (!orderIds?.length || !tariff) {
+      return res.status(400).json({ error: 'Укажите заказы и тариф' });
+    }
+
+    const orders = await prisma.order.findMany({
+      where: { id: { in: orderIds } },
+      select: { email: true }
+    });
+
+    const emails = [...new Set(orders.map(o => o.email))];
+    
+    const updated = await prisma.student.updateMany({
+      where: {
+        user: { email: { in: emails } }
+      },
+      data: { tariff }
+    });
+
+    res.json({ success: true, updated: updated.count });
+  } catch (error) {
+    console.error('Bulk tariff update error:', error);
+    res.status(500).json({ error: 'Ошибка массового обновления' });
+  }
+});
+
+// Bulk grant module access
+router.post('/admin/bulk/module-access', async (req: AuthRequest, res: Response) => {
+  try {
+    const { orderIds, moduleId, expiresAt } = req.body;
+    
+    if (!orderIds?.length || !moduleId) {
+      return res.status(400).json({ error: 'Укажите заказы и модуль' });
+    }
+
+    const orders = await prisma.order.findMany({
+      where: { id: { in: orderIds } },
+      select: { email: true }
+    });
+
+    const emails = [...new Set(orders.map(o => o.email))];
+    
+    const students = await prisma.student.findMany({
+      where: {
+        user: { email: { in: emails } }
+      }
+    });
+
+    let granted = 0;
+    for (const student of students) {
+      await prisma.moduleAccess.upsert({
+        where: {
+          studentId_moduleId: {
+            studentId: student.id,
+            moduleId
+          }
+        },
+        update: {
+          isActive: true,
+          expiresAt: expiresAt ? new Date(expiresAt) : null
+        },
+        create: {
+          studentId: student.id,
+          moduleId,
+          isActive: true,
+          expiresAt: expiresAt ? new Date(expiresAt) : null
+        }
+      });
+      granted++;
+    }
+
+    res.json({ success: true, granted });
+  } catch (error) {
+    console.error('Bulk module access error:', error);
+    res.status(500).json({ error: 'Ошибка массового открытия доступа' });
+  }
+});
+
+// Get order status history
+router.get('/admin/:id/history', async (req: AuthRequest, res: Response) => {
+  try {
+    const orderId = req.params.id;
+    
+    const history = await prisma.orderStatusHistory.findMany({
+      where: { orderId },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(history);
+  } catch (error) {
+    console.error('Get order history error:', error);
+    res.status(500).json({ error: 'Ошибка загрузки истории' });
+  }
+});
+
+// Update order comment
+router.put('/admin/:id/comment', async (req: AuthRequest, res: Response) => {
+  try {
+    const orderId = req.params.id;
+    const { comment } = req.body;
+    
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { comment }
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update order comment error:', error);
+    res.status(500).json({ error: 'Ошибка обновления комментария' });
+  }
+});
+
+// CRM Statistics
+router.get('/admin/stats', async (req: AuthRequest, res: Response) => {
+  try {
+    const [totalOrders, paidOrders, totalRevenue, tariffStats] = await Promise.all([
+      prisma.order.count(),
+      prisma.order.count({ where: { status: 'PAID' } }),
+      prisma.order.aggregate({
+        where: { status: 'PAID' },
+        _sum: { amount: true }
+      }),
+      prisma.student.groupBy({
+        by: ['tariff'],
+        _count: { tariff: true }
+      })
+    ]);
+
+    const avgCheck = paidOrders > 0 ? (totalRevenue._sum.amount || 0) / paidOrders : 0;
+
+    res.json({
+      totalOrders,
+      paidOrders,
+      totalRevenue: totalRevenue._sum.amount || 0,
+      avgCheck: Math.round(avgCheck * 100) / 100,
+      tariffDistribution: tariffStats.map(t => ({
+        tariff: t.tariff,
+        count: t._count.tariff
+      }))
+    });
+  } catch (error) {
+    console.error('Get CRM stats error:', error);
+    res.status(500).json({ error: 'Ошибка загрузки статистики' });
+  }
+});
 
 export { processSuccessfulPayment };
 export default router;

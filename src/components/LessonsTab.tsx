@@ -174,7 +174,7 @@ export function LessonsTab() {
                               }`}
                               onClick={() => !isLocked && navigate(`/lesson/${lesson.id}`)}
                             >
-                              Урок {lessonIndex + 1}: {lesson.title}
+                              {lesson.title}
                             </h3>
                             <div className="flex items-center gap-3 md:gap-4 text-sm opacity-60 flex-wrap">
                               {lesson.duration && (

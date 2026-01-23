@@ -273,36 +273,56 @@ router.post('/tilda', async (req: Request, res: Response) => {
     }
 
     if (matchedProducts.length === 0 && products?.length > 0) {
-      console.warn(`Tilda webhook: No products matched from Tilda order. User created but no access granted.`);
+      console.warn(`Tilda webhook: No products matched from Tilda order. Received: ${productNames.join(', ')}`);
     }
 
     const primaryProductId = matchedProducts.length > 0 
       ? matchedProducts[0].id 
       : null;
 
-    if (primaryProductId) {
-      await prisma.order.create({
-        data: {
-          firstName: customerName.split(' ')[0] || customerName,
-          lastName: customerName.split(' ').slice(1).join(' ') || '',
-          phone: customerPhone || '',
-          email: customerEmail,
-          productId: primaryProductId,
-          status: 'PAID',
-          amount: totalAmount,
-          paidAt: new Date(),
-          robokassaInvId: orderHash,
-          source: 'TILDA',
-          tildaTranId: tranid || null,
-          tildaOrderId: orderid || null,
-          utmSource: utm_source || null,
-          utmMedium: utm_medium || null,
-          utmCampaign: utm_campaign || null
-        }
+    // Always create order for tracking, even if no product matched
+    // Use first available product as fallback if none matched
+    let orderProductId = primaryProductId;
+    if (!orderProductId) {
+      const fallbackProduct = await prisma.product.findFirst({
+        where: { isActive: true },
+        orderBy: { createdAt: 'asc' }
       });
-      console.log(`Tilda webhook: Created order, amount: ${totalAmount}, tranId: ${tranid}, orderId: ${orderid}`);
-    } else if (matchedProducts.length === 0) {
-      console.log(`Tilda webhook: No order created - no matching products found`);
+      orderProductId = fallbackProduct?.id || null;
+    }
+
+    if (orderProductId) {
+      try {
+        await prisma.order.create({
+          data: {
+            firstName: customerName.split(' ')[0] || customerName,
+            lastName: customerName.split(' ').slice(1).join(' ') || '',
+            phone: customerPhone || '',
+            email: customerEmail,
+            productId: orderProductId,
+            status: 'PAID',
+            amount: totalAmount,
+            paidAt: new Date(),
+            robokassaInvId: orderHash,
+            source: 'TILDA',
+            tildaTranId: tranid || null,
+            tildaOrderId: orderid || null,
+            utmSource: utm_source || null,
+            utmMedium: utm_medium || null,
+            utmCampaign: utm_campaign || null,
+            comment: matchedProducts.length === 0 ? `Tilda products: ${productNames.join(', ')} (not matched)` : null
+          }
+        });
+        console.log(`Tilda webhook: Created order, amount: ${totalAmount}, tranId: ${tranid}, orderId: ${orderid}, matched: ${matchedProducts.length > 0}`);
+      } catch (orderError: any) {
+        if (orderError.code === 'P2002') {
+          console.log(`Tilda webhook: Order already exists for hash ${orderHash}`);
+        } else {
+          console.error('Tilda webhook: Failed to create order:', orderError);
+        }
+      }
+    } else {
+      console.error(`Tilda webhook: No products in database to create order`);
     }
 
     if (isNewUser && generatedPassword) {
@@ -322,6 +342,36 @@ router.post('/tilda', async (req: Request, res: Response) => {
         console.log(`Tilda webhook: Sent welcome email`);
       } catch (emailError) {
         console.error('Tilda webhook: Failed to send email:', emailError);
+      }
+    } else if (!isNewUser && matchedProducts.length > 0) {
+      // Send purchase confirmation to existing user
+      const purchaseEmailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"></head>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #a67c52;">Спасибо за покупку!</h2>
+          <p>Здравствуйте, ${customerName}!</p>
+          <p>Ваша оплата успешно получена. Вам открыт доступ к материалам:</p>
+          <ul>
+            ${matchedProducts.map(p => `<li><strong>${p.name}</strong></li>`).join('')}
+          </ul>
+          <p>Вы можете войти в личный кабинет и начать обучение:</p>
+          <p><a href="${PLATFORM_URL}" style="display: inline-block; padding: 12px 24px; background-color: #a67c52; color: white; text-decoration: none; border-radius: 8px;">Войти на платформу</a></p>
+          <p style="color: #666; font-size: 14px;">С уважением,<br>Платформа школы трезвости</p>
+        </body>
+        </html>
+      `;
+
+      try {
+        await sendEmail(
+          customerEmail,
+          'Оплата получена - доступ открыт',
+          purchaseEmailHtml
+        );
+        console.log(`Tilda webhook: Sent purchase confirmation email`);
+      } catch (emailError) {
+        console.error('Tilda webhook: Failed to send purchase email:', emailError);
       }
     }
 

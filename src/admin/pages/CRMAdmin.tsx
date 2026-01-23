@@ -1,9 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { ClipboardList, Search, Eye, CheckCircle, XCircle, Clock, User, Phone, Mail, ShoppingBag, Filter, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { ClipboardList, Search, Eye, CheckCircle, XCircle, Clock, User, Phone, Mail, ShoppingBag, Filter, X, ChevronDown, ChevronUp, Download, Users, BookOpen, MessageSquare, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+
+interface StudentData {
+  id: string;
+  tariff: string;
+  lastLoginAt: string | null;
+  completedLessons: number;
+  miniGroup: {
+    id: string;
+    name: string;
+    mentors: { id: string; name: string }[];
+  } | null;
+}
 
 interface Order {
   id: string;
@@ -17,11 +30,32 @@ interface Order {
   createdAt: string;
   robokassaInvId: number | null;
   product: { id: string; name: string };
+  source: string | null;
+  tildaTranId: string | null;
+  tildaOrderId: string | null;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+  comment: string | null;
+  student: StudentData | null;
 }
 
 interface Product {
   id: string;
   name: string;
+}
+
+interface Module {
+  id: string;
+  title: string;
+}
+
+interface CRMStats {
+  totalOrders: number;
+  paidOrders: number;
+  totalRevenue: number;
+  avgCheck: number;
+  tariffDistribution: { tariff: string; count: number }[];
 }
 
 interface Filters {
@@ -35,6 +69,7 @@ interface Filters {
   orderDateTo: string;
   paidDateFrom: string;
   paidDateTo: string;
+  source: string;
 }
 
 const initialFilters: Filters = {
@@ -47,8 +82,19 @@ const initialFilters: Filters = {
   orderDateFrom: '',
   orderDateTo: '',
   paidDateFrom: '',
-  paidDateTo: ''
+  paidDateTo: '',
+  source: 'all'
 };
+
+const tariffLabels: Record<string, string> = {
+  BASIC: 'Базовый',
+  FAMILY: 'Семейный',
+  WITH_MENTOR: 'С наставником',
+  WITH_PSYCHOLOGIST: 'С психологом',
+  INDIVIDUAL_PSYCHOLOGIST: 'Индивидуальный'
+};
+
+const CHART_COLORS = ['#a67c52', '#c9a86c', '#d4c9b0', '#8b7355', '#6b5344'];
 
 const statusConfig = {
   NEW: { label: 'Новая', color: 'bg-blue-100 text-blue-700', icon: Clock },
@@ -59,14 +105,22 @@ const statusConfig = {
 export function CRMAdmin() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [stats, setStats] = useState<CRMStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [bulkTariff, setBulkTariff] = useState('');
+  const [bulkModuleId, setBulkModuleId] = useState('');
 
   useEffect(() => {
     loadProducts();
+    loadModules();
+    loadStats();
   }, []);
 
   useEffect(() => {
@@ -82,11 +136,30 @@ export function CRMAdmin() {
     }
   }
 
+  async function loadModules() {
+    try {
+      const data = await api.get<Module[]>('/content/modules');
+      setModules(data);
+    } catch (error) {
+      console.error('Error loading modules');
+    }
+  }
+
+  async function loadStats() {
+    try {
+      const data = await api.get<CRMStats>('/public/orders/admin/stats');
+      setStats(data);
+    } catch (error) {
+      console.error('Error loading stats');
+    }
+  }
+
   async function loadOrders() {
     try {
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (filters.status !== 'all') params.append('status', filters.status);
+      if (filters.source !== 'all') params.append('source', filters.source);
       if (filters.orderId) params.append('orderId', filters.orderId);
       if (filters.transactionId) params.append('transactionId', filters.transactionId);
       if (filters.productId) params.append('productId', filters.productId);
@@ -112,9 +185,68 @@ export function CRMAdmin() {
   }
 
   const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
-    if (key === 'status') return value !== 'all';
+    if (key === 'status' || key === 'source') return value !== 'all';
     return value !== '';
   });
+
+  async function exportToCSV() {
+    try {
+      window.open('/api/public/orders/admin/export', '_blank');
+      toast.success('Экспорт начат');
+    } catch (error) {
+      toast.error('Ошибка экспорта');
+    }
+  }
+
+  async function bulkUpdateTariff() {
+    if (!selectedOrders.length || !bulkTariff) {
+      toast.error('Выберите заказы и тариф');
+      return;
+    }
+    try {
+      await api.post('/public/orders/admin/bulk/tariff', { orderIds: selectedOrders, tariff: bulkTariff });
+      toast.success('Тариф обновлён');
+      loadOrders();
+      setSelectedOrders([]);
+      setBulkTariff('');
+      setShowBulkActions(false);
+    } catch (error) {
+      toast.error('Ошибка обновления');
+    }
+  }
+
+  async function bulkGrantAccess() {
+    if (!selectedOrders.length || !bulkModuleId) {
+      toast.error('Выберите заказы и модуль');
+      return;
+    }
+    try {
+      await api.post('/public/orders/admin/bulk/module-access', { orderIds: selectedOrders, moduleId: bulkModuleId });
+      toast.success('Доступ открыт');
+      loadOrders();
+      setSelectedOrders([]);
+      setBulkModuleId('');
+      setShowBulkActions(false);
+    } catch (error) {
+      toast.error('Ошибка открытия доступа');
+    }
+  }
+
+  function toggleOrderSelection(orderId: string) {
+    setSelectedOrders(prev => 
+      prev.includes(orderId) 
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
+    );
+  }
+
+  function selectAllOrders() {
+    if (selectedOrders.length === orders.length) {
+      setSelectedOrders([]);
+    } else {
+      setSelectedOrders(orders.map(o => o.id));
+    }
+  }
 
   async function updateStatus(orderId: string, status: string) {
     try {
@@ -127,13 +259,18 @@ export function CRMAdmin() {
     }
   }
 
-  const stats = {
+  const localStats = {
     total: orders.length,
     new: orders.filter(o => o.status === 'NEW').length,
     paid: orders.filter(o => o.status === 'PAID').length,
     cancelled: orders.filter(o => o.status === 'CANCELLED').length,
     totalRevenue: orders.filter(o => o.status === 'PAID').reduce((sum, o) => sum + o.amount, 0)
   };
+
+  const chartData = stats?.tariffDistribution.map(t => ({
+    name: tariffLabels[t.tariff] || t.tariff,
+    value: t.count
+  })) || [];
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -142,30 +279,154 @@ export function CRMAdmin() {
           <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">CRM</h1>
           <p className="text-[#3d3527]/60 mt-1">Управление заявками</p>
         </div>
+        <div className="flex gap-2">
+          <button
+            onClick={exportToCSV}
+            className="flex items-center gap-2 px-4 py-2 bg-[#a67c52] text-white rounded-xl hover:bg-[#8b6844] transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Экспорт CSV</span>
+          </button>
+          {selectedOrders.length > 0 && (
+            <button
+              onClick={() => setShowBulkActions(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+            >
+              <Users className="w-4 h-4" />
+              Действия ({selectedOrders.length})
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-4">
         <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
           <p className="text-xs md:text-sm text-[#3d3527]/60">Всего заявок</p>
-          <p className="text-xl md:text-2xl font-bold text-[#3d3527] truncate">{stats.total}</p>
+          <p className="text-xl md:text-2xl font-bold text-[#3d3527] truncate">{localStats.total}</p>
         </div>
         <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
           <p className="text-xs md:text-sm text-[#3d3527]/60">Новые</p>
-          <p className="text-xl md:text-2xl font-bold text-blue-600 truncate">{stats.new}</p>
+          <p className="text-xl md:text-2xl font-bold text-blue-600 truncate">{localStats.new}</p>
         </div>
         <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
           <p className="text-xs md:text-sm text-[#3d3527]/60">Оплачено</p>
-          <p className="text-xl md:text-2xl font-bold text-green-600 truncate">{stats.paid}</p>
+          <p className="text-xl md:text-2xl font-bold text-green-600 truncate">{localStats.paid}</p>
         </div>
         <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
           <p className="text-xs md:text-sm text-[#3d3527]/60">Отменено</p>
-          <p className="text-xl md:text-2xl font-bold text-red-600 truncate">{stats.cancelled}</p>
+          <p className="text-xl md:text-2xl font-bold text-red-600 truncate">{localStats.cancelled}</p>
         </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4 col-span-2 sm:col-span-1">
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
           <p className="text-xs md:text-sm text-[#3d3527]/60">Выручка</p>
-          <p className="text-xl md:text-2xl font-bold text-[#a67c52] truncate">{stats.totalRevenue.toLocaleString()} ₽</p>
+          <p className="text-xl md:text-2xl font-bold text-[#a67c52] truncate">{localStats.totalRevenue.toLocaleString()} ₽</p>
+        </div>
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-3 md:p-4">
+          <p className="text-xs md:text-sm text-[#3d3527]/60">Средний чек</p>
+          <p className="text-xl md:text-2xl font-bold text-purple-600 truncate">{stats?.avgCheck?.toLocaleString() || 0} ₽</p>
         </div>
       </div>
+
+      {chartData.length > 0 && (
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
+          <h3 className="text-lg font-semibold text-[#3d3527] mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-[#a67c52]" />
+            Распределение по тарифам
+          </h3>
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <div className="w-48 h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={70}
+                    dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    labelLine={false}
+                  >
+                    {chartData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {chartData.map((item, index) => (
+                <div key={item.name} className="flex items-center gap-2 text-sm">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} />
+                  <span className="text-[#3d3527]">{item.name}: {item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkActions && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-[#3d3527]">Массовые действия</h3>
+              <button onClick={() => setShowBulkActions(false)} className="text-[#3d3527]/60 hover:text-[#3d3527]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-[#3d3527]/60">Выбрано заказов: {selectedOrders.length}</p>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Изменить тариф</label>
+                <div className="flex gap-2">
+                  <select
+                    value={bulkTariff}
+                    onChange={(e) => setBulkTariff(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                  >
+                    <option value="">Выберите тариф</option>
+                    {Object.entries(tariffLabels).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={bulkUpdateTariff}
+                    disabled={!bulkTariff}
+                    className="px-4 py-2 bg-[#a67c52] text-white rounded-xl hover:bg-[#8b6844] disabled:opacity-50"
+                  >
+                    Применить
+                  </button>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Открыть доступ к модулю</label>
+                <div className="flex gap-2">
+                  <select
+                    value={bulkModuleId}
+                    onChange={(e) => setBulkModuleId(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                  >
+                    <option value="">Выберите модуль</option>
+                    {modules.map(m => (
+                      <option key={m.id} value={m.id}>{m.title}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={bulkGrantAccess}
+                    disabled={!bulkModuleId}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    Открыть
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center">
@@ -252,6 +513,18 @@ export function CRMAdmin() {
                   {products.map(p => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Источник</label>
+                <select
+                  value={filters.source}
+                  onChange={(e) => setFilters({ ...filters, source: e.target.value })}
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                >
+                  <option value="all">Все источники</option>
+                  <option value="TILDA">Tilda</option>
+                  <option value="MANUAL">Вручную</option>
                 </select>
               </div>
               <div>
@@ -362,40 +635,90 @@ export function CRMAdmin() {
               <table className="w-full">
                 <thead className="bg-[#f5f3ed]">
                   <tr>
+                    <th className="p-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedOrders.length === orders.length && orders.length > 0}
+                        onChange={selectAllOrders}
+                        className="w-4 h-4 rounded border-[#d4c9b0]"
+                      />
+                    </th>
                     <th className="text-left p-3 text-sm font-medium text-[#3d3527]">№</th>
                     <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Статус</th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Дата заказа</th>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Источник</th>
                     <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Дата оплаты</th>
                     <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Контакт</th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">E-mail</th>
                     <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Продукт</th>
                     <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Сумма</th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Способ оплаты</th>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Тариф</th>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Группа</th>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Уроков</th>
                     <th className="p-3"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {orders.map((order, index) => {
-                    const StatusIcon = statusConfig[order.status].icon;
                     return (
-                      <tr key={order.id} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
+                      <tr key={order.id} className={`border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50 ${selectedOrders.includes(order.id) ? 'bg-blue-50' : ''}`}>
+                        <td className="p-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedOrders.includes(order.id)}
+                            onChange={() => toggleOrderSelection(order.id)}
+                            className="w-4 h-4 rounded border-[#d4c9b0]"
+                          />
+                        </td>
                         <td className="p-3 text-sm text-[#3d3527]">{orders.length - index}</td>
                         <td className="p-3">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${statusConfig[order.status].color}`}>
                             {statusConfig[order.status].label}
                           </span>
                         </td>
-                        <td className="p-3 text-sm text-[#3d3527]">
-                          {format(new Date(order.createdAt), 'yyyy-MM-dd HH:mm:ss', { locale: ru })}
+                        <td className="p-3 text-sm">
+                          <span className={`px-2 py-1 rounded text-xs ${order.source === 'TILDA' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>
+                            {order.source === 'TILDA' ? 'Tilda' : 'Вручную'}
+                          </span>
                         </td>
                         <td className="p-3 text-sm text-[#3d3527]">
-                          {order.paidAt ? format(new Date(order.paidAt), 'yyyy-MM-dd HH:mm:ss', { locale: ru }) : '—'}
+                          {order.paidAt ? format(new Date(order.paidAt), 'dd.MM.yy HH:mm', { locale: ru }) : '—'}
                         </td>
-                        <td className="p-3 text-sm text-[#3d3527]">{order.firstName} {order.lastName}</td>
-                        <td className="p-3 text-sm text-[#3d3527]">{order.email}</td>
-                        <td className="p-3 text-sm text-[#3d3527]">{order.product.name}</td>
-                        <td className="p-3 text-sm font-medium text-[#3d3527]">{order.amount.toLocaleString()}</td>
-                        <td className="p-3 text-sm text-[#3d3527]">ROBOKASSA</td>
+                        <td className="p-3 text-sm">
+                          <div className="text-[#3d3527]">{order.firstName} {order.lastName}</div>
+                          <div className="text-xs text-[#3d3527]/60">{order.email}</div>
+                        </td>
+                        <td className="p-3 text-sm text-[#3d3527] max-w-[150px] truncate">{order.product.name}</td>
+                        <td className="p-3 text-sm font-medium text-[#3d3527]">{order.amount.toLocaleString()} ₽</td>
+                        <td className="p-3 text-sm">
+                          {order.student ? (
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              order.student.tariff === 'BASIC' ? 'bg-gray-100 text-gray-700' :
+                              order.student.tariff === 'FAMILY' ? 'bg-blue-100 text-blue-700' :
+                              order.student.tariff === 'WITH_MENTOR' ? 'bg-green-100 text-green-700' :
+                              order.student.tariff === 'WITH_PSYCHOLOGIST' ? 'bg-purple-100 text-purple-700' :
+                              'bg-pink-100 text-pink-700'
+                            }`}>
+                              {tariffLabels[order.student.tariff] || order.student.tariff}
+                            </span>
+                          ) : <span className="text-[#3d3527]/40">—</span>}
+                        </td>
+                        <td className="p-3 text-sm text-[#3d3527]">
+                          {order.student?.miniGroup ? (
+                            <div>
+                              <div className="font-medium text-xs">{order.student.miniGroup.name}</div>
+                              <div className="text-xs text-[#3d3527]/60">
+                                {order.student.miniGroup.mentors.map(m => m.name).join(', ') || '—'}
+                              </div>
+                            </div>
+                          ) : <span className="text-[#3d3527]/40">—</span>}
+                        </td>
+                        <td className="p-3 text-sm text-[#3d3527]">
+                          {order.student ? (
+                            <div className="flex items-center gap-1">
+                              <BookOpen className="w-4 h-4 text-[#a67c52]" />
+                              {order.student.completedLessons}
+                            </div>
+                          ) : <span className="text-[#3d3527]/40">—</span>}
+                        </td>
                         <td className="p-3">
                           <button
                             onClick={() => setSelectedOrder(order)}

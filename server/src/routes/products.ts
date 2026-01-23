@@ -114,10 +114,11 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     res.status(201).json(product);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Zod validation error:', error.issues);
       return res.status(400).json({ error: error.issues[0].message });
     }
     console.error('Create product error:', error);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    res.status(500).json({ error: 'Ошибка сервера: ' + (error as any)?.message });
   }
 });
 

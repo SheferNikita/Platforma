@@ -226,7 +226,7 @@ router.get('/admin/list', async (req: AuthRequest, res: Response) => {
           student: {
             include: {
               progress: { where: { isCompleted: true } },
-              miniGroupMemberships: {
+              miniGroups: {
                 include: {
                   miniGroup: {
                     include: {
@@ -238,22 +238,22 @@ router.get('/admin/list', async (req: AuthRequest, res: Response) => {
             }
           }
         }
-      });
+      }) as any;
 
       return {
         ...order,
         student: user?.student ? {
           id: user.student.id,
           tariff: user.student.tariff,
-          lastLoginAt: user.lastLoginAt,
-          completedLessons: user.student.progress.length,
-          miniGroup: user.student.miniGroupMemberships[0]?.miniGroup ? {
-            id: user.student.miniGroupMemberships[0].miniGroup.id,
-            name: user.student.miniGroupMemberships[0].miniGroup.name,
-            mentors: user.student.miniGroupMemberships[0].miniGroup.mentors.map(m => ({
+          lastLoginAt: user.updatedAt,
+          completedLessons: user.student.progress?.length || 0,
+          miniGroup: user.student.miniGroups?.[0]?.miniGroup ? {
+            id: user.student.miniGroups[0].miniGroup.id,
+            name: user.student.miniGroups[0].miniGroup.name,
+            mentors: user.student.miniGroups[0].miniGroup.mentors?.map((m: any) => ({
               id: m.user.id,
               name: m.user.name
-            }))
+            })) || []
           } : null
         } : null
       };

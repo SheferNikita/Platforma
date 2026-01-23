@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("EXTERNAL_DATABASE_URL")
+  url      = "postgresql://gen_user:9.U82o%7D%3Bs8BX7V@31.130.150.167:5432/Platform"
 }
 
 model User {
@@ -20,9 +20,9 @@ model User {
   diaryReplies       Diary[]        @relation("DiaryReplies")
   notifications      Notification[]
   sessions           Session[]
+  assignedStudents   Student[]      @relation("AssignedPsychologist")
   student            Student?
   studentNoteReplies StudentNote[]  @relation("StudentNoteReplies")
-  assignedStudents   Student[]      @relation("AssignedPsychologist")
 }
 
 model Session {
@@ -48,17 +48,17 @@ model Student {
   createdAt              DateTime          @default(now())
   updatedAt              DateTime          @updatedAt
   isClergy               Boolean?          @default(false)
-  tariff                 StudentTariff     @default(WITH_MENTOR)
   assignedPsychologistId String?
+  tariff                 StudentTariff     @default(WITH_MENTOR)
   diaries                Diary[]
   enrollments            Enrollment[]
   progress               LessonProgress[]
   miniGroups             MiniGroupMember[]
   moduleAccess           ModuleAccess[]
   payments               Payment[]
+  assignedPsychologist   User?             @relation("AssignedPsychologist", fields: [assignedPsychologistId], references: [id])
   user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   studentNotes           StudentNote[]
-  assignedPsychologist   User?             @relation("AssignedPsychologist", fields: [assignedPsychologistId], references: [id])
 }
 
 model ModuleAccess {
@@ -66,10 +66,10 @@ model ModuleAccess {
   studentId  String
   moduleId   String
   expiresAt  DateTime?
-  accessFrom DateTime?
   isActive   Boolean   @default(true)
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+  accessFrom DateTime?
   module     Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   student    Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -174,20 +174,20 @@ model Diary {
 }
 
 model StudentNote {
-  id          String            @id @default(uuid())
+  id          String           @id @default(uuid())
   studentId   String
   lessonId    String
   content     String
-  noteType    String            @default("question")
+  noteType    String           @default("question")
   reply       String?
   repliedAt   DateTime?
   repliedById String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  lesson      Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  repliedBy   User?             @relation("StudentNoteReplies", fields: [repliedById], references: [id])
-  student     Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   attachments NoteAttachment[]
+  lesson      Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  repliedBy   User?            @relation("StudentNoteReplies", fields: [repliedById], references: [id])
+  student     Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
 }
 
 model DiaryAttachment {
@@ -197,7 +197,7 @@ model DiaryAttachment {
   originalName String
   mimeType     String
   size         Int
-  data         String   @db.Text
+  data         String
   createdAt    DateTime @default(now())
   diary        Diary    @relation(fields: [diaryId], references: [id], onDelete: Cascade)
 }
@@ -209,7 +209,7 @@ model NoteAttachment {
   originalName String
   mimeType     String
   size         Int
-  data         String      @db.Text
+  data         String
   createdAt    DateTime    @default(now())
   note         StudentNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
 }
@@ -311,9 +311,9 @@ model Product {
   updatedAt          DateTime        @updatedAt
   accessDurationType String          @default("unlimited")
   accessExpiresAt    DateTime?
-  startDate          DateTime?
   offerUrl           String?
   defaultTariff      StudentTariff?
+  startDate          DateTime?
   enrollments        Enrollment[]
   orders             Order[]
   payments           Payment[]
@@ -332,19 +332,27 @@ model ProductModule {
 }
 
 model Order {
-  id             String      @id @default(uuid())
-  firstName      String
-  lastName       String
-  phone          String
-  email          String
-  productId      String
-  status         OrderStatus @default(NEW)
-  amount         Float
-  robokassaInvId Int?        @unique
-  paidAt         DateTime?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  product        Product     @relation(fields: [productId], references: [id])
+  id                 String               @id @default(uuid())
+  firstName          String
+  lastName           String
+  phone              String
+  email              String
+  productId          String
+  status             OrderStatus          @default(NEW)
+  amount             Float
+  robokassaInvId     Int?                 @unique
+  paidAt             DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  source             String?              @default("MANUAL") @db.VarChar(50)
+  tildaTranId        String?              @db.VarChar(100)
+  tildaOrderId       String?              @db.VarChar(100)
+  utmSource          String?              @db.VarChar(255)
+  utmMedium          String?              @db.VarChar(255)
+  utmCampaign        String?              @db.VarChar(255)
+  comment            String?
+  product            Product              @relation(fields: [productId], references: [id])
+  OrderStatusHistory OrderStatusHistory[]
 }
 
 model Enrollment {
@@ -415,6 +423,35 @@ model Metric {
   createdAt DateTime @default(now())
 }
 
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  link      String?
+  relatedId String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+model OrderStatusHistory {
+  id         String    @id @default(dbgenerated("(gen_random_uuid())::text")) @db.VarChar(36)
+  orderId    String    @db.VarChar(36)
+  fromStatus String?   @db.VarChar(50)
+  toStatus   String    @db.VarChar(50)
+  changedBy  String?   @db.VarChar(36)
+  comment    String?
+  createdAt  DateTime? @default(now()) @db.Timestamp(6)
+  Order      Order     @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order")
+
+  @@index([orderId], map: "idx_order_status_history_order")
+}
+
 enum UserRole {
   SUPER_ADMIN
   ADMIN
@@ -427,11 +464,11 @@ enum UserRole {
 }
 
 enum StudentTariff {
-  BASIC                    // Базовый тариф (только уроки)
-  FAMILY                   // Для родственников (только уроки)
-  WITH_MENTOR              // С наставником (полный доступ + мини-группы)
-  WITH_PSYCHOLOGIST        // С психологом (полный доступ + мини-группы)
-  INDIVIDUAL_PSYCHOLOGIST  // Индивидуально с психологом (без мини-групп)
+  BASIC
+  FAMILY
+  WITH_MENTOR
+  WITH_PSYCHOLOGIST
+  INDIVIDUAL_PSYCHOLOGIST
 }
 
 enum PaymentStatus {
@@ -470,20 +507,4 @@ enum NotificationType {
   WELCOME
   NEW_LIBRARY_ITEM
   INCOMPLETE_LESSON
-}
-
-model Notification {
-  id        String           @id @default(uuid())
-  userId    String
-  type      NotificationType
-  title     String
-  message   String
-  link      String?
-  relatedId String?
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, isRead])
-  @@index([userId, createdAt])
 }

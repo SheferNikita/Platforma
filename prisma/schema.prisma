@@ -310,6 +310,7 @@ model Product {
   updatedAt          DateTime        @updatedAt
   accessDurationType String          @default("unlimited")
   accessExpiresAt    DateTime?
+  startDate          DateTime?
   offerUrl           String?
   defaultTariff      StudentTariff?
   enrollments        Enrollment[]

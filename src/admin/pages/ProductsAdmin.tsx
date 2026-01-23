@@ -22,7 +22,6 @@ interface Product {
   accessDurationType: 'unlimited' | 'days' | 'date';
   accessDuration: number | null;
   accessExpiresAt: string | null;
-  startDate: string | null;
   emailSubject: string;
   emailTemplate: string;
   offerUrl: string | null;
@@ -197,7 +196,6 @@ const TARIFF_OPTIONS = [
 function ProductModal({ product, onSave, onClose }: { product: Product | null; onSave: (data: any) => void; onClose: () => void }) {
   const [name, setName] = useState(product?.name || '');
   const [description, setDescription] = useState(product?.description || '');
-  const [startDate, setStartDate] = useState(product?.startDate?.split('T')[0] || '');
   const [accessExpiresAt, setAccessExpiresAt] = useState(product?.accessExpiresAt?.split('T')[0] || '');
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
   const [defaultTariff, setDefaultTariff] = useState((product as any)?.defaultTariff || '');
@@ -225,7 +223,6 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
       name,
       description,
       price: 0,
-      startDate: startDate || null,
       accessDurationType: accessExpiresAt ? 'date' : 'unlimited',
       accessExpiresAt: accessExpiresAt || null,
       isActive,
@@ -257,26 +254,15 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Дата старта</label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Дата окончания доступа</label>
-              <input
-                type="date"
-                value={accessExpiresAt}
-                onChange={(e) => setAccessExpiresAt(e.target.value)}
-                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
-              />
-              <p className="text-xs text-[#3d3527]/60 mt-1">Оставьте пустым для бессрочного доступа</p>
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Дата окончания доступа</label>
+            <input
+              type="date"
+              value={accessExpiresAt}
+              onChange={(e) => setAccessExpiresAt(e.target.value)}
+              className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+            />
+            <p className="text-xs text-[#3d3527]/60 mt-1">Оставьте пустым для бессрочного доступа</p>
           </div>
 
           <div>

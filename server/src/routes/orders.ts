@@ -230,7 +230,7 @@ router.get('/admin/list', async (req: AuthRequest, res: Response) => {
                 include: {
                   miniGroup: {
                     include: {
-                      mentors: { include: { user: { select: { id: true, name: true } } } }
+                      curator: true
                     }
                   }
                 }
@@ -249,11 +249,11 @@ router.get('/admin/list', async (req: AuthRequest, res: Response) => {
           completedLessons: user.student.progress?.length || 0,
           miniGroup: user.student.miniGroups?.[0]?.miniGroup ? {
             id: user.student.miniGroups[0].miniGroup.id,
-            name: user.student.miniGroups[0].miniGroup.name,
-            mentors: user.student.miniGroups[0].miniGroup.mentors?.map((m: any) => ({
-              id: m.user.id,
-              name: m.user.name
-            })) || []
+            name: user.student.miniGroups[0].miniGroup.title,
+            mentors: user.student.miniGroups[0].miniGroup.curator ? [{
+              id: user.student.miniGroups[0].miniGroup.curator.id,
+              name: user.student.miniGroups[0].miniGroup.curator.name
+            }] : []
           } : null
         } : null
       };

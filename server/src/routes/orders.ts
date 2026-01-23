@@ -317,12 +317,17 @@ async function processSuccessfulPayment(orderId: string) {
 
   if (student && order.product.modules.length > 0) {
     let expiresAt: Date | null = null;
+    let accessFrom: Date | null = null;
 
     if (order.product.accessDurationType === 'days' && order.product.accessDuration) {
       expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + order.product.accessDuration);
     } else if (order.product.accessDurationType === 'date' && order.product.accessExpiresAt) {
       expiresAt = new Date(order.product.accessExpiresAt);
+    }
+
+    if ((order.product as any).startDate) {
+      accessFrom = new Date((order.product as any).startDate);
     }
 
     for (const pm of order.product.modules) {
@@ -335,13 +340,15 @@ async function processSuccessfulPayment(orderId: string) {
         },
         update: {
           isActive: true,
-          expiresAt
+          expiresAt,
+          accessFrom
         },
         create: {
           studentId: student.id,
           moduleId: pm.moduleId,
           isActive: true,
-          expiresAt
+          expiresAt,
+          accessFrom
         }
       });
     }

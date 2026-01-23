@@ -91,6 +91,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       data: {
         ...data,
         accessExpiresAt: accessExpiresAt ? new Date(accessExpiresAt) : null,
+        startDate: startDate ? new Date(startDate) : null,
         modules: moduleIds?.length ? {
           create: moduleIds.map(moduleId => ({ moduleId }))
         } : undefined
@@ -139,7 +140,8 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
       where: { id },
       data: {
         ...data,
-        accessExpiresAt: accessExpiresAt ? new Date(accessExpiresAt) : accessExpiresAt === null ? null : undefined
+        accessExpiresAt: accessExpiresAt ? new Date(accessExpiresAt) : accessExpiresAt === null ? null : undefined,
+        startDate: startDate ? new Date(startDate) : startDate === null ? null : undefined
       } as any,
       include: {
         modules: { include: { module: { select: { id: true, title: true } } } }

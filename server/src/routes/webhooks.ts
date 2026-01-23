@@ -230,6 +230,7 @@ router.post('/tilda', async (req: Request, res: Response) => {
           if (existingUser?.student) {
             for (const pm of dbProduct.modules) {
               const expiresAt = calculateAccessExpiry(dbProduct);
+              const accessFrom = (dbProduct as any).startDate ? new Date((dbProduct as any).startDate) : null;
               
               await prisma.moduleAccess.upsert({
                 where: {
@@ -240,13 +241,15 @@ router.post('/tilda', async (req: Request, res: Response) => {
                 },
                 update: {
                   isActive: true,
-                  expiresAt
+                  expiresAt,
+                  accessFrom
                 },
                 create: {
                   studentId: existingUser.student.id,
                   moduleId: pm.moduleId,
                   isActive: true,
-                  expiresAt
+                  expiresAt,
+                  accessFrom
                 }
               });
             }

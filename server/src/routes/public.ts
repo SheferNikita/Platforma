@@ -79,14 +79,17 @@ router.get('/modules', async (req: Request, res: Response) => {
       where: { studentId: student.studentId }
     });
     const accessMap = new Map(accessList.map(a => [a.moduleId, a]));
+    const now = new Date();
 
     const result = modules.map(m => {
       const access = accessMap.get(m.id);
-      const isExpired = access?.expiresAt && new Date(access.expiresAt) < new Date();
+      const isExpired = access?.expiresAt && new Date(access.expiresAt) < now;
+      const isNotStarted = access?.accessFrom && new Date(access.accessFrom) > now;
       return {
         ...m,
-        hasAccess: access?.isActive && !isExpired ? true : false,
-        accessExpiresAt: access?.expiresAt ?? null
+        hasAccess: access?.isActive && !isExpired && !isNotStarted ? true : false,
+        accessExpiresAt: access?.expiresAt ?? null,
+        accessFrom: access?.accessFrom ?? null
       };
     });
 
@@ -132,10 +135,12 @@ router.get('/lessons/:id', async (req: Request, res: Response) => {
       }
     });
 
-    const isExpired = access?.expiresAt && new Date(access.expiresAt) < new Date();
-    const hasAccess = access?.isActive && !isExpired;
+    const now = new Date();
+    const isExpired = access?.expiresAt && new Date(access.expiresAt) < now;
+    const isNotStarted = access?.accessFrom && new Date(access.accessFrom) > now;
+    const hasAccess = access?.isActive && !isExpired && !isNotStarted;
 
-    res.json({ ...lesson, hasAccess });
+    res.json({ ...lesson, hasAccess, accessFrom: access?.accessFrom ?? null });
   } catch (error) {
     console.error('Get public lesson error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

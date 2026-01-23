@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import express from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../db';
 import { sendEmail } from '../services/email';
@@ -7,6 +8,9 @@ import { getWelcomeEmailTemplate } from '../templates/welcomeEmail';
 const PLATFORM_URL = 'https://schkola-trezvosti.ru';
 
 const router = Router();
+
+// Add urlencoded parser for Tilda webhooks (Tilda sends form data, not JSON)
+router.use(express.urlencoded({ extended: true }));
 
 const TILDA_WEBHOOK_SECRET = process.env.TILDA_WEBHOOK_SECRET || '';
 

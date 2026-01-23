@@ -16,7 +16,7 @@ interface Mentor {
   id: string;
   name: string;
   email: string;
-  role: 'MENTOR' | 'INTERN';
+  role: 'MENTOR' | 'PSYCHOLOGIST' | 'INTERN';
 }
 
 interface ScheduleEvent {

@@ -191,8 +191,19 @@ export function CRMAdmin() {
 
   async function exportToCSV() {
     try {
-      window.open('/api/public/orders/admin/export', '_blank');
-      toast.success('Экспорт начат');
+      const response = await api.get('/public/orders/admin/export', {
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'orders.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('Экспорт завершён');
     } catch (error) {
       toast.error('Ошибка экспорта');
     }

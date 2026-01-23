@@ -191,10 +191,13 @@ export function CRMAdmin() {
 
   async function exportToCSV() {
     try {
-      const response = await api.get('/public/orders/admin/export', {
-        responseType: 'blob'
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/public/orders/admin/export', {
+        credentials: 'include',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
-      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8' });
+      if (!response.ok) throw new Error('Export failed');
+      const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;

@@ -281,10 +281,10 @@ export function CRMAdmin() {
     totalRevenue: orders.filter(o => o.status === 'PAID').reduce((sum, o) => sum + o.amount, 0)
   };
 
-  const chartData = stats?.tariffDistribution.map(t => ({
+  const chartData = (stats?.tariffDistribution || []).map(t => ({
     name: tariffLabels[t.tariff] || t.tariff,
     value: t.count
-  })) || [];
+  }));
 
   return (
     <div className="space-y-4 md:space-y-6">

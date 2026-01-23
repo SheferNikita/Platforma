@@ -46,7 +46,7 @@ router.post('/create', async (req: Request, res: Response) => {
     res.status(201).json(order);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0].message });
     }
     console.error('Create order error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -136,6 +136,77 @@ router.get('/:orderId/payment-url', async (req: Request, res: Response) => {
 
 router.use('/admin', authenticate);
 router.use('/admin', requireRole('SUPER_ADMIN', 'ADMIN'));
+
+// Export orders to CSV - MUST be before :id routes
+router.get('/admin/export', async (req: AuthRequest, res: Response) => {
+  try {
+    const orders = await prisma.order.findMany({
+      include: {
+        product: { select: { name: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const csvHeader = 'ID,Имя,Фамилия,Email,Телефон,Продукт,Сумма,Статус,Источник,Tilda ID,Дата создания,Дата оплаты,UTM Source,UTM Medium,UTM Campaign,Комментарий\n';
+    const csvRows = orders.map(order => {
+      return [
+        order.id,
+        order.firstName,
+        order.lastName,
+        order.email,
+        order.phone,
+        order.product?.name || '',
+        order.amount,
+        order.status,
+        order.source || 'MANUAL',
+        order.tildaTranId || '',
+        order.createdAt.toISOString(),
+        order.paidAt?.toISOString() || '',
+        order.utmSource || '',
+        order.utmMedium || '',
+        order.utmCampaign || '',
+        order.comment || ''
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+    }).join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=orders.csv');
+    res.send('\uFEFF' + csvHeader + csvRows);
+  } catch (error) {
+    console.error('Export orders error:', error);
+    res.status(500).json({ error: 'Ошибка экспорта' });
+  }
+});
+
+// CRM Statistics - MUST be before :id routes
+router.get('/admin/stats', async (req: AuthRequest, res: Response) => {
+  try {
+    const [totalOrders, paidOrders, cancelledOrders, totalRevenue] = await Promise.all([
+      prisma.order.count(),
+      prisma.order.count({ where: { status: 'PAID' } }),
+      prisma.order.count({ where: { status: 'CANCELLED' } }),
+      prisma.order.aggregate({
+        where: { status: 'PAID' },
+        _sum: { amount: true }
+      })
+    ]);
+
+    const newOrders = totalOrders - paidOrders - cancelledOrders;
+    const avgCheck = paidOrders > 0 ? (totalRevenue._sum.amount || 0) / paidOrders : 0;
+
+    res.json({
+      totalOrders,
+      newOrders,
+      paidOrders,
+      cancelledOrders,
+      totalRevenue: totalRevenue._sum.amount || 0,
+      avgCheck: Math.round(avgCheck * 100) / 100
+    });
+  } catch (error) {
+    console.error('Get CRM stats error:', error);
+    res.status(500).json({ error: 'Ошибка загрузки статистики' });
+  }
+});
 
 router.get('/admin/list', async (req: AuthRequest, res: Response) => {
   try {
@@ -409,57 +480,16 @@ async function processSuccessfulPayment(orderId: string) {
         loginUrl: `${appUrl}/login`
       });
 
-      await sendEmail({
-        to: order.email,
-        subject: 'Добро пожаловать на платформу!',
-        html: emailHtml
-      });
+      await sendEmail(
+        order.email,
+        'Добро пожаловать на платформу!',
+        emailHtml
+      );
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);
     }
   }
 }
-
-// Export orders to CSV
-router.get('/admin/export', async (req: AuthRequest, res: Response) => {
-  try {
-    const orders = await prisma.order.findMany({
-      include: {
-        product: { select: { name: true } }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    const csvHeader = 'ID,Имя,Фамилия,Email,Телефон,Продукт,Сумма,Статус,Источник,Tilda ID,Дата создания,Дата оплаты,UTM Source,UTM Medium,UTM Campaign,Комментарий\n';
-    const csvRows = orders.map(order => {
-      return [
-        order.id,
-        order.firstName,
-        order.lastName,
-        order.email,
-        order.phone,
-        order.product?.name || '',
-        order.amount,
-        order.status,
-        order.source || 'MANUAL',
-        order.tildaTranId || '',
-        order.createdAt.toISOString(),
-        order.paidAt?.toISOString() || '',
-        order.utmSource || '',
-        order.utmMedium || '',
-        order.utmCampaign || '',
-        order.comment || ''
-      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
-    }).join('\n');
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename=orders.csv');
-    res.send('\uFEFF' + csvHeader + csvRows);
-  } catch (error) {
-    console.error('Export orders error:', error);
-    res.status(500).json({ error: 'Ошибка экспорта' });
-  }
-});
 
 // Bulk update tariff for multiple students
 router.post('/admin/bulk/tariff', async (req: AuthRequest, res: Response) => {
@@ -546,7 +576,7 @@ router.post('/admin/bulk/module-access', async (req: AuthRequest, res: Response)
 // Get order status history
 router.get('/admin/:id/history', async (req: AuthRequest, res: Response) => {
   try {
-    const orderId = req.params.id;
+    const orderId = req.params.id as string;
     
     const history = await prisma.orderStatusHistory.findMany({
       where: { orderId },
@@ -563,7 +593,7 @@ router.get('/admin/:id/history', async (req: AuthRequest, res: Response) => {
 // Update order comment
 router.put('/admin/:id/comment', async (req: AuthRequest, res: Response) => {
   try {
-    const orderId = req.params.id;
+    const orderId = req.params.id as string;
     const { comment } = req.body;
     
     await prisma.order.update({
@@ -575,40 +605,6 @@ router.put('/admin/:id/comment', async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Update order comment error:', error);
     res.status(500).json({ error: 'Ошибка обновления комментария' });
-  }
-});
-
-// CRM Statistics
-router.get('/admin/stats', async (req: AuthRequest, res: Response) => {
-  try {
-    const [totalOrders, paidOrders, totalRevenue, tariffStats] = await Promise.all([
-      prisma.order.count(),
-      prisma.order.count({ where: { status: 'PAID' } }),
-      prisma.order.aggregate({
-        where: { status: 'PAID' },
-        _sum: { amount: true }
-      }),
-      prisma.student.groupBy({
-        by: ['tariff'],
-        _count: { tariff: true }
-      })
-    ]);
-
-    const avgCheck = paidOrders > 0 ? (totalRevenue._sum.amount || 0) / paidOrders : 0;
-
-    res.json({
-      totalOrders,
-      paidOrders,
-      totalRevenue: totalRevenue._sum.amount || 0,
-      avgCheck: Math.round(avgCheck * 100) / 100,
-      tariffDistribution: tariffStats.map(t => ({
-        tariff: t.tariff,
-        count: t._count.tariff
-      }))
-    });
-  } catch (error) {
-    console.error('Get CRM stats error:', error);
-    res.status(500).json({ error: 'Ошибка загрузки статистики' });
   }
 });
 

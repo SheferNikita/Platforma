@@ -258,15 +258,50 @@ router.post('/tilda', async (req: Request, res: Response) => {
             }
           });
           
+          console.log(`Tilda webhook: Searching for product "${productName}" among ${allProducts.length} active products: ${allProducts.map(p => p.name).join(', ')}`);
           
           const productNameLower = productName.toLowerCase().trim();
+          
+          // Try exact substring match first
           dbProduct = allProducts.find(p => 
             p.name.toLowerCase().includes(productNameLower) ||
             productNameLower.includes(p.name.toLowerCase())
           ) || null;
           
+          // Try normalized match (remove special chars, numbers variations)
+          if (!dbProduct) {
+            const normalize = (s: string) => s.toLowerCase().replace(/[^a-zа-яё]/gi, '');
+            const normalizedInput = normalize(productName);
+            dbProduct = allProducts.find(p => {
+              const normalizedDb = normalize(p.name);
+              return normalizedDb === normalizedInput || 
+                     normalizedDb.includes(normalizedInput) || 
+                     normalizedInput.includes(normalizedDb);
+            }) || null;
+            
+            if (dbProduct) {
+              console.log(`Tilda webhook: Found product by normalized match: "${dbProduct.name}" for "${productName}"`);
+            }
+          }
+          
+          // Try matching by base name (e.g., "Базовый" matches "ШТ-3.Базовый" or "ШТ-4.Базовый")
+          if (!dbProduct) {
+            const baseNames = ['базовый', 'семейный', 'с ментором', 'с психологом', 'индивидуальный'];
+            for (const baseName of baseNames) {
+              if (productNameLower.includes(baseName)) {
+                dbProduct = allProducts.find(p => p.name.toLowerCase().includes(baseName)) || null;
+                if (dbProduct) {
+                  console.log(`Tilda webhook: Found product by base name "${baseName}": "${dbProduct.name}" for "${productName}"`);
+                  break;
+                }
+              }
+            }
+          }
+          
           if (dbProduct) {
             console.log(`Tilda webhook: Found product by partial match: "${dbProduct.name}" for "${productName}"`);
+          } else {
+            console.warn(`Tilda webhook: No product match found for "${productName}". Available products: ${allProducts.map(p => `"${p.name}"`).join(', ')}`);
           }
         }
 

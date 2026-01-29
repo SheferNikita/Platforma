@@ -202,24 +202,41 @@ router.post('/tilda', async (req: Request, res: Response) => {
     let totalAmount = 0;
     let matchedProducts: any[] = [];
 
-    // Parse products - Tilda may send as JSON string or array
+    // Parse products - Tilda sends products inside payment object!
     let parsedProducts: any[] = [];
-    if (products) {
-      if (Array.isArray(products)) {
-        parsedProducts = products;
-      } else if (typeof products === 'string') {
+    
+    // First try req.body.products directly
+    let productsSource = products;
+    
+    // If not found, check inside payment object (Tilda format)
+    if (!productsSource && req.body.payment) {
+      const paymentData = typeof req.body.payment === 'string' 
+        ? JSON.parse(req.body.payment) 
+        : req.body.payment;
+      if (paymentData.products) {
+        productsSource = paymentData.products;
+        console.log('Tilda webhook: Found products inside payment object');
+      }
+    }
+    
+    if (productsSource) {
+      if (Array.isArray(productsSource)) {
+        parsedProducts = productsSource;
+      } else if (typeof productsSource === 'string') {
         try {
-          const parsed = JSON.parse(products);
+          const parsed = JSON.parse(productsSource);
           parsedProducts = Array.isArray(parsed) ? parsed : [parsed];
           console.log(`Tilda webhook: Parsed products from JSON string, count: ${parsedProducts.length}`);
         } catch (e) {
-          console.warn('Tilda webhook: Failed to parse products JSON:', products);
+          console.warn('Tilda webhook: Failed to parse products JSON:', productsSource);
         }
-      } else if (typeof products === 'object') {
+      } else if (typeof productsSource === 'object') {
         // Single product object
-        parsedProducts = [products];
+        parsedProducts = [productsSource];
       }
     }
+    
+    console.log('Tilda webhook: Parsed products:', JSON.stringify(parsedProducts));
 
     if (parsedProducts.length > 0) {
       for (const product of parsedProducts) {

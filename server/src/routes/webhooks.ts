@@ -168,6 +168,20 @@ router.post('/tilda', async (req: Request, res: Response) => {
 
       isNewUser = true;
       console.log(`Tilda webhook: Created new user for ${customerEmail.substring(0, 3)}***`);
+    } else if (!existingUser.student) {
+      // User exists but without student record - create student
+      const student = await prisma.student.create({
+        data: {
+          userId: existingUser.id,
+          phone: customerPhone,
+          surveyCompleted: false
+        }
+      });
+      existingUser = await prisma.user.findUnique({
+        where: { id: existingUser.id },
+        include: { student: true }
+      });
+      console.log(`Tilda webhook: Created student for existing user ${customerEmail.substring(0, 3)}***`);
     }
 
     let productNames: string[] = [];

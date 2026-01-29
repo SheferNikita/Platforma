@@ -307,32 +307,46 @@ router.post('/tilda', async (req: Request, res: Response) => {
 
         if (dbProduct) {
           matchedProducts.push(dbProduct);
+          
+          console.log(`Tilda webhook: Product found: "${dbProduct.name}" with ${dbProduct.modules?.length || 0} modules`);
+          console.log(`Tilda webhook: Student check - existingUser: ${!!existingUser}, student: ${!!existingUser?.student}, studentId: ${existingUser?.student?.id || 'none'}`);
 
           if (existingUser?.student) {
+            if (!dbProduct.modules || dbProduct.modules.length === 0) {
+              console.warn(`Tilda webhook: Product "${dbProduct.name}" has no modules attached! Cannot grant access.`);
+            }
+            
             for (const pm of dbProduct.modules) {
               const expiresAt = calculateAccessExpiry(dbProduct);
               const accessFrom = (dbProduct as any).startDate ? new Date((dbProduct as any).startDate) : null;
               
-              await prisma.moduleAccess.upsert({
-                where: {
-                  studentId_moduleId: {
+              console.log(`Tilda webhook: Creating ModuleAccess - studentId: ${existingUser.student.id}, moduleId: ${pm.moduleId}, expiresAt: ${expiresAt}, accessFrom: ${accessFrom}`);
+              
+              try {
+                await prisma.moduleAccess.upsert({
+                  where: {
+                    studentId_moduleId: {
+                      studentId: existingUser.student.id,
+                      moduleId: pm.moduleId
+                    }
+                  },
+                  update: {
+                    isActive: true,
+                    expiresAt,
+                    accessFrom
+                  },
+                  create: {
                     studentId: existingUser.student.id,
-                    moduleId: pm.moduleId
+                    moduleId: pm.moduleId,
+                    isActive: true,
+                    expiresAt,
+                    accessFrom
                   }
-                },
-                update: {
-                  isActive: true,
-                  expiresAt,
-                  accessFrom
-                },
-                create: {
-                  studentId: existingUser.student.id,
-                  moduleId: pm.moduleId,
-                  isActive: true,
-                  expiresAt,
-                  accessFrom
-                }
-              });
+                });
+                console.log(`Tilda webhook: ModuleAccess created/updated successfully for module ${pm.moduleId}`);
+              } catch (accessError) {
+                console.error(`Tilda webhook: Failed to create ModuleAccess:`, accessError);
+              }
             }
             console.log(`Tilda webhook: Granted access to ${dbProduct.modules.length} modules for product ${dbProduct.name}`);
             
@@ -343,6 +357,8 @@ router.post('/tilda', async (req: Request, res: Response) => {
               });
               console.log(`Tilda webhook: Updated student tariff to ${dbProduct.defaultTariff}`);
             }
+          } else {
+            console.error(`Tilda webhook: Cannot grant access - no student record found for user`);
           }
         } else {
           console.warn(`Tilda webhook: No matching product found for "${productName}"`);

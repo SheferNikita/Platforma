@@ -377,12 +377,67 @@ router.post('/tilda', async (req: Request, res: Response) => {
     // Always create order for tracking, even if no product matched
     // Use first available product as fallback if none matched
     let orderProductId = primaryProductId;
+    let fallbackProduct: any = null;
+    
     if (!orderProductId) {
-      const fallbackProduct = await prisma.product.findFirst({
+      fallbackProduct = await prisma.product.findFirst({
         where: { isActive: true },
+        include: {
+          modules: {
+            include: { module: true }
+          }
+        },
         orderBy: { createdAt: 'asc' }
       });
       orderProductId = fallbackProduct?.id || null;
+      
+      // CRITICAL FIX: If no products matched from Tilda but we have a fallback,
+      // grant access to fallback product's modules
+      if (fallbackProduct && existingUser?.student && fallbackProduct.modules?.length > 0) {
+        console.log(`Tilda webhook: No products matched from Tilda, using fallback product "${fallbackProduct.name}" with ${fallbackProduct.modules.length} modules`);
+        
+        for (const pm of fallbackProduct.modules) {
+          const expiresAt = calculateAccessExpiry(fallbackProduct);
+          const accessFrom = (fallbackProduct as any).startDate ? new Date((fallbackProduct as any).startDate) : null;
+          
+          console.log(`Tilda webhook: Creating ModuleAccess (fallback) - studentId: ${existingUser.student.id}, moduleId: ${pm.moduleId}`);
+          
+          try {
+            await prisma.moduleAccess.upsert({
+              where: {
+                studentId_moduleId: {
+                  studentId: existingUser.student.id,
+                  moduleId: pm.moduleId
+                }
+              },
+              update: {
+                isActive: true,
+                expiresAt,
+                accessFrom
+              },
+              create: {
+                studentId: existingUser.student.id,
+                moduleId: pm.moduleId,
+                isActive: true,
+                expiresAt,
+                accessFrom
+              }
+            });
+            console.log(`Tilda webhook: ModuleAccess (fallback) created successfully for module ${pm.moduleId}`);
+          } catch (accessError) {
+            console.error(`Tilda webhook: Failed to create fallback ModuleAccess:`, accessError);
+          }
+        }
+        
+        // Update tariff if fallback product has default
+        if (fallbackProduct.defaultTariff) {
+          await prisma.student.update({
+            where: { id: existingUser.student.id },
+            data: { tariff: fallbackProduct.defaultTariff }
+          });
+          console.log(`Tilda webhook: Updated student tariff to ${fallbackProduct.defaultTariff} (fallback)`);
+        }
+      }
     }
 
     if (orderProductId) {
@@ -404,10 +459,10 @@ router.post('/tilda', async (req: Request, res: Response) => {
             utmSource: utm_source || null,
             utmMedium: utm_medium || null,
             utmCampaign: utm_campaign || null,
-            comment: matchedProducts.length === 0 ? `Tilda products: ${productNames.join(', ')} (not matched)` : null
+            comment: matchedProducts.length === 0 ? `Tilda products: ${productNames.join(', ')} (not matched, fallback used)` : null
           }
         });
-        console.log(`Tilda webhook: Created order, amount: ${totalAmount}, tranId: ${tranid}, orderId: ${orderid}, matched: ${matchedProducts.length > 0}`);
+        console.log(`Tilda webhook: Created order, amount: ${totalAmount}, tranId: ${tranid}, orderId: ${orderid}, matched: ${matchedProducts.length > 0}, fallback: ${!!fallbackProduct}`);
       } catch (orderError: any) {
         if (orderError.code === 'P2002') {
           console.log(`Tilda webhook: Order already exists for hash ${orderHash}`);

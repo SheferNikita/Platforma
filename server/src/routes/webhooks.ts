@@ -85,13 +85,20 @@ router.post('/tilda', async (req: Request, res: Response) => {
     
     // Specifically check for products in different formats
     const rawProducts = req.body.products;
-    const paymentProducts = req.body['payment[products]'];
+    const paymentField = req.body.payment;
     const cartProducts = req.body.cart_products;
     
     console.log('Products field check:');
-    console.log('  req.body.products:', typeof rawProducts, rawProducts ? String(rawProducts).substring(0, 200) : 'undefined');
-    console.log('  req.body["payment[products]"]:', typeof paymentProducts, paymentProducts ? String(paymentProducts).substring(0, 200) : 'undefined');
+    console.log('  req.body.products:', typeof rawProducts, rawProducts ? String(rawProducts).substring(0, 500) : 'undefined');
+    console.log('  req.body.payment (FULL):', typeof paymentField, JSON.stringify(paymentField)?.substring(0, 1000));
     console.log('  req.body.cart_products:', typeof cartProducts, cartProducts ? String(cartProducts).substring(0, 200) : 'undefined');
+    
+    // Check all keys that might contain "product"
+    for (const [key, value] of Object.entries(req.body)) {
+      if (key.toLowerCase().includes('product') || key.toLowerCase().includes('cart') || key.toLowerCase().includes('item')) {
+        console.log(`  Found potential product key: ${key} = ${JSON.stringify(value)?.substring(0, 500)}`);
+      }
+    }
     console.log('=== END RAW DATA ===');
 
     const {

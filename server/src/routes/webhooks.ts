@@ -69,13 +69,19 @@ function generateOrderHash(email: string, tranid: string | undefined, orderid: s
 router.post('/tilda', async (req: Request, res: Response) => {
   try {
     // Log full incoming data for debugging (mask sensitive info)
+    const rawProducts = req.body.products;
+    const productsType = typeof rawProducts;
+    const productsPreview = productsType === 'string' 
+      ? rawProducts.substring(0, 200) 
+      : (Array.isArray(rawProducts) ? `array[${rawProducts.length}]` : productsType);
+    
     const logData = {
       email: req.body.email ? `${req.body.email.substring(0, 3)}***` : undefined,
       hasName: !!req.body.name,
       tranid: req.body.tranid,
       orderid: req.body.orderid,
-      productsCount: req.body.products?.length || 0,
-      productNames: req.body.products?.map((p: any) => p.name || p.title) || [],
+      productsType,
+      productsPreview,
       contentType: req.headers['content-type'],
       bodyKeys: Object.keys(req.body)
     };
@@ -168,8 +174,27 @@ router.post('/tilda', async (req: Request, res: Response) => {
     let totalAmount = 0;
     let matchedProducts: any[] = [];
 
-    if (products && Array.isArray(products)) {
-      for (const product of products) {
+    // Parse products - Tilda may send as JSON string or array
+    let parsedProducts: any[] = [];
+    if (products) {
+      if (Array.isArray(products)) {
+        parsedProducts = products;
+      } else if (typeof products === 'string') {
+        try {
+          const parsed = JSON.parse(products);
+          parsedProducts = Array.isArray(parsed) ? parsed : [parsed];
+          console.log(`Tilda webhook: Parsed products from JSON string, count: ${parsedProducts.length}`);
+        } catch (e) {
+          console.warn('Tilda webhook: Failed to parse products JSON:', products);
+        }
+      } else if (typeof products === 'object') {
+        // Single product object
+        parsedProducts = [products];
+      }
+    }
+
+    if (parsedProducts.length > 0) {
+      for (const product of parsedProducts) {
         const productName = product.name || 'Неизвестный продукт';
         const productSku = product.sku || product.uid || product.externalid;
         const productPrice = parseFloat(product.price) || 0;
@@ -276,7 +301,7 @@ router.post('/tilda', async (req: Request, res: Response) => {
       }
     }
 
-    if (matchedProducts.length === 0 && products?.length > 0) {
+    if (matchedProducts.length === 0 && parsedProducts.length > 0) {
       console.warn(`Tilda webhook: No products matched from Tilda order. Received: ${productNames.join(', ')}`);
     }
 

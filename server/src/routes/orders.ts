@@ -181,18 +181,27 @@ router.get('/admin/export', async (req: AuthRequest, res: Response) => {
 // CRM Statistics - MUST be before :id routes
 router.get('/admin/stats', async (req: AuthRequest, res: Response) => {
   try {
-    const [totalOrders, paidOrders, cancelledOrders, totalRevenue] = await Promise.all([
+    const [totalOrders, paidOrders, cancelledOrders, totalRevenue, tariffCounts] = await Promise.all([
       prisma.order.count(),
       prisma.order.count({ where: { status: 'PAID' } }),
       prisma.order.count({ where: { status: 'CANCELLED' } }),
       prisma.order.aggregate({
         where: { status: 'PAID' },
         _sum: { amount: true }
+      }),
+      prisma.student.groupBy({
+        by: ['tariff'],
+        _count: { tariff: true }
       })
     ]);
 
     const newOrders = totalOrders - paidOrders - cancelledOrders;
     const avgCheck = paidOrders > 0 ? (totalRevenue._sum.amount || 0) / paidOrders : 0;
+
+    const tariffDistribution = tariffCounts.map(t => ({
+      tariff: t.tariff,
+      count: t._count.tariff
+    }));
 
     res.json({
       totalOrders,
@@ -200,7 +209,8 @@ router.get('/admin/stats', async (req: AuthRequest, res: Response) => {
       paidOrders,
       cancelledOrders,
       totalRevenue: totalRevenue._sum.amount || 0,
-      avgCheck: Math.round(avgCheck * 100) / 100
+      avgCheck: Math.round(avgCheck * 100) / 100,
+      tariffDistribution
     });
   } catch (error) {
     console.error('Get CRM stats error:', error);
@@ -307,16 +317,39 @@ router.get('/admin/list', async (req: AuthRequest, res: Response) => {
                 }
               }
             }
+          },
+          sessions: {
+            orderBy: { createdAt: 'desc' },
+            take: 1
           }
         }
       }) as any;
+
+      // Calculate student status based on last login and progress
+      let studentStatus: 'new' | 'active' | 'inactive' = 'new';
+      if (user?.student) {
+        const lastSession = user.sessions?.[0];
+        const completedLessons = user.student.progress?.length || 0;
+        const daysSinceLastLogin = lastSession 
+          ? Math.floor((Date.now() - new Date(lastSession.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+          : 999;
+        
+        if (completedLessons > 0 && daysSinceLastLogin <= 14) {
+          studentStatus = 'active';
+        } else if (completedLessons > 0 || daysSinceLastLogin <= 7) {
+          studentStatus = 'active';
+        } else if (daysSinceLastLogin > 30) {
+          studentStatus = 'inactive';
+        }
+      }
 
       return {
         ...order,
         student: user?.student ? {
           id: user.student.id,
           tariff: user.student.tariff,
-          lastLoginAt: user.updatedAt,
+          status: studentStatus,
+          lastLoginAt: user.sessions?.[0]?.createdAt || null,
           completedLessons: user.student.progress?.length || 0,
           miniGroup: user.student.miniGroups?.[0]?.miniGroup ? {
             id: user.student.miniGroups[0].miniGroup.id,
@@ -366,13 +399,30 @@ router.get('/admin/:id', async (req: AuthRequest, res: Response) => {
 router.put('/admin/:id/status', async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { status } = req.body;
+    const { status, comment } = req.body;
+
+    // Get current order to record status history
+    const currentOrder = await prisma.order.findUnique({ where: { id } });
+    if (!currentOrder) {
+      return res.status(404).json({ error: 'Заявка не найдена' });
+    }
 
     const order = await prisma.order.update({
       where: { id },
       data: { 
         status,
         paidAt: status === 'PAID' ? new Date() : undefined
+      }
+    });
+
+    // Record status change in history
+    await prisma.orderStatusHistory.create({
+      data: {
+        orderId: id,
+        fromStatus: currentOrder.status,
+        toStatus: status,
+        changedBy: req.user?.id || null,
+        comment: comment || null
       }
     });
 
@@ -384,6 +434,96 @@ router.put('/admin/:id/status', async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Update order status error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Send email to order contact
+router.post('/admin/:id/send-email', async (req: AuthRequest, res: Response) => {
+  try {
+    const orderId = req.params.id as string;
+    const { subject, message } = req.body;
+
+    if (!subject || !message) {
+      return res.status(400).json({ error: 'Укажите тему и текст письма' });
+    }
+
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      return res.status(404).json({ error: 'Заявка не найдена' });
+    }
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #f5f3ed 0%, #e8e4dc 100%); padding: 30px; border-radius: 16px;">
+          <h2 style="color: #3d3527; margin-bottom: 20px;">${subject}</h2>
+          <div style="color: #3d3527; line-height: 1.6;">
+            ${message.replace(/\n/g, '<br>')}
+          </div>
+          <hr style="border: none; border-top: 1px solid #d4c9b0; margin: 30px 0;">
+          <p style="color: #666; font-size: 14px;">С уважением,<br>Платформа школы трезвости</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    await sendEmail(order.email, subject, emailHtml);
+    res.json({ success: true, message: 'Письмо отправлено' });
+  } catch (error) {
+    console.error('Send email error:', error);
+    res.status(500).json({ error: 'Ошибка отправки письма' });
+  }
+});
+
+// Bulk send email
+router.post('/admin/bulk/send-email', async (req: AuthRequest, res: Response) => {
+  try {
+    const { orderIds, subject, message } = req.body;
+
+    if (!orderIds?.length || !subject || !message) {
+      return res.status(400).json({ error: 'Укажите заказы, тему и текст письма' });
+    }
+
+    const orders = await prisma.order.findMany({
+      where: { id: { in: orderIds } },
+      select: { email: true }
+    });
+
+    const emails = [...new Set(orders.map(o => o.email))];
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"></head>
+      <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #f5f3ed 0%, #e8e4dc 100%); padding: 30px; border-radius: 16px;">
+          <h2 style="color: #3d3527; margin-bottom: 20px;">${subject}</h2>
+          <div style="color: #3d3527; line-height: 1.6;">
+            ${message.replace(/\n/g, '<br>')}
+          </div>
+          <hr style="border: none; border-top: 1px solid #d4c9b0; margin: 30px 0;">
+          <p style="color: #666; font-size: 14px;">С уважением,<br>Платформа школы трезвости</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    let sent = 0;
+    for (const email of emails) {
+      try {
+        await sendEmail(email, subject, emailHtml);
+        sent++;
+      } catch (e) {
+        console.error(`Failed to send to ${email}:`, e);
+      }
+    }
+
+    res.json({ success: true, sent, total: emails.length });
+  } catch (error) {
+    console.error('Bulk send email error:', error);
+    res.status(500).json({ error: 'Ошибка массовой отправки' });
   }
 });
 

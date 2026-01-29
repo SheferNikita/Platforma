@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { ClipboardList, Search, Eye, CheckCircle, XCircle, Clock, User, Phone, Mail, ShoppingBag, Filter, X, ChevronDown, ChevronUp, Download, Users, BookOpen, MessageSquare, TrendingUp } from 'lucide-react';
+import { ClipboardList, Search, Eye, CheckCircle, XCircle, Clock, User, Phone, Mail, ShoppingBag, Filter, X, ChevronDown, ChevronUp, Download, Users, BookOpen, MessageSquare, TrendingUp, Send, History, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -9,6 +9,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 interface StudentData {
   id: string;
   tariff: string;
+  status: 'new' | 'active' | 'inactive';
   lastLoginAt: string | null;
   completedLessons: number;
   miniGroup: {
@@ -16,6 +17,15 @@ interface StudentData {
     name: string;
     mentors: { id: string; name: string }[];
   } | null;
+}
+
+interface OrderStatusHistory {
+  id: string;
+  fromStatus: string | null;
+  toStatus: string;
+  changedBy: string | null;
+  comment: string | null;
+  createdAt: string;
 }
 
 interface Order {
@@ -94,6 +104,12 @@ const tariffLabels: Record<string, string> = {
   INDIVIDUAL_PSYCHOLOGIST: 'Индивидуальный'
 };
 
+const studentStatusConfig: Record<string, { label: string; color: string }> = {
+  new: { label: 'Новый', color: 'bg-blue-100 text-blue-700' },
+  active: { label: 'Активный', color: 'bg-green-100 text-green-700' },
+  inactive: { label: 'Неактивный', color: 'bg-gray-100 text-gray-700' }
+};
+
 const CHART_COLORS = ['#a67c52', '#c9a86c', '#d4c9b0', '#8b7355', '#6b5344'];
 
 const statusConfig = {
@@ -116,6 +132,10 @@ export function CRMAdmin() {
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [bulkTariff, setBulkTariff] = useState('');
   const [bulkModuleId, setBulkModuleId] = useState('');
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     loadProducts();
@@ -243,6 +263,31 @@ export function CRMAdmin() {
       setShowBulkActions(false);
     } catch (error) {
       toast.error('Ошибка открытия доступа');
+    }
+  }
+
+  async function bulkSendEmail() {
+    if (!selectedOrders.length || !emailSubject || !emailMessage) {
+      toast.error('Заполните тему и текст письма');
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      const result = await api.post<{ sent: number; total: number }>('/public/orders/admin/bulk/send-email', { 
+        orderIds: selectedOrders, 
+        subject: emailSubject, 
+        message: emailMessage 
+      });
+      toast.success(`Отправлено ${result.sent} из ${result.total} писем`);
+      setSelectedOrders([]);
+      setEmailSubject('');
+      setEmailMessage('');
+      setShowEmailModal(false);
+      setShowBulkActions(false);
+    } catch (error) {
+      toast.error('Ошибка отправки');
+    } finally {
+      setSendingEmail(false);
     }
   }
 
@@ -437,6 +482,77 @@ export function CRMAdmin() {
                   </button>
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Отправить email</label>
+                <button
+                  onClick={() => setShowEmailModal(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700"
+                >
+                  <Send className="w-4 h-4" />
+                  Написать письмо
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-[#3d3527]">Отправить email</h3>
+              <button onClick={() => setShowEmailModal(false)} className="text-[#3d3527]/60 hover:text-[#3d3527]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-[#3d3527]/60">Получателей: {selectedOrders.length}</p>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Тема письма</label>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Тема..."
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Текст письма</label>
+                <textarea
+                  value={emailMessage}
+                  onChange={(e) => setEmailMessage(e.target.value)}
+                  placeholder="Текст письма..."
+                  rows={5}
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setShowEmailModal(false)}
+                className="flex-1 px-4 py-2 border border-[#d4c9b0] text-[#3d3527] rounded-xl hover:bg-[#f5f3ed]"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={bulkSendEmail}
+                disabled={!emailSubject || !emailMessage || sendingEmail}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 disabled:opacity-50"
+              >
+                {sendingEmail ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Отправить
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -665,6 +781,7 @@ export function CRMAdmin() {
                     <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Продукт</th>
                     <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Сумма</th>
                     <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Тариф</th>
+                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Статус уч.</th>
                     <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Группа</th>
                     <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Уроков</th>
                     <th className="p-3"></th>
@@ -712,6 +829,14 @@ export function CRMAdmin() {
                               'bg-pink-100 text-pink-700'
                             }`}>
                               {tariffLabels[order.student.tariff] || order.student.tariff}
+                            </span>
+                          ) : <span className="text-[#3d3527]/40">—</span>}
+                        </td>
+                        <td className="p-3 text-sm">
+                          {order.student?.status ? (
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${studentStatusConfig[order.student.status]?.color || 'bg-gray-100 text-gray-700'}`}>
+                              <UserCheck className="w-3 h-3" />
+                              {studentStatusConfig[order.student.status]?.label || order.student.status}
                             </span>
                           ) : <span className="text-[#3d3527]/40">—</span>}
                         </td>
@@ -768,6 +893,50 @@ function OrderModal({ order, onClose, onUpdateStatus }: {
   onClose: () => void;
   onUpdateStatus: (orderId: string, status: string) => void;
 }) {
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailMessage, setEmailMessage] = useState('');
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [history, setHistory] = useState<OrderStatusHistory[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  async function loadHistory() {
+    if (history.length > 0) {
+      setShowHistory(!showHistory);
+      return;
+    }
+    setLoadingHistory(true);
+    try {
+      const data = await api.get<OrderStatusHistory[]>(`/public/orders/admin/${order.id}/history`);
+      setHistory(data);
+      setShowHistory(true);
+    } catch (error) {
+      toast.error('Ошибка загрузки истории');
+    } finally {
+      setLoadingHistory(false);
+    }
+  }
+
+  async function sendEmail() {
+    if (!emailSubject || !emailMessage) {
+      toast.error('Заполните тему и текст');
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      await api.post(`/public/orders/admin/${order.id}/send-email`, { subject: emailSubject, message: emailMessage });
+      toast.success('Письмо отправлено');
+      setShowEmailForm(false);
+      setEmailSubject('');
+      setEmailMessage('');
+    } catch (error) {
+      toast.error('Ошибка отправки');
+    } finally {
+      setSendingEmail(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-lg my-4 max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
@@ -799,12 +968,64 @@ function OrderModal({ order, onClose, onUpdateStatus }: {
             </div>
             <div className="flex items-center gap-2 sm:col-span-2">
               <Mail className="w-5 h-5 text-[#3d3527]/40 flex-shrink-0" />
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs text-[#3d3527]/60">Email</p>
                 <p className="text-[#3d3527] truncate">{order.email}</p>
               </div>
+              <button
+                onClick={() => setShowEmailForm(!showEmailForm)}
+                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
+                title="Написать письмо"
+              >
+                <Send className="w-4 h-4" />
+              </button>
             </div>
           </div>
+
+          {showEmailForm && (
+            <div className="border border-purple-200 rounded-xl p-3 space-y-2 bg-purple-50/50">
+              <input
+                type="text"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                placeholder="Тема письма..."
+                className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg text-sm focus:outline-none focus:border-purple-500"
+              />
+              <textarea
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+                placeholder="Текст письма..."
+                rows={3}
+                className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg text-sm focus:outline-none focus:border-purple-500 resize-none"
+              />
+              <button
+                onClick={sendEmail}
+                disabled={sendingEmail || !emailSubject || !emailMessage}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700 disabled:opacity-50"
+              >
+                {sendingEmail ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : <><Send className="w-4 h-4" />Отправить</>}
+              </button>
+            </div>
+          )}
+
+          {order.student && (
+            <div className="border-t border-[#d4c9b0]/30 pt-4">
+              <p className="text-sm text-[#3d3527]/60 mb-2">Данные ученика</p>
+              <div className="flex flex-wrap gap-2">
+                <span className={`px-2 py-1 rounded text-xs ${studentStatusConfig[order.student.status]?.color || 'bg-gray-100'}`}>
+                  {studentStatusConfig[order.student.status]?.label || order.student.status}
+                </span>
+                <span className="px-2 py-1 rounded text-xs bg-[#a67c52]/10 text-[#a67c52]">
+                  {tariffLabels[order.student.tariff] || order.student.tariff}
+                </span>
+                {order.student.lastLoginAt && (
+                  <span className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">
+                    Вход: {format(new Date(order.student.lastLoginAt), 'dd.MM.yy', { locale: ru })}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="border-t border-[#d4c9b0]/30 pt-4">
             <p className="text-sm text-[#3d3527]/60 mb-2">Текущий статус</p>
@@ -835,6 +1056,37 @@ function OrderModal({ order, onClose, onUpdateStatus }: {
                 </button>
               )}
             </div>
+          </div>
+
+          <div className="border-t border-[#d4c9b0]/30 pt-4">
+            <button
+              onClick={loadHistory}
+              className="flex items-center gap-2 text-sm text-[#3d3527]/60 hover:text-[#3d3527]"
+            >
+              <History className="w-4 h-4" />
+              {showHistory ? 'Скрыть историю' : 'Показать историю изменений'}
+              {loadingHistory && <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-[#a67c52]"></div>}
+            </button>
+            {showHistory && history.length > 0 && (
+              <div className="mt-2 space-y-2">
+                {history.map(h => (
+                  <div key={h.id} className="text-xs p-2 bg-gray-50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <span>
+                        {h.fromStatus && <span className="text-gray-500">{statusConfig[h.fromStatus as keyof typeof statusConfig]?.label || h.fromStatus}</span>}
+                        {h.fromStatus && ' → '}
+                        <span className="font-medium">{statusConfig[h.toStatus as keyof typeof statusConfig]?.label || h.toStatus}</span>
+                      </span>
+                      <span className="text-gray-400">{h.createdAt && format(new Date(h.createdAt), 'dd.MM.yy HH:mm', { locale: ru })}</span>
+                    </div>
+                    {h.comment && <p className="text-gray-500 mt-1">{h.comment}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {showHistory && history.length === 0 && (
+              <p className="mt-2 text-xs text-gray-400">Нет записей об изменениях</p>
+            )}
           </div>
 
           <div className="text-xs text-[#3d3527]/50 space-y-1 sm:space-y-0">

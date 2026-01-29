@@ -68,24 +68,31 @@ function generateOrderHash(email: string, tranid: string | undefined, orderid: s
 
 router.post('/tilda', async (req: Request, res: Response) => {
   try {
-    // Log full incoming data for debugging (mask sensitive info)
-    const rawProducts = req.body.products;
-    const productsType = typeof rawProducts;
-    const productsPreview = productsType === 'string' 
-      ? rawProducts.substring(0, 200) 
-      : (Array.isArray(rawProducts) ? `array[${rawProducts.length}]` : productsType);
+    // FULL DEBUG: Log entire body to understand Tilda format
+    console.log('=== TILDA WEBHOOK RAW DATA ===');
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('All body keys:', Object.keys(req.body));
     
-    const logData = {
-      email: req.body.email ? `${req.body.email.substring(0, 3)}***` : undefined,
-      hasName: !!req.body.name,
-      tranid: req.body.tranid,
-      orderid: req.body.orderid,
-      productsType,
-      productsPreview,
-      contentType: req.headers['content-type'],
-      bodyKeys: Object.keys(req.body)
-    };
-    console.log('Tilda webhook received:', JSON.stringify(logData));
+    // Log each key-value pair (mask email partially)
+    for (const [key, value] of Object.entries(req.body)) {
+      const displayValue = key === 'email' && typeof value === 'string' 
+        ? `${value.substring(0, 3)}***@***` 
+        : (typeof value === 'string' && value.length > 300 
+            ? value.substring(0, 300) + '...[truncated]' 
+            : value);
+      console.log(`  ${key}: ${JSON.stringify(displayValue)}`);
+    }
+    
+    // Specifically check for products in different formats
+    const rawProducts = req.body.products;
+    const paymentProducts = req.body['payment[products]'];
+    const cartProducts = req.body.cart_products;
+    
+    console.log('Products field check:');
+    console.log('  req.body.products:', typeof rawProducts, rawProducts ? String(rawProducts).substring(0, 200) : 'undefined');
+    console.log('  req.body["payment[products]"]:', typeof paymentProducts, paymentProducts ? String(paymentProducts).substring(0, 200) : 'undefined');
+    console.log('  req.body.cart_products:', typeof cartProducts, cartProducts ? String(cartProducts).substring(0, 200) : 'undefined');
+    console.log('=== END RAW DATA ===');
 
     const {
       name,

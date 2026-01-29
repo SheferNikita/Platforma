@@ -749,5 +749,121 @@ router.put('/admin/:id/comment', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Helper function to calculate access expiry (matching webhook logic)
+function calculateAccessExpiry(product: any): Date | null {
+  if (product.accessDurationType === 'unlimited') {
+    return null;
+  }
+  
+  if (product.accessDurationType === 'fixed' && product.accessExpiresAt) {
+    return new Date(product.accessExpiresAt);
+  }
+  
+  if (product.accessDuration && product.accessDuration > 0) {
+    return new Date(Date.now() + product.accessDuration * 24 * 60 * 60 * 1000);
+  }
+  
+  return null;
+}
+
+// Reconciliation endpoint - backfill ModuleAccess for PAID orders
+router.post('/reconcile-access', authenticate, requireRole('SUPER_ADMIN', 'ADMIN'), async (req: AuthRequest, res: Response) => {
+  try {
+    // Get all PAID orders - filter nulls in loop for type safety
+    const paidOrders = await prisma.order.findMany({
+      where: { status: 'PAID' }
+    });
+
+    let created = 0;
+    let skipped = 0;
+    let errors: string[] = [];
+
+    for (const order of paidOrders) {
+      if (!order.productId) {
+        skipped++;
+        continue;
+      }
+
+      // Get product with modules
+      const product = await prisma.product.findUnique({
+        where: { id: order.productId },
+        include: { modules: true }
+      });
+
+      if (!product || !product.modules || product.modules.length === 0) {
+        skipped++;
+        continue;
+      }
+
+      // Find user and student by email
+      const user = await prisma.user.findUnique({
+        where: { email: order.email.toLowerCase() },
+        include: { student: true }
+      });
+
+      if (!user || !user.student) {
+        errors.push(`Order ${order.id}: No student found for ${order.email}`);
+        continue;
+      }
+
+      // Calculate access timing (matching webhook logic)
+      const expiresAt = calculateAccessExpiry(product);
+      const accessFrom = (product as any).startDate ? new Date((product as any).startDate) : null;
+
+      // Create ModuleAccess for each module in product
+      for (const pm of product.modules) {
+        try {
+          await prisma.moduleAccess.upsert({
+            where: {
+              studentId_moduleId: {
+                studentId: user.student.id,
+                moduleId: pm.moduleId
+              }
+            },
+            update: {
+              isActive: true,
+              expiresAt,
+              accessFrom
+            },
+            create: {
+              studentId: user.student.id,
+              moduleId: pm.moduleId,
+              isActive: true,
+              expiresAt,
+              accessFrom
+            }
+          });
+          created++;
+        } catch (e) {
+          errors.push(`Order ${order.id}: Failed to create access for module ${pm.moduleId}`);
+        }
+      }
+
+      // Update tariff if product has default
+      if (product.defaultTariff && user.student) {
+        await prisma.student.update({
+          where: { id: user.student.id },
+          data: { tariff: product.defaultTariff }
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Сверка завершена`,
+      stats: {
+        ordersProcessed: paidOrders.length,
+        accessCreated: created,
+        skipped,
+        errors: errors.length
+      },
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error('Reconcile access error:', error);
+    res.status(500).json({ error: 'Ошибка сверки доступов' });
+  }
+});
+
 export { processSuccessfulPayment };
 export default router;

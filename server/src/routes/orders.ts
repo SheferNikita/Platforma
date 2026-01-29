@@ -295,7 +295,7 @@ router.get('/admin/list', async (req: AuthRequest, res: Response) => {
     const orders = await prisma.order.findMany({
       where,
       include: {
-        product: { select: { id: true, name: true } }
+        product: { select: { id: true, name: true, defaultTariff: true } }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -345,6 +345,7 @@ router.get('/admin/list', async (req: AuthRequest, res: Response) => {
 
       return {
         ...order,
+        productTariff: (order.product as any)?.defaultTariff || null,
         student: user?.student ? {
           id: user.student.id,
           tariff: user.student.tariff,

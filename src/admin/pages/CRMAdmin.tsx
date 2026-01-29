@@ -40,6 +40,7 @@ interface Order {
   createdAt: string;
   robokassaInvId: number | null;
   product: { id: string; name: string };
+  productTariff: string | null;
   source: string | null;
   tildaTranId: string | null;
   tildaOrderId: string | null;
@@ -820,15 +821,15 @@ export function CRMAdmin() {
                         <td className="p-3 text-sm text-[#3d3527] max-w-[150px] truncate">{order.product.name}</td>
                         <td className="p-3 text-sm font-medium text-[#3d3527]">{order.amount.toLocaleString()} ₽</td>
                         <td className="p-3 text-sm">
-                          {order.student ? (
+                          {order.productTariff ? (
                             <span className={`px-2 py-1 rounded text-xs ${
-                              order.student.tariff === 'BASIC' ? 'bg-gray-100 text-gray-700' :
-                              order.student.tariff === 'FAMILY' ? 'bg-blue-100 text-blue-700' :
-                              order.student.tariff === 'WITH_MENTOR' ? 'bg-green-100 text-green-700' :
-                              order.student.tariff === 'WITH_PSYCHOLOGIST' ? 'bg-purple-100 text-purple-700' :
+                              order.productTariff === 'BASIC' ? 'bg-gray-100 text-gray-700' :
+                              order.productTariff === 'FAMILY' ? 'bg-blue-100 text-blue-700' :
+                              order.productTariff === 'WITH_MENTOR' ? 'bg-green-100 text-green-700' :
+                              order.productTariff === 'WITH_PSYCHOLOGIST' ? 'bg-purple-100 text-purple-700' :
                               'bg-pink-100 text-pink-700'
                             }`}>
-                              {tariffLabels[order.student.tariff] || order.student.tariff}
+                              {tariffLabels[order.productTariff] || order.productTariff}
                             </span>
                           ) : <span className="text-[#3d3527]/40">—</span>}
                         </td>

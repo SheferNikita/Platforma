@@ -493,6 +493,26 @@ router.delete('/contacts/:id', adminOnly, async (req: AuthRequest & Request<IdPa
   }
 });
 
+// Temporary migration endpoint for adding new Community columns
+router.post('/migrate-communities', adminOnly, async (req: AuthRequest, res: Response) => {
+  try {
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "Community" 
+      ADD COLUMN IF NOT EXISTS "format" VARCHAR(20) DEFAULT 'offline',
+      ADD COLUMN IF NOT EXISTS "communityType" VARCHAR(30) DEFAULT 'mixed',
+      ADD COLUMN IF NOT EXISTS "dayOfWeek" VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS "time" VARCHAR(20),
+      ADD COLUMN IF NOT EXISTS "leader" VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS "leaderContact" VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS "link" VARCHAR(500)
+    `);
+    res.json({ message: 'Migration completed successfully' });
+  } catch (error) {
+    console.error('Migration error:', error);
+    res.status(500).json({ error: 'Migration failed' });
+  }
+});
+
 router.get('/communities', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const communities = await prisma.$queryRaw`

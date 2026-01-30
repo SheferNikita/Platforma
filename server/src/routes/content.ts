@@ -495,9 +495,11 @@ router.delete('/contacts/:id', adminOnly, async (req: AuthRequest & Request<IdPa
 
 router.get('/communities', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
-    const communities = await prisma.community.findMany({
-      orderBy: { name: 'asc' }
-    });
+    const communities = await prisma.$queryRaw`
+      SELECT id, name, description, address, city, phone, schedule, "isPublished", "createdAt", "updatedAt",
+             format, "communityType", "dayOfWeek", time, leader, "leaderContact", link
+      FROM "Community" ORDER BY name ASC
+    `;
     res.json(communities);
   } catch (error) {
     console.error('Get communities error:', error);
@@ -507,12 +509,13 @@ router.get('/communities', moderatorRoles, async (req: AuthRequest, res: Respons
 
 router.post('/communities', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
-    const community = await prisma.community.create({ 
-      data: { 
-        ...req.body,
-        isPublished: true 
-      } 
-    });
+    const { name, format, communityType, dayOfWeek, time, city, address, link, leader, leaderContact } = req.body;
+    const id = crypto.randomUUID();
+    await prisma.$executeRaw`
+      INSERT INTO "Community" (id, name, format, "communityType", "dayOfWeek", time, city, address, link, leader, "leaderContact", "isPublished", "createdAt", "updatedAt")
+      VALUES (${id}, ${name}, ${format || 'offline'}, ${communityType || 'mixed'}, ${dayOfWeek || null}, ${time || null}, ${city || null}, ${address || null}, ${link || null}, ${leader || null}, ${leaderContact || null}, true, NOW(), NOW())
+    `;
+    const [community] = await prisma.$queryRaw<any[]>`SELECT * FROM "Community" WHERE id = ${id}`;
     res.status(201).json(community);
   } catch (error) {
     console.error('Create community error:', error);
@@ -523,7 +526,25 @@ router.post('/communities', moderatorRoles, async (req: AuthRequest, res: Respon
 router.put('/communities/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
-    const community = await prisma.community.update({ where: { id }, data: req.body });
+    const { name, format, communityType, dayOfWeek, time, city, address, link, leader, leaderContact, isPublished } = req.body;
+    
+    await prisma.$executeRaw`
+      UPDATE "Community" SET
+        name = COALESCE(${name}, name),
+        format = COALESCE(${format}, format),
+        "communityType" = COALESCE(${communityType}, "communityType"),
+        "dayOfWeek" = ${dayOfWeek},
+        time = ${time},
+        city = ${city},
+        address = ${address},
+        link = ${link},
+        leader = ${leader},
+        "leaderContact" = ${leaderContact},
+        "isPublished" = COALESCE(${isPublished}, "isPublished"),
+        "updatedAt" = NOW()
+      WHERE id = ${id}
+    `;
+    const [community] = await prisma.$queryRaw<any[]>`SELECT * FROM "Community" WHERE id = ${id}`;
     res.json(community);
   } catch (error) {
     console.error('Update community error:', error);
@@ -534,7 +555,7 @@ router.put('/communities/:id', moderatorRoles, async (req: AuthRequest & Request
 router.delete('/communities/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
-    await prisma.community.delete({ where: { id } });
+    await prisma.$executeRaw`DELETE FROM "Community" WHERE id = ${id}`;
     res.json({ message: 'Община удалена' });
   } catch (error) {
     console.error('Delete community error:', error);

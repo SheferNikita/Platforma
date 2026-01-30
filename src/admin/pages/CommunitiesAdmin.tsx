@@ -39,8 +39,12 @@ export function CommunitiesAdmin() {
   const [showModal, setShowModal] = useState(false);
   const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
   const [activeTab, setActiveTab] = useState<'offline' | 'online'>('offline');
+  const [sectionVisible, setSectionVisible] = useState(true);
 
-  useEffect(() => { loadCommunities(); }, []);
+  useEffect(() => { 
+    loadCommunities(); 
+    loadVisibility();
+  }, []);
 
   async function loadCommunities() {
     try {
@@ -48,6 +52,22 @@ export function CommunitiesAdmin() {
       setCommunities(data);
     } catch (error) { toast.error('Ошибка загрузки'); }
     finally { setLoading(false); }
+  }
+
+  async function loadVisibility() {
+    try {
+      const data = await api.get<{ value: string | null }>('/content/settings/communities_visible');
+      setSectionVisible(data.value !== 'false');
+    } catch (error) { console.error('Error loading visibility setting'); }
+  }
+
+  async function toggleVisibility() {
+    try {
+      const newValue = !sectionVisible;
+      await api.put('/content/settings/communities_visible', { value: newValue ? 'true' : 'false' });
+      setSectionVisible(newValue);
+      toast.success(newValue ? 'Раздел отображается у учеников' : 'Раздел скрыт у учеников');
+    } catch (error) { toast.error('Ошибка сохранения'); }
   }
 
   async function saveCommunity(data: Partial<Community>) {
@@ -94,9 +114,18 @@ export function CommunitiesAdmin() {
           <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Общины</h1>
           <p className="text-sm md:text-base text-[#3d3527]/60 mt-1">Управление общинами</p>
         </div>
-        <button onClick={() => { setEditingCommunity(null); setShowModal(true); }} className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg w-full sm:w-auto">
-          <Plus className="w-5 h-5" /> Добавить
-        </button>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <button 
+            onClick={toggleVisibility} 
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors ${sectionVisible ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}
+          >
+            {sectionVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            <span className="text-sm">{sectionVisible ? 'Виден ученикам' : 'Скрыт от учеников'}</span>
+          </button>
+          <button onClick={() => { setEditingCommunity(null); setShowModal(true); }} className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg">
+            <Plus className="w-5 h-5" /> Добавить
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-2 border-b border-[#d4c9b0]/30">

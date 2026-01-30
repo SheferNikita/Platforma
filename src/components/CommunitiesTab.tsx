@@ -5,20 +5,28 @@ import { api } from '../lib/api';
 interface Community {
   id: string;
   name: string;
-  city: string | null;
-  address: string | null;
-  description: string | null;
-  communityType: string | null;
-  schedule: string | null;
-  contact: string | null;
-  website: string | null;
-  membersCount: number | null;
+  format?: 'offline' | 'online';
+  communityType?: string;
+  dayOfWeek?: string;
+  time?: string;
+  city?: string;
+  address?: string;
+  link?: string;
+  leader?: string;
+  leaderContact?: string;
+  description?: string;
+}
+
+interface CommunitiesResponse {
+  hidden: boolean;
+  communities: Community[];
 }
 
 export function CommunitiesTab() {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
     loadCommunities();
@@ -27,8 +35,9 @@ export function CommunitiesTab() {
   async function loadCommunities() {
     try {
       setLoading(true);
-      const data = await api.get<Community[]>('/public/communities');
-      setCommunities(data);
+      const data = await api.get<CommunitiesResponse>('/public/communities');
+      setHidden(data.hidden);
+      setCommunities(data.communities || []);
       setError(null);
     } catch (err) {
       setError('Не удалось загрузить общины');
@@ -67,6 +76,10 @@ export function CommunitiesTab() {
         </button>
       </div>
     );
+  }
+
+  if (hidden) {
+    return null; // Section is hidden by admin
   }
 
   if (communities.length === 0) {
@@ -115,7 +128,7 @@ export function CommunitiesTab() {
             )}
 
             <div className="space-y-2 md:space-y-3 mb-5 md:mb-6 text-xs md:text-sm">
-              {(community.city || community.address) && (
+              {community.format === 'offline' && (community.city || community.address) && (
                 <div className="flex items-start gap-2 opacity-70">
                   <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 mt-0.5 text-[var(--icon-lavender)]" />
                   <div className="min-w-0">
@@ -125,25 +138,34 @@ export function CommunitiesTab() {
                 </div>
               )}
 
-              {community.schedule && (
+              {community.format === 'online' && (
                 <div className="flex items-center gap-2 opacity-70">
-                  <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 text-[var(--icon-lavender)]" />
-                  <span className="leading-relaxed">{community.schedule}</span>
+                  <Globe className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 text-[var(--icon-lavender)]" />
+                  <span className="leading-relaxed">Онлайн встреча</span>
                 </div>
               )}
 
-              {community.membersCount && (
+              {(community.dayOfWeek || community.time) && (
+                <div className="flex items-center gap-2 opacity-70">
+                  <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 text-[var(--icon-lavender)]" />
+                  <span className="leading-relaxed">
+                    {community.dayOfWeek}{community.dayOfWeek && community.time && ', '}{community.time}
+                  </span>
+                </div>
+              )}
+
+              {community.leader && (
                 <div className="flex items-center gap-2 opacity-70">
                   <Users className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 text-[var(--icon-lavender)]" />
-                  {community.membersCount} участников
+                  <span className="leading-relaxed">Ведущий: {community.leader}</span>
                 </div>
               )}
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {community.contact && (
+              {community.leaderContact && (
                 <a
-                  href={community.contact.startsWith('@') ? `https://t.me/${community.contact.replace('@', '')}` : `tel:${community.contact}`}
+                  href={community.leaderContact.startsWith('@') ? `https://t.me/${community.leaderContact.replace('@', '')}` : community.leaderContact.startsWith('http') ? community.leaderContact : `tel:${community.leaderContact}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_6px_16px_rgba(139,149,188,0.4)] transition-all duration-300 text-xs md:text-sm transform hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group"
@@ -154,19 +176,19 @@ export function CommunitiesTab() {
                 </a>
               )}
               
-              {community.website && (
+              {community.format === 'online' && community.link && (
                 <a
-                  href={community.website}
+                  href={community.link}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 border-2 border-[var(--sky-light)]/50 rounded-xl hover:bg-gradient-to-r hover:from-[var(--book-bg)] hover:to-white transition-all duration-300 text-xs md:text-sm transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Globe className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                  Сайт
+                  Присоединиться
                 </a>
               )}
 
-              {community.city && community.city !== 'Онлайн' && (
+              {community.format === 'offline' && community.city && (
                 <button className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 border-2 border-[var(--sky-light)]/50 rounded-xl hover:bg-gradient-to-r hover:from-[var(--book-bg)] hover:to-white transition-all duration-300 text-xs md:text-sm transform hover:scale-[1.02] active:scale-[0.98]">
                   <Navigation className="w-3.5 h-3.5 md:w-4 md:h-4" />
                   На карте

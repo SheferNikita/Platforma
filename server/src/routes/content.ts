@@ -583,6 +583,32 @@ router.delete('/communities/:id', moderatorRoles, async (req: AuthRequest & Requ
   }
 });
 
+// Settings endpoints
+router.get('/settings/:key', moderatorRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const setting = await prisma.setting.findUnique({ where: { key: req.params.key } });
+    res.json({ value: setting?.value || null });
+  } catch (error) {
+    console.error('Get setting error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/settings/:key', adminOnly, async (req: AuthRequest, res: Response) => {
+  try {
+    const { value } = req.body;
+    const setting = await prisma.setting.upsert({
+      where: { key: req.params.key },
+      update: { value },
+      create: { key: req.params.key, value }
+    });
+    res.json(setting);
+  } catch (error) {
+    console.error('Update setting error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // Helper to parse chatLink JSON and extract mentorIds
 function parseMiniGroupData(group: any) {
   let chatLink = null;

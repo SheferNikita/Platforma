@@ -216,11 +216,20 @@ router.get('/contacts', async (req, res) => {
 
 router.get('/communities', async (req, res) => {
   try {
-    const communities = await prisma.community.findMany({
-      where: { isPublished: true },
-      orderBy: { name: 'asc' }
-    });
-    res.json(communities);
+    // Check visibility setting
+    const setting = await prisma.setting.findUnique({ where: { key: 'communities_visible' } });
+    if (setting?.value === 'false') {
+      return res.json({ hidden: true, communities: [] });
+    }
+    
+    const communities = await prisma.$queryRaw`
+      SELECT id, name, description, address, city, phone, schedule, "isPublished", "createdAt", "updatedAt",
+             format, "communityType", "dayOfWeek", time, leader, "leaderContact", link
+      FROM "Community" 
+      WHERE "isPublished" = true 
+      ORDER BY name ASC
+    `;
+    res.json({ hidden: false, communities });
   } catch (error) {
     console.error('Get public communities error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

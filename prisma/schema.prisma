@@ -101,24 +101,28 @@ model Module {
 }
 
 model Lesson {
-  id          String             @id @default(uuid())
-  moduleId    String
-  title       String
-  description String?
-  content     String?
-  duration    String?
-  order       Int                @default(0)
-  isPublished Boolean            @default(false)
-  isTextOnly  Boolean            @default(false)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  publishAt   DateTime?
-  diaries     Diary[]
-  module      Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  attachments LessonAttachment[]
-  progress    LessonProgress[]
-  videos      LessonVideo[]
-  notes       StudentNote[]
+  id               String             @id @default(uuid())
+  moduleId         String
+  title            String
+  description      String?
+  content          String?
+  duration         String?
+  order            Int                @default(0)
+  isPublished      Boolean            @default(false)
+  isTextOnly       Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  publishAt        DateTime?
+  showDiary        Boolean            @default(true)
+  showNotes        Boolean            @default(true)
+  diaryDescription String?            @default("Запишите свои мысли, эмоции и впечатления от пройденного урока")
+  notesDescription String?            @default("Запишите основные моменты урока, важные понятия и выводы")
+  diaries          Diary[]
+  module           Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  attachments      LessonAttachment[]
+  progress         LessonProgress[]
+  videos           LessonVideo[]
+  notes            StudentNote[]
 }
 
 model LessonVideo {

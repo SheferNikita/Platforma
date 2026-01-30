@@ -556,15 +556,8 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
   // Diary and Notes settings
   const [showDiary, setShowDiary] = useState(lesson?.showDiary ?? true);
   const [showNotes, setShowNotes] = useState(lesson?.showNotes ?? true);
-  const [diaryDescription, setDiaryDescription] = useState(lesson?.diaryDescription || `<p>Здесь ссылка на актуальный шаблон.</p>
-<p>А здесь рекомендации по написанию дневника.</p>
-<p>Дневник можно написать от руки или напечатать в электронном виде.</p>
-<p><strong>Если от руки:</strong><br>Приложите фото в хорошем качестве с пронумерованными страницами.</p>
-<p><strong>Если в электронном виде:</strong><br>Заполните дневник там, где вам удобно, затем скопируйте и вставьте текст здесь.</p>`);
-  const [notesDescription, setNotesDescription] = useState(lesson?.notesDescription || `<p>Мы просим вас делать для себя конспект каждой лекции или вебинара.</p>
-<p>Это самый эффективный способ прохождения курса и глубокого понимания новой информации.</p>
-<p>(Если сегодня Вы выполняли предложенное задание или рекомендацию, можете загрузить его вместе с конспектом).</p>
-<p>Также как и дневник его можно написать от руки или напечатать.</p>`);
+  const [diaryDescription, setDiaryDescription] = useState(lesson?.diaryDescription || `<p>Здесь ссылка на актуальный шаблон.</p><p>А здесь рекомендации по написанию дневника.</p><p><br></p><p>Дневник можно написать от руки или напечатать в электронном виде.</p><p><br></p><p>Если от руки:</p><p>Приложите фото в хорошем качестве с пронумерованными страницами.</p><p><br></p><p>Если в электронном виде:</p><p>Заполните дневник там, где вам удобно, затем скопируйте и вставьте текст здесь.</p>`);
+  const [notesDescription, setNotesDescription] = useState(lesson?.notesDescription || `<p>Мы просим вас делать для себя конспект каждой лекции или вебинара.</p><p>Это самый эффективный способ прохождения курса и глубокого понимания новой информации.</p><p><br></p><p>(Если сегодня Вы выполняли предложенное задание или рекомендацию, можете загрузить его вместе с конспектом).</p><p>Также как и дневник его можно написать от руки или напечатать.</p>`);
   
   // Task/Recommendation settings
   const [showTask, setShowTask] = useState(lesson?.showTask ?? false);

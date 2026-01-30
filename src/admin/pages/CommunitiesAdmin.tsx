@@ -1,24 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, Building, Eye, EyeOff, MapPin } from 'lucide-react';
+import { Plus, Edit, Trash2, Building, Eye, EyeOff, MapPin, Globe, Clock, User, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Community {
   id: string;
   name: string;
-  description: string;
-  address: string;
-  city: string;
-  phone: string;
-  schedule: string;
+  format: 'offline' | 'online';
+  communityType: 'mixed' | 'dependent' | 'codependent';
+  dayOfWeek: string;
+  time: string;
+  city?: string;
+  address?: string;
+  link?: string;
+  leader: string;
+  leaderContact: string;
   isPublished: boolean;
 }
+
+const FORMAT_OPTIONS = [
+  { value: 'offline', label: 'Очная' },
+  { value: 'online', label: 'Онлайн' }
+];
+
+const TYPE_OPTIONS = [
+  { value: 'mixed', label: 'Смешанная' },
+  { value: 'dependent', label: 'Для зависимых' },
+  { value: 'codependent', label: 'Для созависимых' }
+];
+
+const DAY_OPTIONS = [
+  'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'
+];
 
 export function CommunitiesAdmin() {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
+  const [activeTab, setActiveTab] = useState<'offline' | 'online'>('offline');
 
   useEffect(() => { loadCommunities(); }, []);
 
@@ -61,6 +81,12 @@ export function CommunitiesAdmin() {
     } catch (error) { toast.error('Ошибка'); }
   }
 
+  const filteredCommunities = communities.filter(c => c.format === activeTab);
+
+  const getTypeLabel = (type: string) => {
+    return TYPE_OPTIONS.find(t => t.value === type)?.label || type;
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -73,17 +99,40 @@ export function CommunitiesAdmin() {
         </button>
       </div>
 
+      <div className="flex gap-2 border-b border-[#d4c9b0]/30">
+        <button
+          onClick={() => setActiveTab('offline')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'offline' ? 'text-[#a67c52] border-b-2 border-[#a67c52]' : 'text-[#3d3527]/60 hover:text-[#3d3527]'}`}
+        >
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4" />
+            Очные ({communities.filter(c => c.format === 'offline').length})
+          </div>
+        </button>
+        <button
+          onClick={() => setActiveTab('online')}
+          className={`px-4 py-2 text-sm font-medium transition-colors ${activeTab === 'online' ? 'text-[#a67c52] border-b-2 border-[#a67c52]' : 'text-[#3d3527]/60 hover:text-[#3d3527]'}`}
+        >
+          <div className="flex items-center gap-2">
+            <Globe className="w-4 h-4" />
+            Онлайн ({communities.filter(c => c.format === 'online').length})
+          </div>
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
         {loading ? (
           <div className="col-span-full flex justify-center py-12"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#a67c52]"></div></div>
-        ) : communities.length === 0 ? (
-          <div className="col-span-full text-center py-12 text-[#3d3527]/60">Нет общин</div>
+        ) : filteredCommunities.length === 0 ? (
+          <div className="col-span-full text-center py-12 text-[#3d3527]/60">
+            {activeTab === 'offline' ? 'Нет очных общин' : 'Нет онлайн общин'}
+          </div>
         ) : (
-          communities.map((community) => (
+          filteredCommunities.map((community) => (
             <div key={community.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-4 md:p-5">
               <div className="flex items-start justify-between mb-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center">
-                  <Building className="w-6 h-6 text-white" />
+                  {activeTab === 'offline' ? <Building className="w-6 h-6 text-white" /> : <Globe className="w-6 h-6 text-white" />}
                 </div>
                 <div className="flex gap-1">
                   <button onClick={() => togglePublish(community.id, community.isPublished)} className="p-2 hover:bg-[#f5f3ed] rounded-lg">
@@ -97,11 +146,54 @@ export function CommunitiesAdmin() {
                   </button>
                 </div>
               </div>
+              
               <h3 className="font-bold text-[#3d3527] text-lg">{community.name}</h3>
-              <p className="text-sm text-[#3d3527]/60 mt-1 line-clamp-2">{community.description}</p>
-              <div className="mt-3 space-y-1 text-sm text-[#3d3527]/80">
-                {community.city && <p className="flex items-center gap-2"><MapPin className="w-4 h-4" />{community.city}</p>}
-                {community.schedule && <p>{community.schedule}</p>}
+              
+              <span className="inline-block mt-2 px-2 py-0.5 text-xs rounded-full bg-[#f5f3ed] text-[#3d3527]/80">
+                {getTypeLabel(community.communityType)}
+              </span>
+              
+              <div className="mt-3 space-y-1.5 text-sm text-[#3d3527]/80">
+                {community.dayOfWeek && community.time && (
+                  <p className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 flex-shrink-0" />
+                    {community.dayOfWeek}, {community.time}
+                  </p>
+                )}
+                
+                {activeTab === 'offline' ? (
+                  <>
+                    {community.city && (
+                      <p className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 flex-shrink-0" />
+                        {community.city}
+                      </p>
+                    )}
+                    {community.address && (
+                      <p className="text-xs text-[#3d3527]/60 ml-6">{community.address}</p>
+                    )}
+                  </>
+                ) : (
+                  community.link && (
+                    <p className="flex items-center gap-2">
+                      <Globe className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{community.link}</span>
+                    </p>
+                  )
+                )}
+                
+                {community.leader && (
+                  <p className="flex items-center gap-2">
+                    <User className="w-4 h-4 flex-shrink-0" />
+                    {community.leader}
+                  </p>
+                )}
+                {community.leaderContact && (
+                  <p className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">{community.leaderContact}</span>
+                  </p>
+                )}
               </div>
             </div>
           ))
@@ -112,7 +204,12 @@ export function CommunitiesAdmin() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg md:text-xl font-bold text-[#3d3527] mb-4">{editingCommunity ? 'Редактировать' : 'Новая община'}</h2>
-            <CommunityForm community={editingCommunity} onSave={saveCommunity} onClose={() => { setShowModal(false); setEditingCommunity(null); }} />
+            <CommunityForm 
+              community={editingCommunity} 
+              onSave={saveCommunity} 
+              onClose={() => { setShowModal(false); setEditingCommunity(null); }} 
+              defaultFormat={activeTab}
+            />
           </div>
         </div>
       )}
@@ -120,45 +217,142 @@ export function CommunitiesAdmin() {
   );
 }
 
-function CommunityForm({ community, onSave, onClose }: { community: Community | null; onSave: (data: any) => void; onClose: () => void }) {
+function CommunityForm({ community, onSave, onClose, defaultFormat }: { 
+  community: Community | null; 
+  onSave: (data: any) => void; 
+  onClose: () => void;
+  defaultFormat: 'offline' | 'online';
+}) {
   const [name, setName] = useState(community?.name || '');
-  const [description, setDescription] = useState(community?.description || '');
+  const [format, setFormat] = useState<'offline' | 'online'>(community?.format || defaultFormat);
+  const [communityType, setCommunityType] = useState(community?.communityType || 'mixed');
+  const [dayOfWeek, setDayOfWeek] = useState(community?.dayOfWeek || '');
+  const [time, setTime] = useState(community?.time || '');
   const [city, setCity] = useState(community?.city || '');
   const [address, setAddress] = useState(community?.address || '');
-  const [phone, setPhone] = useState(community?.phone || '');
-  const [schedule, setSchedule] = useState(community?.schedule || '');
+  const [link, setLink] = useState(community?.link || '');
+  const [leader, setLeader] = useState(community?.leader || '');
+  const [leaderContact, setLeaderContact] = useState(community?.leaderContact || '');
+
+  const handleSave = () => {
+    if (!name.trim()) {
+      toast.error('Введите название');
+      return;
+    }
+    onSave({ 
+      name, 
+      format, 
+      communityType, 
+      dayOfWeek, 
+      time, 
+      city: format === 'offline' ? city : null,
+      address: format === 'offline' ? address : null,
+      link: format === 'online' ? link : null,
+      leader, 
+      leaderContact 
+    });
+  };
 
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-[#3d3527] mb-1">Название</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
+        <label className="block text-sm font-medium text-[#3d3527] mb-1">Название *</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none" />
       </div>
-      <div>
-        <label className="block text-sm font-medium text-[#3d3527] mb-1">Описание</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" rows={3} />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      
+      <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-[#3d3527] mb-1">Город</label>
-          <input value={city} onChange={(e) => setCity(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Формат</label>
+          <select 
+            value={format} 
+            onChange={(e) => setFormat(e.target.value as 'offline' | 'online')} 
+            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none"
+          >
+            {FORMAT_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#3d3527] mb-1">Телефон</label>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Тип</label>
+          <select 
+            value={communityType} 
+            onChange={(e) => setCommunityType(e.target.value as 'mixed' | 'dependent' | 'codependent')} 
+            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none"
+          >
+            {TYPE_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         </div>
       </div>
-      <div>
-        <label className="block text-sm font-medium text-[#3d3527] mb-1">Адрес</label>
-        <input value={address} onChange={(e) => setAddress(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
+      
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">День недели</label>
+          <select 
+            value={dayOfWeek} 
+            onChange={(e) => setDayOfWeek(e.target.value)} 
+            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none"
+          >
+            <option value="">Выберите день</option>
+            {DAY_OPTIONS.map(day => (
+              <option key={day} value={day}>{day}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Время</label>
+          <input 
+            type="time" 
+            value={time} 
+            onChange={(e) => setTime(e.target.value)} 
+            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none" 
+          />
+        </div>
       </div>
+      
+      {format === 'offline' ? (
+        <>
+          <div>
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Город</label>
+            <input value={city} onChange={(e) => setCity(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Адрес</label>
+            <input value={address} onChange={(e) => setAddress(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none" />
+          </div>
+        </>
+      ) : (
+        <div>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Ссылка</label>
+          <input 
+            value={link} 
+            onChange={(e) => setLink(e.target.value)} 
+            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none" 
+            placeholder="Ссылка на ТГ или 'можно получить у ведущего'"
+          />
+        </div>
+      )}
+      
       <div>
-        <label className="block text-sm font-medium text-[#3d3527] mb-1">Расписание</label>
-        <input value={schedule} onChange={(e) => setSchedule(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="Пн-Пт 10:00-18:00" />
+        <label className="block text-sm font-medium text-[#3d3527] mb-1">Ведущий</label>
+        <input value={leader} onChange={(e) => setLeader(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none" />
       </div>
-      <div className="flex justify-end gap-3">
-        <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
-        <button onClick={() => onSave({ name, description, city, address, phone, schedule })} className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl">Сохранить</button>
+      
+      <div>
+        <label className="block text-sm font-medium text-[#3d3527] mb-1">Контакт ведущего</label>
+        <input 
+          value={leaderContact} 
+          onChange={(e) => setLeaderContact(e.target.value)} 
+          className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none" 
+          placeholder="Телефон или ссылка на ТГ"
+        />
+      </div>
+      
+      <div className="flex justify-end gap-3 pt-2">
+        <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl transition-colors">Отмена</button>
+        <button onClick={handleSave} className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-all">Сохранить</button>
       </div>
     </div>
   );

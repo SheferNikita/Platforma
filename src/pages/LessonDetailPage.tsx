@@ -818,9 +818,12 @@ export function LessonDetailPage() {
             </div>
             <div className="flex-1">
               <h3 className="mb-2 text-lg">Дневник к уроку</h3>
-              <p className="text-sm opacity-70 leading-relaxed">
-                {lessonData.diaryDescription || 'Запишите свои мысли, эмоции и впечатления от пройденного урока'}
-              </p>
+              <div 
+                className="text-sm opacity-70 leading-relaxed prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ 
+                  __html: lessonData.diaryDescription || 'Запишите свои мысли, эмоции и впечатления от пройденного урока' 
+                }}
+              />
             </div>
           </div>
 
@@ -972,9 +975,12 @@ export function LessonDetailPage() {
             </div>
             <div className="flex-1">
               <h3 className="mb-2 text-lg">Конспект к уроку</h3>
-              <p className="text-sm opacity-70 leading-relaxed">
-                {lessonData.notesDescription || 'Запишите основные моменты урока, важные понятия и выводы'}
-              </p>
+              <div 
+                className="text-sm opacity-70 leading-relaxed prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ 
+                  __html: lessonData.notesDescription || 'Запишите основные моменты урока, важные понятия и выводы' 
+                }}
+              />
             </div>
           </div>
 

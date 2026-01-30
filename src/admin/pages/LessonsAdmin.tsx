@@ -813,12 +813,9 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
               {showDiary && (
                 <div className="ml-6">
                   <label className="block text-xs text-[#3d3527]/60 mb-1">Описание/подсказка для дневника</label>
-                  <textarea
-                    value={diaryDescription}
-                    onChange={(e) => setDiaryDescription(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg focus:outline-none focus:border-[#a67c52] text-sm"
-                    rows={2}
-                    placeholder="Запишите свои мысли, эмоции и впечатления от пройденного урока"
+                  <RichTextEditor
+                    content={diaryDescription}
+                    onChange={setDiaryDescription}
                   />
                 </div>
               )}
@@ -838,12 +835,9 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
               {showNotes && (
                 <div className="ml-6">
                   <label className="block text-xs text-[#3d3527]/60 mb-1">Описание/подсказка для конспекта</label>
-                  <textarea
-                    value={notesDescription}
-                    onChange={(e) => setNotesDescription(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg focus:outline-none focus:border-[#a67c52] text-sm"
-                    rows={2}
-                    placeholder="Запишите основные моменты урока, важные понятия и выводы"
+                  <RichTextEditor
+                    content={notesDescription}
+                    onChange={setNotesDescription}
                   />
                 </div>
               )}

@@ -27,7 +27,18 @@ interface Lesson {
   showNotes: boolean;
   diaryDescription: string;
   notesDescription: string;
+  showTask: boolean;
+  taskContent: string;
+  taskAllowedTariffs: string[];
 }
+
+const TARIFF_OPTIONS = [
+  { value: 'BASIC', label: 'Базовый' },
+  { value: 'FAMILY', label: 'Для родственников' },
+  { value: 'WITH_MENTOR', label: 'С наставником' },
+  { value: 'WITH_PSYCHOLOGIST', label: 'С психологом' },
+  { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивидуальный с психологом' },
+];
 
 interface Module {
   id: string;
@@ -547,6 +558,19 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
   const [showNotes, setShowNotes] = useState(lesson?.showNotes ?? true);
   const [diaryDescription, setDiaryDescription] = useState(lesson?.diaryDescription || 'Запишите свои мысли, эмоции и впечатления от пройденного урока');
   const [notesDescription, setNotesDescription] = useState(lesson?.notesDescription || 'Запишите основные моменты урока, важные понятия и выводы');
+  
+  // Task/Recommendation settings
+  const [showTask, setShowTask] = useState(lesson?.showTask ?? false);
+  const [taskContent, setTaskContent] = useState(lesson?.taskContent || '');
+  const [taskAllowedTariffs, setTaskAllowedTariffs] = useState<string[]>(lesson?.taskAllowedTariffs || []);
+  
+  const toggleTaskTariff = (tariff: string) => {
+    setTaskAllowedTariffs(prev => 
+      prev.includes(tariff) 
+        ? prev.filter(t => t !== tariff) 
+        : [...prev, tariff]
+    );
+  };
 
   const addVideo = () => {
     setVideos([...videos, { url: '', title: '', order: videos.length }]);
@@ -595,7 +619,10 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
       showDiary,
       showNotes,
       diaryDescription,
-      notesDescription
+      notesDescription,
+      showTask,
+      taskContent,
+      taskAllowedTariffs
     });
   };
 
@@ -850,6 +877,47 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
                     content={notesDescription}
                     onChange={setNotesDescription}
                   />
+                </div>
+              )}
+            </div>
+            
+            {/* Task/Recommendation settings */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showTask}
+                  onChange={(e) => setShowTask(e.target.checked)}
+                  className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                />
+                <span className="text-sm text-[#3d3527]">Показывать блок "Задание/Рекомендация"</span>
+              </label>
+              {showTask && (
+                <div className="ml-6 space-y-3">
+                  <div>
+                    <label className="block text-xs text-[#3d3527]/60 mb-2">Кому виден блок</label>
+                    <div className="space-y-1.5 bg-[#f5f3ed]/50 rounded-lg p-2">
+                      {TARIFF_OPTIONS.map(tariff => (
+                        <label key={tariff.value} className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={taskAllowedTariffs.includes(tariff.value)}
+                            onChange={() => toggleTaskTariff(tariff.value)}
+                            className="w-3.5 h-3.5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                          />
+                          <span className="text-xs text-[#3d3527]">{tariff.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-[#3d3527]/50 mt-1">Если не выбрано — виден всем</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-[#3d3527]/60 mb-1">Содержимое блока</label>
+                    <RichTextEditor
+                      content={taskContent}
+                      onChange={setTaskContent}
+                    />
+                  </div>
                 </div>
               )}
             </div>

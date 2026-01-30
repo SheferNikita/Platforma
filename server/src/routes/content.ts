@@ -65,6 +65,9 @@ const lessonSchema = z.object({
   showNotes: z.boolean().optional(),
   diaryDescription: z.string().optional(),
   notesDescription: z.string().optional(),
+  showTask: z.boolean().optional(),
+  taskContent: z.string().optional(),
+  taskAllowedTariffs: z.array(z.string()).optional(),
   videos: z.array(z.object({
     id: z.string().optional(),
     title: z.string().optional(),

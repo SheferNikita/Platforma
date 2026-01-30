@@ -810,7 +810,7 @@ export function LessonDetailPage() {
         )}
 
         {/* Форма дневника с чатом */}
-        {canAccessMentorFeatures(userTariff) && lesson.showDiary !== false && (
+        {canAccessMentorFeatures(userTariff) && lessonData.showDiary !== false && (
         <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
           <div className="flex items-start gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
@@ -819,7 +819,7 @@ export function LessonDetailPage() {
             <div className="flex-1">
               <h3 className="mb-2 text-lg">Дневник к уроку</h3>
               <p className="text-sm opacity-70 leading-relaxed">
-                {lesson.diaryDescription || 'Запишите свои мысли, эмоции и впечатления от пройденного урока'}
+                {lessonData.diaryDescription || 'Запишите свои мысли, эмоции и впечатления от пройденного урока'}
               </p>
             </div>
           </div>
@@ -964,7 +964,7 @@ export function LessonDetailPage() {
         )}
 
         {/* Форма конспекта с чатом */}
-        {canAccessMentorFeatures(userTariff) && lesson.showNotes !== false && (
+        {canAccessMentorFeatures(userTariff) && lessonData.showNotes !== false && (
         <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
           <div className="flex items-start gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
@@ -973,7 +973,7 @@ export function LessonDetailPage() {
             <div className="flex-1">
               <h3 className="mb-2 text-lg">Конспект к уроку</h3>
               <p className="text-sm opacity-70 leading-relaxed">
-                {lesson.notesDescription || 'Запишите основные моменты урока, важные понятия и выводы'}
+                {lessonData.notesDescription || 'Запишите основные моменты урока, важные понятия и выводы'}
               </p>
             </div>
           </div>

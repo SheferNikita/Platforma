@@ -12,7 +12,16 @@ interface LibraryItem {
   content: string;
   order: number;
   isPublished: boolean;
+  allowedTariffs: string[];
 }
+
+const TARIFF_OPTIONS = [
+  { value: 'BASIC', label: 'Базовый' },
+  { value: 'FAMILY', label: 'Семейный' },
+  { value: 'WITH_MENTOR', label: 'С наставником' },
+  { value: 'WITH_PSYCHOLOGIST', label: 'С психологом' },
+  { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивидуальный с психологом' },
+];
 
 export function LibraryAdmin() {
   const [items, setItems] = useState<LibraryItem[]>([]);
@@ -278,6 +287,15 @@ function LibraryForm({ item, onSave, onClose }: { item: LibraryItem | null; onSa
   const [url, setUrl] = useState(item?.url || '');
   const [downloadUrl, setDownloadUrl] = useState((item as any)?.downloadUrl || '');
   const [isPublished, setIsPublished] = useState(item?.isPublished ?? true);
+  const [allowedTariffs, setAllowedTariffs] = useState<string[]>(item?.allowedTariffs || []);
+
+  const toggleTariff = (tariff: string) => {
+    setAllowedTariffs(prev => 
+      prev.includes(tariff) 
+        ? prev.filter(t => t !== tariff) 
+        : [...prev, tariff]
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -308,6 +326,23 @@ function LibraryForm({ item, onSave, onClose }: { item: LibraryItem | null; onSa
         <p className="text-xs text-[#3d3527]/50 mt-1">Если заполнено, на карточке появится кнопка «Скачать»</p>
       </div>
       <div>
+        <label className="block text-sm font-medium text-[#3d3527] mb-2">Кому доступен</label>
+        <div className="space-y-2 bg-[#f5f3ed]/50 rounded-xl p-3">
+          {TARIFF_OPTIONS.map(tariff => (
+            <label key={tariff.value} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allowedTariffs.includes(tariff.value)}
+                onChange={() => toggleTariff(tariff.value)}
+                className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+              />
+              <span className="text-sm text-[#3d3527]">{tariff.label}</span>
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-[#3d3527]/50 mt-1">Если не выбрано ни одного — доступен всем</p>
+      </div>
+      <div>
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
@@ -323,7 +358,7 @@ function LibraryForm({ item, onSave, onClose }: { item: LibraryItem | null; onSa
       </div>
       <div className="flex justify-end gap-3">
         <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
-        <button onClick={() => onSave({ title, description, type, url, downloadUrl: downloadUrl || null, isPublished })} className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl">Сохранить</button>
+        <button onClick={() => onSave({ title, description, type, url, downloadUrl: downloadUrl || null, isPublished, allowedTariffs })} className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl">Сохранить</button>
       </div>
     </div>
   );

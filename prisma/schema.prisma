@@ -219,17 +219,18 @@ model NoteAttachment {
 }
 
 model LibraryItem {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  type        String
-  url         String?
-  downloadUrl String?
-  content     String?
-  order       Int      @default(0)
-  isPublished Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(uuid())
+  title          String
+  description    String?
+  type           String
+  url            String?
+  downloadUrl    String?
+  content        String?
+  order          Int      @default(0)
+  isPublished    Boolean  @default(false)
+  allowedTariffs String[] @default([])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model ScheduleEvent {

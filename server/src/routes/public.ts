@@ -153,7 +153,27 @@ router.get('/library', async (req, res) => {
       where: { isPublished: true },
       orderBy: { order: 'asc' }
     });
-    res.json(items);
+    
+    const studentInfo = await getStudentFromToken(req);
+    if (studentInfo) {
+      const student = await prisma.student.findUnique({
+        where: { id: studentInfo.studentId },
+        select: { tariff: true }
+      });
+      
+      if (student) {
+        const filteredItems = items.filter(item => {
+          if (!item.allowedTariffs || item.allowedTariffs.length === 0) {
+            return true;
+          }
+          return item.allowedTariffs.includes(student.tariff);
+        });
+        return res.json(filteredItems);
+      }
+    }
+    
+    const publicItems = items.filter(item => !item.allowedTariffs || item.allowedTariffs.length === 0);
+    res.json(publicItems);
   } catch (error) {
     console.error('Get public library error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

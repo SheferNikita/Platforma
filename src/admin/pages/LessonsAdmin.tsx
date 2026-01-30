@@ -23,6 +23,10 @@ interface Lesson {
   isTextOnly: boolean;
   publishAt: string | null;
   videos: LessonVideo[];
+  showDiary: boolean;
+  showNotes: boolean;
+  diaryDescription: string;
+  notesDescription: string;
 }
 
 interface Module {
@@ -526,6 +530,12 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
     }
     return '09:00';
   });
+  
+  // Diary and Notes settings
+  const [showDiary, setShowDiary] = useState(lesson?.showDiary ?? true);
+  const [showNotes, setShowNotes] = useState(lesson?.showNotes ?? true);
+  const [diaryDescription, setDiaryDescription] = useState(lesson?.diaryDescription || 'Запишите свои мысли, эмоции и впечатления от пройденного урока');
+  const [notesDescription, setNotesDescription] = useState(lesson?.notesDescription || 'Запишите основные моменты урока, важные понятия и выводы');
 
   const addVideo = () => {
     setVideos([...videos, { url: '', title: '', order: videos.length }]);
@@ -570,7 +580,11 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
       isTextOnly, 
       isPublished: schedulePublish ? false : isPublished, 
       publishAt,
-      videos: videosToSave 
+      videos: videosToSave,
+      showDiary,
+      showNotes,
+      diaryDescription,
+      notesDescription
     });
   };
 
@@ -776,6 +790,64 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
               className="w-full px-3 sm:px-4 py-2 border border-[#d4c9b0] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#a67c52] text-sm sm:text-base"
               placeholder="30 минут"
             />
+          </div>
+
+          {/* Diary and Notes settings */}
+          <div className="p-4 bg-[#f5f3ed] rounded-xl space-y-4">
+            <h3 className="font-medium text-[#3d3527] flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Настройки дневника и конспекта
+            </h3>
+            
+            {/* Diary settings */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showDiary}
+                  onChange={(e) => setShowDiary(e.target.checked)}
+                  className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                />
+                <span className="text-sm text-[#3d3527]">Показывать блок "Дневник к уроку"</span>
+              </label>
+              {showDiary && (
+                <div className="ml-6">
+                  <label className="block text-xs text-[#3d3527]/60 mb-1">Описание/подсказка для дневника</label>
+                  <textarea
+                    value={diaryDescription}
+                    onChange={(e) => setDiaryDescription(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg focus:outline-none focus:border-[#a67c52] text-sm"
+                    rows={2}
+                    placeholder="Запишите свои мысли, эмоции и впечатления от пройденного урока"
+                  />
+                </div>
+              )}
+            </div>
+            
+            {/* Notes settings */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showNotes}
+                  onChange={(e) => setShowNotes(e.target.checked)}
+                  className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                />
+                <span className="text-sm text-[#3d3527]">Показывать блок "Конспект к уроку"</span>
+              </label>
+              {showNotes && (
+                <div className="ml-6">
+                  <label className="block text-xs text-[#3d3527]/60 mb-1">Описание/подсказка для конспекта</label>
+                  <textarea
+                    value={notesDescription}
+                    onChange={(e) => setNotesDescription(e.target.value)}
+                    className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg focus:outline-none focus:border-[#a67c52] text-sm"
+                    rows={2}
+                    placeholder="Запишите основные моменты урока, важные понятия и выводы"
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 mt-6">

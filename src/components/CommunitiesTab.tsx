@@ -27,6 +27,7 @@ export function CommunitiesTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hidden, setHidden] = useState(false);
+  const [activeTab, setActiveTab] = useState<'offline' | 'online'>('offline');
 
   useEffect(() => {
     loadCommunities();
@@ -91,9 +92,13 @@ export function CommunitiesTab() {
     );
   }
 
+  const offlineCommunities = communities.filter(c => c.format === 'offline' || !c.format);
+  const onlineCommunities = communities.filter(c => c.format === 'online');
+  const filteredCommunities = activeTab === 'offline' ? offlineCommunities : onlineCommunities;
+
   return (
     <div className="animate-fade-in">
-      <div className="mb-10 border-b-2 border-[var(--book-border)]/30 pb-8 relative">
+      <div className="mb-8 border-b-2 border-[var(--book-border)]/30 pb-6 relative">
         <div className="absolute -top-2 left-0 w-16 h-1 bg-gradient-to-r from-[var(--button-lavender-dark)] via-[var(--button-lavender-light)] to-transparent rounded-full"></div>
         
         <h2 className="text-[#3a3a3a] mb-3">Общины трезвости</h2>
@@ -103,8 +108,31 @@ export function CommunitiesTab() {
         </p>
       </div>
 
+      <div className="flex gap-2 mb-6 border-b border-[var(--book-border)]/30">
+        <button
+          onClick={() => setActiveTab('offline')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === 'offline' ? 'text-[var(--button-lavender-dark)] border-b-2 border-[var(--button-lavender-dark)]' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          <MapPin className="w-4 h-4" />
+          Очные ({offlineCommunities.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('online')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === 'online' ? 'text-[var(--button-lavender-dark)] border-b-2 border-[var(--button-lavender-dark)]' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          <Globe className="w-4 h-4" />
+          Онлайн ({onlineCommunities.length})
+        </button>
+      </div>
+
+      {filteredCommunities.length === 0 ? (
+        <div className="text-center py-12">
+          <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+          <p className="text-gray-500">{activeTab === 'offline' ? 'Очных общин пока нет' : 'Онлайн общин пока нет'}</p>
+        </div>
+      ) : (
       <div className="grid gap-6 md:grid-cols-2">
-        {communities.map((community, index) => (
+        {filteredCommunities.map((community, index) => (
           <div
             key={community.id}
             className="border-2 border-[var(--sky-light)]/50 rounded-2xl p-4 md:p-7 bg-gradient-to-br from-white/80 to-white/40 shadow-[0_4px_16px_var(--book-shadow)] hover:shadow-[0_8px_24px_var(--book-shadow-strong)] transition-all duration-300 transform hover:-translate-y-1 animate-slide-up"
@@ -198,6 +226,7 @@ export function CommunitiesTab() {
           </div>
         ))}
       </div>
+      )}
 
       <div className="mt-10 p-5 md:p-8 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-[var(--button-lavender-dark)]/5 border-2 border-[var(--button-lavender-dark)]/30 rounded-2xl shadow-[0_4px_16px_rgba(122,132,171,0.08)]">
         <h4 className="mb-3 text-[var(--button-lavender-dark)] text-base md:text-lg">Не нашли общину в своем городе?</h4>

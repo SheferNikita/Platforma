@@ -186,7 +186,8 @@ export function LibraryAdmin() {
                         {item.type === 'article' ? 'Статья' : 
                          item.type === 'video' ? 'Видео' : 
                          item.type === 'audio' ? 'Аудио' : 
-                         item.type === 'book' ? 'Книга' : item.type}
+                         item.type === 'book' ? 'Книга' : 
+                         item.type === 'document' ? 'Документ' : item.type}
                       </p>
                       {item.description && (
                         <p className="text-xs text-[#3d3527]/50 mt-1 line-clamp-2">{item.description}</p>
@@ -239,7 +240,8 @@ export function LibraryAdmin() {
                         {item.type === 'article' ? 'Статья' : 
                          item.type === 'video' ? 'Видео' : 
                          item.type === 'audio' ? 'Аудио' : 
-                         item.type === 'book' ? 'Книга' : item.type}
+                         item.type === 'book' ? 'Книга' : 
+                         item.type === 'document' ? 'Документ' : item.type}
                       </p>
                       {item.description && (
                         <p className="text-sm text-[#3d3527]/50 mt-1 line-clamp-2">{item.description}</p>
@@ -314,6 +316,7 @@ function LibraryForm({ item, onSave, onClose }: { item: LibraryItem | null; onSa
           <option value="video">Видео</option>
           <option value="audio">Аудио</option>
           <option value="book">Книга</option>
+          <option value="document">Документ</option>
         </select>
       </div>
       <div>

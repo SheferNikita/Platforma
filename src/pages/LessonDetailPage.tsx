@@ -721,15 +721,15 @@ export function LessonDetailPage() {
         {/* Блок Задание/Рекомендация */}
         {lessonData.showTask && lessonData.taskContent && (
           (!lessonData.taskAllowedTariffs || lessonData.taskAllowedTariffs.length === 0 || (userTariff && lessonData.taskAllowedTariffs.includes(userTariff))) && (
-            <div className="mb-10 border-2 border-amber-200/60 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-amber-50/95 to-orange-50/60 backdrop-blur-sm shadow-[0_8px_24px_rgba(251,191,36,0.1)]">
+            <div className="mb-10 border border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/95 to-white/60 backdrop-blur-sm shadow-[0_4px_16px_var(--ethereal-shadow)]">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/20 to-orange-400/20 flex items-center justify-center border border-amber-300/40">
-                  <FileText className="w-5 h-5 text-amber-600" />
+                <div className="w-8 h-8 rounded-lg bg-[var(--sky-light)]/30 flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-[#3d3527]/60" />
                 </div>
-                <h3 className="text-lg font-medium text-amber-800">Задание / Рекомендация</h3>
+                <h3 className="text-base font-medium text-[#3a3a3a]">Задание / Рекомендация</h3>
               </div>
               <div 
-                className="prose prose-sm max-w-none prose-headings:text-amber-800 prose-p:text-amber-900/80 prose-a:text-amber-700 prose-ul:text-amber-900/80 prose-ol:text-amber-900/80 prose-li:text-amber-900/80 prose-strong:text-amber-800"
+                className="prose prose-sm max-w-none prose-headings:text-[#3a3a3a] prose-p:text-[#3d3527] prose-a:text-[var(--button-lavender-dark)] prose-ul:text-[#3d3527] prose-ol:text-[#3d3527] prose-li:text-[#3d3527] prose-strong:text-[#3a3a3a]"
                 dangerouslySetInnerHTML={{ __html: lessonData.taskContent }}
               />
             </div>

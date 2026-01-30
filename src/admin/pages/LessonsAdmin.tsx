@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, ArrowUp, ArrowDown, Move, Check, X, Video, FileText, Upload, File, Clock, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, ArrowUp, ArrowDown, Move, Check, X, Video, FileText, Upload, File, Clock, Calendar, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { RichTextEditor } from '../../components/RichTextEditor';
 import { KinescopePlayer } from '../../components/KinescopePlayer';
@@ -400,6 +400,17 @@ export function LessonsAdmin() {
                         ) : (
                           <EyeOff className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />
                         )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          const lessonUrl = `${window.location.origin}/lesson/${lesson.id}`;
+                          navigator.clipboard.writeText(lessonUrl);
+                          toast.success('Ссылка скопирована');
+                        }}
+                        className="p-1.5 md:p-2 hover:bg-white rounded-lg"
+                        title="Копировать ссылку на урок"
+                      >
+                        <Link2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#3d3527]" />
                       </button>
                       <button
                         onClick={() => { setEditingLesson({ lesson, moduleId: module.id }); setShowLessonModal(true); }}

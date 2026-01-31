@@ -13,7 +13,7 @@ interface Attachment {
   size: number;
 }
 
-const getAttachmentUrl = (attachment: Attachment, itemType: 'diary' | 'question' | 'report'): string => {
+const getAttachmentUrl = (attachment: Attachment, itemType: 'diary' | 'question' | 'report' | 'personal'): string => {
   const type = itemType === 'diary' ? 'diary' : 'note';
   return `/api/public/attachments/${type}/${attachment.id}`;
 };
@@ -53,7 +53,7 @@ function parseReplyHistory(reply: string | null): ReplyMessage[] {
 
 interface ModerationItem {
   id: string;
-  type: 'diary' | 'question' | 'report';
+  type: 'diary' | 'question' | 'report' | 'personal';
   content: string;
   reply: string | null;
   repliedAt: string | null;
@@ -70,7 +70,8 @@ interface ModerationItem {
 const typeConfig = {
   diary: { label: 'Дневник', icon: BookOpen, color: 'bg-blue-100 text-blue-700' },
   question: { label: 'Вопрос', icon: MessageCircle, color: 'bg-purple-100 text-purple-700' },
-  report: { label: 'Отчет', icon: FileText, color: 'bg-green-100 text-green-700' }
+  report: { label: 'Отчет', icon: FileText, color: 'bg-green-100 text-green-700' },
+  personal: { label: 'Конспект', icon: FileText, color: 'bg-teal-100 text-teal-700' }
 };
 
 export function ModerationAdmin() {
@@ -522,6 +523,7 @@ function ChatDialog({
             {item.type === 'diary' && 'Запишите свои мысли, эмоции и впечатления от пройденного урока'}
             {item.type === 'question' && 'Вопрос от ученика по содержанию урока'}
             {item.type === 'report' && 'Отчет ученика о выполнении задания'}
+            {item.type === 'personal' && 'Личные заметки и конспект ученика к уроку'}
           </p>
         </div>
 

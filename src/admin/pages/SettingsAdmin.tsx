@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, Upload, Save, RotateCcw, Mail, History, AlertCircle, Check, X, Play, Pause } from 'lucide-react';
+import { Settings, Upload, Save, RotateCcw, Mail, History, AlertCircle, Check, X, Play, Pause, Edit2, Loader2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { toast } from 'sonner';
 
@@ -43,6 +43,9 @@ export function SettingsAdmin() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
+  const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
+  const [templateForm, setTemplateForm] = useState({ name: '', subject: '', body: '', description: '' });
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -108,6 +111,31 @@ export function SettingsAdmin() {
       loadData();
     } catch (error) {
       toast.error('Ошибка обновления');
+    }
+  }
+
+  function openEditTemplate(template: EmailTemplate) {
+    setEditingTemplate(template);
+    setTemplateForm({
+      name: template.name,
+      subject: template.subject,
+      body: template.body,
+      description: template.description || ''
+    });
+  }
+
+  async function saveTemplate() {
+    if (!editingTemplate) return;
+    setSavingTemplate(true);
+    try {
+      await api.put(`/admin/email-templates/${editingTemplate.id}`, templateForm);
+      toast.success('Шаблон сохранён');
+      setEditingTemplate(null);
+      loadData();
+    } catch (error) {
+      toast.error('Ошибка сохранения шаблона');
+    } finally {
+      setSavingTemplate(false);
     }
   }
 
@@ -191,6 +219,7 @@ export function SettingsAdmin() {
       {activeTab === 'email' && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-[#3d3527]">Email-шаблоны</h2>
+          <p className="text-sm text-[#3d3527]/60">Управляйте шаблонами email-уведомлений. Переменные указываются в формате {'{{переменная}}'}</p>
           {templates.length === 0 ? (
             <p className="text-[#3d3527]/60">Шаблоны пока не созданы</p>
           ) : (
@@ -200,28 +229,123 @@ export function SettingsAdmin() {
                   key={template.id}
                   className="bg-white/60 rounded-xl p-4 border border-[#e8e4da]"
                 >
-                  <div className="flex items-start justify-between">
-                    <div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-[#3d3527]">{template.name}</h3>
                       <p className="text-sm text-[#3d3527]/60">{template.description || template.code}</p>
                       <p className="text-xs text-[#3d3527]/40 mt-1">Тема: {template.subject}</p>
+                      {template.variables && template.variables.length > 0 && (
+                        <p className="text-xs text-[#3d3527]/40 mt-1">
+                          Переменные: {template.variables.map(v => `{{${v}}}`).join(', ')}
+                        </p>
+                      )}
                     </div>
-                    <button
-                      onClick={() => toggleTemplate(template)}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                        template.isEnabled
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {template.isEnabled ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
-                      {template.isEnabled ? 'Включен' : 'Отключен'}
-                    </button>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => openEditTemplate(template)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--button-lavender)]/20 text-[var(--button-lavender-dark)] rounded-lg text-sm hover:bg-[var(--button-lavender)]/30 transition-colors"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        Редактировать
+                      </button>
+                      <button
+                        onClick={() => toggleTemplate(template)}
+                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                          template.isEnabled
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {template.isEnabled ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
+                        {template.isEnabled ? 'Вкл' : 'Откл'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {editingTemplate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-[#e8e4da]">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-[#3d3527]">Редактирование шаблона</h2>
+                <button onClick={() => setEditingTemplate(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-sm text-[#3d3527]/60 mt-1">Код: {editingTemplate.code}</p>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Название</label>
+                <input
+                  type="text"
+                  value={templateForm.name}
+                  onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-4 py-2 border border-[#d4c9b0] rounded-lg focus:ring-2 focus:ring-[var(--button-lavender)] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Тема письма</label>
+                <input
+                  type="text"
+                  value={templateForm.subject}
+                  onChange={(e) => setTemplateForm(prev => ({ ...prev, subject: e.target.value }))}
+                  className="w-full px-4 py-2 border border-[#d4c9b0] rounded-lg focus:ring-2 focus:ring-[var(--button-lavender)] focus:border-transparent"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Описание</label>
+                <input
+                  type="text"
+                  value={templateForm.description}
+                  onChange={(e) => setTemplateForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-4 py-2 border border-[#d4c9b0] rounded-lg focus:ring-2 focus:ring-[var(--button-lavender)] focus:border-transparent"
+                  placeholder="Краткое описание назначения шаблона"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">Текст письма</label>
+                <textarea
+                  value={templateForm.body}
+                  onChange={(e) => setTemplateForm(prev => ({ ...prev, body: e.target.value }))}
+                  rows={10}
+                  className="w-full px-4 py-2 border border-[#d4c9b0] rounded-lg focus:ring-2 focus:ring-[var(--button-lavender)] focus:border-transparent font-mono text-sm"
+                />
+                {editingTemplate.variables && editingTemplate.variables.length > 0 && (
+                  <p className="text-xs text-[#3d3527]/60 mt-2">
+                    Доступные переменные: {editingTemplate.variables.map(v => `{{${v}}}`).join(', ')}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            <div className="p-6 border-t border-[#e8e4da] flex justify-end gap-3">
+              <button
+                onClick={() => setEditingTemplate(null)}
+                className="px-4 py-2 border border-[#d4c9b0] rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={saveTemplate}
+                disabled={savingTemplate}
+                className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {savingTemplate ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Сохранить
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

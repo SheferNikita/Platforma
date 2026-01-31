@@ -280,11 +280,17 @@ export function LessonDetailPage() {
           const diaryEntries = await api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/diary`);
           const diaryMessages: ChatMessage[] = [];
           diaryEntries.forEach(entry => {
+            const entryFiles = entry.attachments?.map(att => ({
+              name: att.originalName,
+              type: att.mimeType,
+              url: `/api/public/attachments/diary/${att.id}`
+            }));
             diaryMessages.push({
               id: entry.id,
               text: entry.content,
               author: 'student',
-              timestamp: new Date(entry.createdAt)
+              timestamp: new Date(entry.createdAt),
+              files: entryFiles && entryFiles.length > 0 ? entryFiles : undefined
             });
             if (entry.reply) {
               const replyHistory = parseReplyHistory(entry.reply);
@@ -312,11 +318,17 @@ export function LessonDetailPage() {
           const notesEntries = await api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/personal-notes`);
           const notesMessages: ChatMessage[] = [];
           notesEntries.forEach(entry => {
+            const entryFiles = entry.attachments?.map(att => ({
+              name: att.originalName,
+              type: att.mimeType,
+              url: `/api/public/attachments/note/${att.id}`
+            }));
             notesMessages.push({
               id: entry.id,
               text: entry.content,
               author: 'student',
-              timestamp: new Date(entry.createdAt)
+              timestamp: new Date(entry.createdAt),
+              files: entryFiles && entryFiles.length > 0 ? entryFiles : undefined
             });
             if (entry.reply) {
               const replyHistory = parseReplyHistory(entry.reply);

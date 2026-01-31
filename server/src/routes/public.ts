@@ -5,6 +5,7 @@ import ordersRouter from './orders';
 import moderationRouter from './moderation';
 import auditRouter from './audit';
 import distributionRouter from './distribution';
+import settingsRouter from './settings';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -13,6 +14,7 @@ router.use('/orders', ordersRouter);
 router.use('/moderation', moderationRouter);
 router.use('/audit', auditRouter);
 router.use('/distribution', distributionRouter);
+router.use('/settings', settingsRouter);
 
 interface DecodedToken {
   id: string;

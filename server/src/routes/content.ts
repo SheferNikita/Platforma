@@ -103,15 +103,10 @@ router.post('/modules', contentRoles, async (req: AuthRequest, res: Response) =>
     const data = moduleSchema.parse(req.body);
     const module = await prisma.module.create({ data });
     
-    await prisma.adminLog.create({
-      data: {
-        userId: req.user!.id,
-        action: 'CREATE',
-        entity: 'MODULE',
-        entityId: module.id,
-        details: { title: module.title }
-      }
-    });
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'MODULE', ${module.id}, ${JSON.stringify({ title: module.title })}::jsonb, ${JSON.stringify(module)}::jsonb, NOW())
+    `;
     
     res.status(201).json(module);
   } catch (error: any) {
@@ -226,15 +221,10 @@ router.post('/lessons', contentRoles, async (req: AuthRequest, res: Response) =>
       }
     });
     
-    await prisma.adminLog.create({
-      data: {
-        userId: req.user!.id,
-        action: 'CREATE',
-        entity: 'LESSON',
-        entityId: lesson.id,
-        details: { title: lesson.title }
-      }
-    });
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'LESSON', ${lesson.id}, ${JSON.stringify({ title: lesson.title })}::jsonb, ${JSON.stringify(lesson)}::jsonb, NOW())
+    `;
     
     res.status(201).json(lesson);
   } catch (error) {
@@ -332,6 +322,11 @@ router.post('/library', moderatorRoles, async (req: AuthRequest, res: Response) 
   try {
     const item = await prisma.libraryItem.create({ data: req.body });
 
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'LIBRARY', ${item.id}, ${JSON.stringify({ title: item.title })}::jsonb, ${JSON.stringify(item)}::jsonb, NOW())
+    `;
+
     const activeStudents = await prisma.student.findMany({
       where: { user: { isActive: true } },
       select: { userId: true }
@@ -407,6 +402,11 @@ router.post('/schedule', moderatorRoles, async (req: AuthRequest, res: Response)
       include: { miniGroup: true }
     });
 
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'SCHEDULE', ${event.id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(event)}::jsonb, NOW())
+    `;
+
     const activeStudents = await prisma.student.findMany({
       where: { user: { isActive: true } },
       select: { userId: true }
@@ -481,6 +481,12 @@ router.get('/contacts', adminOnly, async (req: AuthRequest, res: Response) => {
 router.post('/contacts', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
     const contact = await prisma.contact.create({ data: { ...req.body, isPublished: true } });
+    
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'CONTACT', ${contact.id}, ${JSON.stringify({ name: contact.name })}::jsonb, ${JSON.stringify(contact)}::jsonb, NOW())
+    `;
+    
     res.status(201).json(contact);
   } catch (error) {
     console.error('Create contact error:', error);

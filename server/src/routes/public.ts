@@ -818,7 +818,8 @@ router.get('/profile', async (req: Request, res: Response) => {
       joinDate: studentData.user.createdAt,
       lessonsCompleted: studentData.progress.length,
       totalLessons,
-      modulesAccess: studentData.moduleAccess.length
+      modulesAccess: studentData.moduleAccess.length,
+      tariff: studentData.tariff
     });
   } catch (error) {
     console.error('Get profile error:', error);

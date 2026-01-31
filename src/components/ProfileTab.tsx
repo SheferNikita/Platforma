@@ -28,6 +28,7 @@ interface ProfileData {
   lessonsCompleted: number;
   totalLessons: number;
   modulesAccess: number;
+  tariff: string | null;
 }
 
 export function ProfileTab() {
@@ -407,56 +408,58 @@ export function ProfileTab() {
             </div>
           </div>
 
-          {/* My Content - Diaries & Notes */}
-          <div className="border-2 border-[var(--sky-light)]/40 bg-gradient-to-br from-white/90 to-white/50 rounded-2xl p-6 md:p-8 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)]">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] rounded-xl flex items-center justify-center shadow-lg">
-                <BookOpen className="w-6 h-6 text-white" />
+          {/* My Content - Diaries & Notes - скрыто для BASIC и FAMILY */}
+          {profile?.tariff && profile.tariff !== 'BASIC' && profile.tariff !== 'FAMILY' && (
+            <div className="border-2 border-[var(--sky-light)]/40 bg-gradient-to-br from-white/90 to-white/50 rounded-2xl p-6 md:p-8 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)]">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] rounded-xl flex items-center justify-center shadow-lg">
+                  <BookOpen className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h4 className="text-lg">Мои материалы</h4>
+                  <p className="text-sm opacity-60">Дневники и конспекты уроков</p>
+                </div>
               </div>
-              <div>
-                <h4 className="text-lg">Мои материалы</h4>
-                <p className="text-sm opacity-60">Дневники и конспекты уроков</p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button
+                  onClick={() => navigate('/my-diaries')}
+                  className="group relative overflow-hidden p-6 rounded-xl border-2 border-[var(--button-lavender)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-white/80 hover:shadow-[0_8px_20px_rgba(139,149,188,0.3)] transition-all duration-300 transform hover:-translate-y-1 text-left"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                  <div className="relative z-10">
+                    <div className="w-12 h-12 mb-4 bg-gradient-to-br from-[var(--button-lavender-dark)]/20 to-[var(--button-lavender-light)]/20 rounded-lg flex items-center justify-center">
+                      <BookOpen className="w-6 h-6 text-[var(--button-lavender-dark)]" />
+                    </div>
+                    <h5 className="text-base mb-2">Мои дневники</h5>
+                    <p className="text-xs opacity-70 leading-relaxed">Все заполненные дневники к урокам</p>
+                    <div className="mt-4 text-sm opacity-60 flex items-center gap-1">
+                      <span>{diariesCount} {diariesCount === 1 ? 'запись' : diariesCount >= 2 && diariesCount <= 4 ? 'записи' : 'записей'}</span>
+                      <span className="ml-auto">→</span>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => navigate('/my-notes')}
+                  className="group relative overflow-hidden p-6 rounded-xl border-2 border-[var(--button-lavender)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-white/80 hover:shadow-[0_8px_20px_rgba(139,149,188,0.3)] transition-all duration-300 transform hover:-translate-y-1 text-left"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                  <div className="relative z-10">
+                    <div className="w-12 h-12 mb-4 bg-gradient-to-br from-[var(--button-lavender-dark)]/20 to-[var(--button-lavender-light)]/20 rounded-lg flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-[var(--button-lavender-dark)]" />
+                    </div>
+                    <h5 className="text-base mb-2">Мои конспекты</h5>
+                    <p className="text-xs opacity-70 leading-relaxed">Все заполненные конспекты к урокам</p>
+                    <div className="mt-4 text-sm opacity-60 flex items-center gap-1">
+                      <span>{notesCount} {notesCount === 1 ? 'конспект' : notesCount >= 2 && notesCount <= 4 ? 'конспекта' : 'конспектов'}</span>
+                      <span className="ml-auto">→</span>
+                    </div>
+                  </div>
+                </button>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <button
-                onClick={() => navigate('/my-diaries')}
-                className="group relative overflow-hidden p-6 rounded-xl border-2 border-[var(--button-lavender)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-white/80 hover:shadow-[0_8px_20px_rgba(139,149,188,0.3)] transition-all duration-300 transform hover:-translate-y-1 text-left"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-                <div className="relative z-10">
-                  <div className="w-12 h-12 mb-4 bg-gradient-to-br from-[var(--button-lavender-dark)]/20 to-[var(--button-lavender-light)]/20 rounded-lg flex items-center justify-center">
-                    <BookOpen className="w-6 h-6 text-[var(--button-lavender-dark)]" />
-                  </div>
-                  <h5 className="text-base mb-2">Мои дневники</h5>
-                  <p className="text-xs opacity-70 leading-relaxed">Все заполненные дневники к урокам</p>
-                  <div className="mt-4 text-sm opacity-60 flex items-center gap-1">
-                    <span>{diariesCount} {diariesCount === 1 ? 'запись' : diariesCount >= 2 && diariesCount <= 4 ? 'записи' : 'записей'}</span>
-                    <span className="ml-auto">→</span>
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => navigate('/my-notes')}
-                className="group relative overflow-hidden p-6 rounded-xl border-2 border-[var(--button-lavender)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-white/80 hover:shadow-[0_8px_20px_rgba(139,149,188,0.3)] transition-all duration-300 transform hover:-translate-y-1 text-left"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-                <div className="relative z-10">
-                  <div className="w-12 h-12 mb-4 bg-gradient-to-br from-[var(--button-lavender-dark)]/20 to-[var(--button-lavender-light)]/20 rounded-lg flex items-center justify-center">
-                    <FileText className="w-6 h-6 text-[var(--button-lavender-dark)]" />
-                  </div>
-                  <h5 className="text-base mb-2">Мои конспекты</h5>
-                  <p className="text-xs opacity-70 leading-relaxed">Все заполненные конспекты к урокам</p>
-                  <div className="mt-4 text-sm opacity-60 flex items-center gap-1">
-                    <span>{notesCount} {notesCount === 1 ? 'конспект' : notesCount >= 2 && notesCount <= 4 ? 'конспекта' : 'конспектов'}</span>
-                    <span className="ml-auto">→</span>
-                  </div>
-                </div>
-              </button>
-            </div>
-          </div>
+          )}
 
           {/* Achievements */}
           <div className="border-2 border-[var(--sky-light)]/40 bg-gradient-to-br from-white/90 to-white/50 rounded-2xl p-6 md:p-8 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)]">

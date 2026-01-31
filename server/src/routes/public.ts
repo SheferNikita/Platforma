@@ -866,6 +866,114 @@ router.put('/profile', async (req: Request, res: Response) => {
   }
 });
 
+// Get student's lesson progress (completed lessons)
+router.get('/progress', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const progress = await prisma.lessonProgress.findMany({
+      where: { 
+        studentId: student.studentId,
+        isCompleted: true
+      },
+      select: {
+        lessonId: true,
+        completedAt: true
+      }
+    });
+
+    res.json(progress.map(p => p.lessonId));
+  } catch (error) {
+    console.error('Get progress error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Mark lesson as completed
+router.post('/lessons/:lessonId/complete', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const { lessonId } = req.params;
+
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId }
+    });
+
+    if (!lesson) {
+      return res.status(404).json({ error: 'Урок не найден' });
+    }
+
+    const existingProgress = await prisma.lessonProgress.findFirst({
+      where: {
+        studentId: student.studentId,
+        lessonId
+      }
+    });
+
+    if (existingProgress) {
+      await prisma.lessonProgress.update({
+        where: { id: existingProgress.id },
+        data: {
+          isCompleted: true,
+          completedAt: new Date()
+        }
+      });
+    } else {
+      await prisma.lessonProgress.create({
+        data: {
+          studentId: student.studentId,
+          lessonId,
+          isCompleted: true,
+          completedAt: new Date()
+        }
+      });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Mark lesson complete error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Unmark lesson as completed
+router.delete('/lessons/:lessonId/complete', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const { lessonId } = req.params;
+
+    await prisma.lessonProgress.updateMany({
+      where: {
+        studentId: student.studentId,
+        lessonId
+      },
+      data: {
+        isCompleted: false,
+        completedAt: null
+      }
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Unmark lesson complete error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // Get student's diaries
 router.get('/my-diaries', async (req: Request, res: Response) => {
   try {

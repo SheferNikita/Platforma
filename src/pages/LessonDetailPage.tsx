@@ -235,6 +235,14 @@ export function LessonDetailPage() {
           setModuleLessons(currentModule);
         }
 
+        // Fetch lesson completion status
+        try {
+          const progress = await api.get<string[]>('/public/progress');
+          setIsLessonCompleted(progress.includes(lessonId));
+        } catch (progressErr) {
+          console.error('Error fetching progress:', progressErr);
+        }
+
         // Fetch chat history (student questions and replies)
         try {
           console.log('[LessonDetailPage] Fetching notes for lesson:', lessonId);
@@ -400,11 +408,17 @@ export function LessonDetailPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleMarkComplete = () => {
-    if (isLessonCompleted) return;
-    // Здесь должна быть логика для сохранения статуса урока
-    setIsLessonCompleted(true);
-    toast.success('Урок отмечен как пройденный!');
+  const handleMarkComplete = async () => {
+    if (isLessonCompleted || !lessonId) return;
+    
+    try {
+      await api.post(`/public/lessons/${lessonId}/complete`, {});
+      setIsLessonCompleted(true);
+      toast.success('Урок отмечен как пройденный!');
+    } catch (err) {
+      console.error('Failed to mark lesson complete:', err);
+      toast.error('Не удалось отметить урок пройденным');
+    }
   };
 
   const handleSaveDiary = async () => {

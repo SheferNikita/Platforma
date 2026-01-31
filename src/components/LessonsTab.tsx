@@ -29,14 +29,18 @@ export function LessonsTab() {
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    loadModules();
+    loadData();
   }, []);
 
-  async function loadModules() {
+  async function loadData() {
     try {
       setLoading(true);
-      const data = await api.get<Module[]>('/public/modules');
-      setModules(data);
+      const [modulesData, progressData] = await Promise.all([
+        api.get<Module[]>('/public/modules'),
+        api.get<string[]>('/public/progress').catch(() => [])
+      ]);
+      setModules(modulesData);
+      setCompletedLessons(new Set(progressData));
       setError(null);
     } catch (err) {
       setError('Не удалось загрузить программу обучения');
@@ -45,7 +49,9 @@ export function LessonsTab() {
     }
   }
 
-  const toggleComplete = (lessonId: string) => {
+  const toggleComplete = async (lessonId: string) => {
+    const isCurrentlyCompleted = completedLessons.has(lessonId);
+    
     setCompletedLessons(prev => {
       const newSet = new Set(prev);
       if (newSet.has(lessonId)) {
@@ -55,6 +61,25 @@ export function LessonsTab() {
       }
       return newSet;
     });
+
+    try {
+      if (isCurrentlyCompleted) {
+        await api.delete(`/public/lessons/${lessonId}/complete`);
+      } else {
+        await api.post(`/public/lessons/${lessonId}/complete`, {});
+      }
+    } catch (err) {
+      setCompletedLessons(prev => {
+        const newSet = new Set(prev);
+        if (isCurrentlyCompleted) {
+          newSet.add(lessonId);
+        } else {
+          newSet.delete(lessonId);
+        }
+        return newSet;
+      });
+      console.error('Failed to update lesson progress:', err);
+    }
   };
 
   if (loading) {
@@ -71,7 +96,7 @@ export function LessonsTab() {
       <div className="text-center py-20">
         <p className="text-red-500 mb-4">{error}</p>
         <button 
-          onClick={loadModules}
+          onClick={loadData}
           className="px-4 py-2 bg-[var(--button-lavender-dark)] text-white rounded-lg hover:opacity-90"
         >
           Попробовать снова

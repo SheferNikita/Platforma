@@ -36,26 +36,32 @@ const updateStudentSchema = z.object({
   assignedPsychologistId: z.string().nullable().optional()
 });
 
-async function getMentorStudentIds(userEmail: string): Promise<string[]> {
-  const contact = await prisma.contact.findFirst({
-    where: { email: userEmail }
-  });
-  
-  if (!contact) {
-    return [];
-  }
-  
-  const mentorMiniGroups = await prisma.miniGroup.findMany({
-    where: { curatorId: contact.id },
-    select: {
+async function getMentorStudentIds(userId: string): Promise<string[]> {
+  // Get all mini-groups and filter by mentorIds in chatLink JSON
+  const allGroups = await prisma.miniGroup.findMany({
+    select: { 
+      id: true, 
+      chatLink: true,
       members: {
         select: { studentId: true }
       }
     }
   });
+  
+  // Filter groups where user is in mentorIds
+  const userGroups = allGroups.filter(group => {
+    if (!group.chatLink) return false;
+    try {
+      const chatData = JSON.parse(group.chatLink);
+      const mentorIds: string[] = chatData.mentorIds || [];
+      return mentorIds.includes(userId);
+    } catch {
+      return false;
+    }
+  });
 
   const studentIds = new Set<string>();
-  mentorMiniGroups.forEach(group => {
+  userGroups.forEach(group => {
     group.members.forEach(member => {
       studentIds.add(member.studentId);
     });
@@ -94,39 +100,51 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       role: 'STUDENT'
     };
 
-    // MENTOR can only see students from their mini-groups
-    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
-      const contact = await prisma.contact.findFirst({
-        where: { email: req.user!.email }
+    // MENTOR/PSYCHOLOGIST/INTERN can only see students from their mini-groups
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN' || req.user!.role === 'PSYCHOLOGIST') {
+      const userId = req.user!.id;
+      
+      // Get all mini-groups and filter by mentorIds in chatLink JSON
+      const allGroups = await prisma.miniGroup.findMany({
+        select: { id: true, chatLink: true }
       });
-      if (contact) {
-        const mentorGroups = await prisma.miniGroup.findMany({
-          where: { curatorId: contact.id },
-          select: { id: true }
-        });
-        const groupIds = mentorGroups.map(g => g.id);
-        
-        if (groupIds.length === 0) {
-          return res.json({
-            students: [],
-            pagination: { page: 1, limit: 20, total: 0, pages: 0 }
-          });
-        }
-        
-        // Get student IDs that belong to mentor's groups
-        const memberStudentIds = await prisma.miniGroupMember.findMany({
-          where: { miniGroupId: { in: groupIds } },
-          select: { studentId: true }
-        });
-        const studentIds = memberStudentIds.map(m => m.studentId);
-        
-        where.student = { id: { in: studentIds } };
-      } else {
+      
+      // Filter groups where user is in mentorIds
+      const userGroupIds = allGroups
+        .filter(group => {
+          if (!group.chatLink) return false;
+          try {
+            const chatData = JSON.parse(group.chatLink);
+            const mentorIds: string[] = chatData.mentorIds || [];
+            return mentorIds.includes(userId);
+          } catch {
+            return false;
+          }
+        })
+        .map(g => g.id);
+      
+      if (userGroupIds.length === 0) {
         return res.json({
           students: [],
           pagination: { page: 1, limit: 20, total: 0, pages: 0 }
         });
       }
+      
+      // Get student IDs that belong to user's groups
+      const memberStudentIds = await prisma.miniGroupMember.findMany({
+        where: { miniGroupId: { in: userGroupIds } },
+        select: { studentId: true }
+      });
+      const studentIds = memberStudentIds.map(m => m.studentId);
+      
+      if (studentIds.length === 0) {
+        return res.json({
+          students: [],
+          pagination: { page: 1, limit: 20, total: 0, pages: 0 }
+        });
+      }
+      
+      where.student = { id: { in: studentIds } };
     }
 
     if (search) {
@@ -198,7 +216,7 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
       if (!studentRecord) {
         return res.status(403).json({ error: 'Нет доступа к этому ученику' });
       }
-      const allowedStudentIds = await getMentorStudentIds(req.user!.email);
+      const allowedStudentIds = await getMentorStudentIds(req.user!.id);
       if (!allowedStudentIds.includes(studentRecord.id)) {
         return res.status(403).json({ error: 'Нет доступа к этому ученику' });
       }
@@ -345,7 +363,7 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
       if (!studentRecord) {
         return res.status(403).json({ error: 'Нет доступа к этому ученику' });
       }
-      const allowedStudentIds = await getMentorStudentIds(req.user!.email);
+      const allowedStudentIds = await getMentorStudentIds(req.user!.id);
       if (!allowedStudentIds.includes(studentRecord.id)) {
         return res.status(403).json({ error: 'Нет доступа к этому ученику' });
       }
@@ -409,7 +427,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
       if (!studentRecord) {
         return res.status(403).json({ error: 'Нет доступа к этому ученику' });
       }
-      const allowedStudentIds = await getMentorStudentIds(req.user!.email);
+      const allowedStudentIds = await getMentorStudentIds(req.user!.id);
       if (!allowedStudentIds.includes(studentRecord.id)) {
         return res.status(403).json({ error: 'Нет доступа к этому ученику' });
       }
@@ -450,7 +468,7 @@ router.get('/:userId/access', async (req: AuthRequest, res: Response) => {
     
     // MENTOR can only access students from their mini-groups
     if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
-      const allowedStudentIds = await getMentorStudentIds(req.user!.email);
+      const allowedStudentIds = await getMentorStudentIds(req.user!.id);
       if (!allowedStudentIds.includes(user.student.id)) {
         return res.status(403).json({ error: 'Нет доступа к этому ученику' });
       }
@@ -505,7 +523,7 @@ router.post('/:userId/access', async (req: AuthRequest, res: Response) => {
     
     // MENTOR can only modify access for students from their mini-groups
     if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
-      const allowedStudentIds = await getMentorStudentIds(req.user!.email);
+      const allowedStudentIds = await getMentorStudentIds(req.user!.id);
       if (!allowedStudentIds.includes(user.student.id)) {
         return res.status(403).json({ error: 'Нет доступа к этому ученику' });
       }
@@ -570,7 +588,7 @@ router.delete('/:userId/access/:moduleId', async (req: AuthRequest, res: Respons
     
     // MENTOR can only delete access for students from their mini-groups
     if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
-      const allowedStudentIds = await getMentorStudentIds(req.user!.email);
+      const allowedStudentIds = await getMentorStudentIds(req.user!.id);
       if (!allowedStudentIds.includes(user.student.id)) {
         return res.status(403).json({ error: 'Нет доступа к этому ученику' });
       }

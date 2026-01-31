@@ -37,27 +37,32 @@ interface ModerationItem {
   attachments: AttachmentInfo[];
 }
 
-async function getMentorStudentIds(userEmail: string): Promise<string[]> {
-  // Find contact matching mentor's email
-  const contact = await prisma.contact.findFirst({
-    where: { email: userEmail }
-  });
-  
-  if (!contact) {
-    return [];
-  }
-  
-  const mentorMiniGroups = await prisma.miniGroup.findMany({
-    where: { curatorId: contact.id },
-    select: {
+async function getMentorStudentIds(userId: string): Promise<string[]> {
+  // Get all mini-groups and filter by mentorIds in chatLink JSON
+  const allGroups = await prisma.miniGroup.findMany({
+    select: { 
+      id: true, 
+      chatLink: true,
       members: {
         select: { studentId: true }
       }
     }
   });
+  
+  // Filter groups where user is in mentorIds
+  const userGroups = allGroups.filter(group => {
+    if (!group.chatLink) return false;
+    try {
+      const chatData = JSON.parse(group.chatLink);
+      const mentorIds: string[] = chatData.mentorIds || [];
+      return mentorIds.includes(userId);
+    } catch {
+      return false;
+    }
+  });
 
   const studentIds = new Set<string>();
-  mentorMiniGroups.forEach(group => {
+  userGroups.forEach(group => {
     group.members.forEach(member => {
       studentIds.add(member.studentId);
     });
@@ -73,8 +78,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     
     let studentFilter: { studentId?: { in: string[] } } = {};
     
-    if (user.role === 'MENTOR' || user.role === 'INTERN') {
-      const studentIds = await getMentorStudentIds(user.email);
+    if (user.role === 'MENTOR' || user.role === 'INTERN' || user.role === 'PSYCHOLOGIST') {
+      const studentIds = await getMentorStudentIds(user.id);
       if (studentIds.length === 0) {
         return res.json([]);
       }
@@ -184,8 +189,8 @@ router.get('/count', async (req: AuthRequest, res: Response) => {
     
     let studentFilter: { studentId?: { in: string[] } } = {};
     
-    if (user.role === 'MENTOR' || user.role === 'INTERN') {
-      const studentIds = await getMentorStudentIds(user.email);
+    if (user.role === 'MENTOR' || user.role === 'INTERN' || user.role === 'PSYCHOLOGIST') {
+      const studentIds = await getMentorStudentIds(user.id);
       if (studentIds.length === 0) {
         return res.json({ count: 0 });
       }

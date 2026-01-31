@@ -561,4 +561,209 @@ router.post('/email-templates/rollback/:historyId', settingsRoles, async (req: A
   }
 });
 
+// Audit Log endpoints
+const auditRoles = requireRole('SUPER_ADMIN', 'ADMIN');
+
+const entityLabels: Record<string, string> = {
+  LESSON: 'Урок',
+  MODULE: 'Модуль',
+  LIBRARY: 'Библиотека',
+  SCHEDULE: 'Расписание',
+  COMMUNITY: 'Сообщество',
+  CONTACT: 'Контакт',
+  PRODUCT: 'Продукт',
+  PAYMENT: 'Платёж',
+  USER: 'Пользователь',
+  STUDENT: 'Студент',
+  ADMIN: 'Администратор',
+  MINI_GROUP: 'Мини-группа',
+  MODULE_ACCESS: 'Доступ к модулю',
+  EMAIL_TEMPLATE: 'Email-шаблон',
+  SETTING: 'Настройка',
+  DIARY: 'Дневник',
+  NOTE: 'Заметка',
+  QUESTION: 'Вопрос'
+};
+
+const actionLabelsMap: Record<string, string> = {
+  CREATE: 'Создание',
+  UPDATE: 'Изменение',
+  DELETE: 'Удаление',
+  PUBLISH: 'Публикация',
+  UNPUBLISH: 'Снятие с публикации',
+  REPLY: 'Ответ',
+  GRANT_ACCESS: 'Выдача доступа',
+  REVOKE_ACCESS: 'Отзыв доступа',
+  ADD_MEMBER: 'Добавление участника',
+  REMOVE_MEMBER: 'Удаление участника'
+};
+
+router.get('/audit-logs', auditRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const { entityType, action, limit = '50', offset = '0' } = req.query;
+    
+    const where: any = {};
+    if (entityType) where.entity = entityType;
+    if (action) where.action = action;
+    
+    const [logs, total] = await Promise.all([
+      prisma.adminLog.findMany({
+        where,
+        include: { user: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: parseInt(limit as string),
+        skip: parseInt(offset as string)
+      }),
+      prisma.adminLog.count({ where })
+    ]);
+    
+    const logsWithData = await Promise.all(logs.map(async (log) => {
+      const extra = await prisma.$queryRaw<Array<{ oldData: any; newData: any }>>`
+        SELECT "oldData", "newData" FROM "AdminLog" WHERE id = ${log.id}
+      `;
+      return {
+        ...log,
+        oldData: extra[0]?.oldData || null,
+        newData: extra[0]?.newData || null,
+        userName: log.user?.name,
+        userEmail: log.user?.email
+      };
+    }));
+    
+    res.json({ logs: logsWithData, total });
+  } catch (error) {
+    console.error('Get audit logs error:', error);
+    res.status(500).json({ error: 'Ошибка получения журнала' });
+  }
+});
+
+router.get('/audit-logs/meta', auditRoles, async (req: AuthRequest, res: Response) => {
+  res.json({ entityTypes: entityLabels, actions: actionLabelsMap });
+});
+
+router.post('/audit-logs/rollback/:id', auditRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const logEntry = await prisma.$queryRaw<Array<{
+      id: string;
+      action: string;
+      entity: string;
+      entityId: string | null;
+      details: Record<string, any> | null;
+      oldData: Record<string, any> | null;
+      newData: Record<string, any> | null;
+    }>>`SELECT id, action, entity, "entityId", details, "oldData", "newData" FROM "AdminLog" WHERE id = ${id}`;
+    
+    if (!logEntry || logEntry.length === 0) {
+      return res.status(404).json({ error: 'Запись не найдена' });
+    }
+    
+    const entry = logEntry[0];
+    
+    if (!entry.oldData) {
+      return res.status(400).json({ error: 'Нет данных для отката. Откат доступен только для записей с сохранёнными данными.' });
+    }
+    
+    if (entry.action === 'UPDATE' && entry.entityId) {
+      const entityHandlers: Record<string, () => Promise<void>> = {
+        'LESSON': async () => {
+          const { id: _, createdAt, updatedAt, moduleId, ...data } = entry.oldData!;
+          await prisma.lesson.update({ where: { id: entry.entityId! }, data });
+        },
+        'MODULE': async () => {
+          const { id: _, createdAt, updatedAt, ...data } = entry.oldData!;
+          await prisma.module.update({ where: { id: entry.entityId! }, data });
+        },
+        'LIBRARY': async () => {
+          const { id: _, createdAt, updatedAt, ...data } = entry.oldData!;
+          await prisma.libraryItem.update({ where: { id: entry.entityId! }, data });
+        },
+        'SCHEDULE': async () => {
+          const { id: _, createdAt, updatedAt, ...data } = entry.oldData!;
+          await prisma.scheduleEvent.update({ where: { id: entry.entityId! }, data });
+        },
+        'COMMUNITY': async () => {
+          const { id: _, createdAt, updatedAt, ...data } = entry.oldData!;
+          await prisma.community.update({ where: { id: entry.entityId! }, data });
+        },
+        'CONTACT': async () => {
+          const { id: _, createdAt, updatedAt, ...data } = entry.oldData!;
+          await prisma.contact.update({ where: { id: entry.entityId! }, data });
+        },
+        'PRODUCT': async () => {
+          const { id: _, createdAt, updatedAt, ...data } = entry.oldData!;
+          await prisma.product.update({ where: { id: entry.entityId! }, data });
+        },
+        'MINI_GROUP': async () => {
+          const { id: _, createdAt, updatedAt, ...data } = entry.oldData!;
+          await prisma.miniGroup.update({ where: { id: entry.entityId! }, data });
+        }
+      };
+      
+      const handler = entityHandlers[entry.entity];
+      if (handler) {
+        await handler();
+        
+        await prisma.adminLog.create({
+          data: {
+            userId: req.user!.id,
+            action: 'UPDATE',
+            entity: entry.entity,
+            entityId: entry.entityId,
+            details: { rollbackFrom: id, title: entry.details?.title + ' (откат)' }
+          }
+        });
+        
+        return res.json({ success: true });
+      }
+    }
+    
+    if (entry.action === 'DELETE' && entry.entityId && entry.oldData) {
+      const createHandlers: Record<string, () => Promise<void>> = {
+        'LESSON': async () => {
+          await prisma.lesson.create({ data: entry.oldData! as any });
+        },
+        'LIBRARY': async () => {
+          await prisma.libraryItem.create({ data: entry.oldData! as any });
+        },
+        'SCHEDULE': async () => {
+          await prisma.scheduleEvent.create({ data: entry.oldData! as any });
+        },
+        'COMMUNITY': async () => {
+          await prisma.community.create({ data: entry.oldData! as any });
+        },
+        'CONTACT': async () => {
+          await prisma.contact.create({ data: entry.oldData! as any });
+        },
+        'PRODUCT': async () => {
+          await prisma.product.create({ data: entry.oldData! as any });
+        }
+      };
+      
+      const handler = createHandlers[entry.entity];
+      if (handler) {
+        await handler();
+        
+        await prisma.adminLog.create({
+          data: {
+            userId: req.user!.id,
+            action: 'CREATE',
+            entity: entry.entity,
+            entityId: entry.entityId,
+            details: { restoredFrom: id, title: entry.details?.title + ' (восстановлено)' }
+          }
+        });
+        
+        return res.json({ success: true });
+      }
+    }
+    
+    res.status(400).json({ error: 'Откат для этого типа действия недоступен' });
+  } catch (error) {
+    console.error('Rollback audit error:', error);
+    res.status(500).json({ error: 'Ошибка отката' });
+  }
+});
+
 export default router;

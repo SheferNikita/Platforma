@@ -259,6 +259,8 @@ router.put('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdPar
     const data = lessonSchema.partial().parse(req.body);
     const { videos, publishAt, ...lessonData } = data;
     
+    const oldLesson = await prisma.lesson.findUnique({ where: { id } });
+    
     if (videos !== undefined) {
       await prisma.lessonVideo.deleteMany({ where: { lessonId: id } });
       
@@ -287,15 +289,10 @@ router.put('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdPar
       }
     });
     
-    await prisma.adminLog.create({
-      data: {
-        userId: req.user!.id,
-        action: 'UPDATE',
-        entity: 'LESSON',
-        entityId: lesson.id,
-        details: data
-      }
-    });
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'LESSON', ${lesson.id}, ${JSON.stringify({ title: lesson.title })}::jsonb, ${JSON.stringify(oldLesson)}::jsonb, ${JSON.stringify(lesson)}::jsonb, NOW())
+    `;
     
     res.json(lesson);
   } catch (error: any) {
@@ -309,16 +306,15 @@ router.put('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdPar
 router.delete('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
+    
+    const oldLesson = await prisma.lesson.findUnique({ where: { id } });
+    
     await prisma.lesson.delete({ where: { id } });
     
-    await prisma.adminLog.create({
-      data: {
-        userId: req.user!.id,
-        action: 'DELETE',
-        entity: 'LESSON',
-        entityId: id
-      }
-    });
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'DELETE', 'LESSON', ${id}, ${JSON.stringify({ title: oldLesson?.title })}::jsonb, ${JSON.stringify(oldLesson)}::jsonb, NOW())
+    `;
     
     res.json({ message: 'Урок удален' });
   } catch (error) {

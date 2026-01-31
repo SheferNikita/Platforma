@@ -648,96 +648,66 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
               rows={2}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[#3d3527] mb-1">Содержание урока</label>
-            <RichTextEditor
-              content={content}
-              onChange={setContent}
-            />
-          </div>
 
-          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-6 py-2">
+          {/* Задание/Рекомендация - отображается первым после описания в уроке */}
+          <div className="p-4 bg-[#f5f3ed] rounded-xl space-y-3">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={isTextOnly}
-                onChange={(e) => setIsTextOnly(e.target.checked)}
-                className="w-4 h-4 sm:w-5 sm:h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                checked={showTask}
+                onChange={(e) => setShowTask(e.target.checked)}
+                className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
               />
-              <span className="flex items-center gap-2 text-[#3d3527] text-sm sm:text-base">
+              <span className="text-sm font-medium text-[#3d3527] flex items-center gap-2">
                 <FileText className="w-4 h-4" />
-                Текстовый урок (без видео)
+                Блок "Задание/Рекомендация"
               </span>
             </label>
-            {!schedulePublish && (
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isPublished}
-                  onChange={(e) => setIsPublished(e.target.checked)}
-                  className="w-4 h-4 sm:w-5 sm:h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
-                />
-                <span className="flex items-center gap-2 text-[#3d3527] text-sm sm:text-base">
-                  <Eye className="w-4 h-4" />
-                  Опубликован (виден ученикам)
-                </span>
-              </label>
-            )}
-          </div>
-
-          <div className="space-y-3 py-2">
-            <button
-              type="button"
-              onClick={() => {
-                setSchedulePublish(!schedulePublish);
-                if (!schedulePublish && !publishDate) {
-                  const tomorrow = new Date();
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  setPublishDate(tomorrow.toISOString().split('T')[0]);
-                }
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${
-                schedulePublish 
-                  ? 'bg-[#a67c52] text-white' 
-                  : 'bg-[#f5f3ed] text-[#3d3527] hover:bg-[#e8e4d9]'
-              }`}
-            >
-              <Clock className="w-4 h-4" />
-              {schedulePublish ? 'Отложенная публикация активна' : 'Открыть урок позже'}
-            </button>
-            
-            {schedulePublish && (
-              <div className="flex flex-col sm:flex-row gap-3 p-4 bg-[#f5f3ed] rounded-xl">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-[#3d3527] mb-1">
-                    <Calendar className="w-4 h-4 inline mr-1" />
-                    Дата публикации
-                  </label>
-                  <input
-                    type="date"
-                    value={publishDate}
-                    onChange={(e) => setPublishDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg focus:outline-none focus:border-[#a67c52]"
-                  />
+            {showTask && (
+              <div className="ml-6 space-y-3">
+                <div>
+                  <label className="block text-xs text-[#3d3527]/60 mb-2">Кому виден блок</label>
+                  <div className="space-y-1.5 bg-white/50 rounded-lg p-2">
+                    {TARIFF_OPTIONS.map(tariff => (
+                      <label key={tariff.value} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={taskAllowedTariffs.includes(tariff.value)}
+                          onChange={() => toggleTaskTariff(tariff.value)}
+                          className="w-3.5 h-3.5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                        />
+                        <span className="text-xs text-[#3d3527]">{tariff.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="text-xs text-[#3d3527]/50 mt-1">Если не выбрано — виден всем</p>
                 </div>
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-[#3d3527] mb-1">
-                    <Clock className="w-4 h-4 inline mr-1" />
-                    Время публикации (МСК)
-                  </label>
-                  <input
-                    type="time"
-                    value={publishTime}
-                    onChange={(e) => setPublishTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg focus:outline-none focus:border-[#a67c52]"
+                <div>
+                  <label className="block text-xs text-[#3d3527]/60 mb-1">Содержимое блока</label>
+                  <RichTextEditor
+                    content={taskContent}
+                    onChange={setTaskContent}
                   />
                 </div>
               </div>
             )}
           </div>
 
-          {!isTextOnly && (
+          {/* Видео - идёт после задания в уроке */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isTextOnly}
+                  onChange={(e) => setIsTextOnly(e.target.checked)}
+                  className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                />
+                <span className="text-sm text-[#3d3527]">Текстовый урок (без видео)</span>
+              </label>
+            </div>
+            
+            {!isTextOnly && (
             <div className="space-y-2 sm:space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <label className="flex items-center gap-2 text-sm font-medium text-[#3d3527]">
@@ -818,6 +788,83 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
                 </div>
               ))}
             </div>
+            )}
+          </div>
+
+          {/* Содержание урока - после видео */}
+          <div>
+            <label className="block text-sm font-medium text-[#3d3527] mb-1">Содержание урока</label>
+            <RichTextEditor
+              content={content}
+              onChange={setContent}
+            />
+          </div>
+
+          {/* Настройки публикации */}
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 sm:gap-6 py-2">
+            {!schedulePublish && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPublished}
+                  onChange={(e) => setIsPublished(e.target.checked)}
+                  className="w-4 h-4 sm:w-5 sm:h-5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                />
+                <span className="flex items-center gap-2 text-[#3d3527] text-sm sm:text-base">
+                  <Eye className="w-4 h-4" />
+                  Опубликован (виден ученикам)
+                </span>
+              </label>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setSchedulePublish(!schedulePublish);
+                if (!schedulePublish && !publishDate) {
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  setPublishDate(tomorrow.toISOString().split('T')[0]);
+                }
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${
+                schedulePublish 
+                  ? 'bg-[#a67c52] text-white' 
+                  : 'bg-[#f5f3ed] text-[#3d3527] hover:bg-[#e8e4d9]'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+              {schedulePublish ? 'Отложенная публикация активна' : 'Открыть урок позже'}
+            </button>
+          </div>
+          
+          {schedulePublish && (
+            <div className="flex flex-col sm:flex-row gap-3 p-4 bg-[#f5f3ed] rounded-xl">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">
+                  <Calendar className="w-4 h-4 inline mr-1" />
+                  Дата публикации
+                </label>
+                <input
+                  type="date"
+                  value={publishDate}
+                  onChange={(e) => setPublishDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg focus:outline-none focus:border-[#a67c52]"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-[#3d3527] mb-1">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  Время публикации (МСК)
+                </label>
+                <input
+                  type="time"
+                  value={publishTime}
+                  onChange={(e) => setPublishTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-[#d4c9b0] rounded-lg focus:outline-none focus:border-[#a67c52]"
+                />
+              </div>
+            </div>
           )}
 
           <div>
@@ -830,97 +877,54 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
             />
           </div>
 
-          {/* Diary and Notes settings */}
-          <div className="p-4 bg-[#f5f3ed] rounded-xl space-y-4">
-            <h3 className="font-medium text-[#3d3527] flex items-center gap-2">
-              <FileText className="w-4 h-4" />
-              Настройки дневника и конспекта
-            </h3>
-            
-            {/* Diary settings */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showDiary}
-                  onChange={(e) => setShowDiary(e.target.checked)}
-                  className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+          {/* Дневник - отдельный блок */}
+          <div className="p-4 bg-[#f5f3ed] rounded-xl space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showDiary}
+                onChange={(e) => setShowDiary(e.target.checked)}
+                className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+              />
+              <span className="text-sm font-medium text-[#3d3527] flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Блок "Дневник к уроку"
+              </span>
+            </label>
+            {showDiary && (
+              <div className="ml-6">
+                <label className="block text-xs text-[#3d3527]/60 mb-1">Описание/подсказка для дневника</label>
+                <RichTextEditor
+                  content={diaryDescription}
+                  onChange={setDiaryDescription}
                 />
-                <span className="text-sm text-[#3d3527]">Показывать блок "Дневник к уроку"</span>
-              </label>
-              {showDiary && (
-                <div className="ml-6">
-                  <label className="block text-xs text-[#3d3527]/60 mb-1">Описание/подсказка для дневника</label>
-                  <RichTextEditor
-                    content={diaryDescription}
-                    onChange={setDiaryDescription}
-                  />
-                </div>
-              )}
-            </div>
-            
-            {/* Notes settings */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showNotes}
-                  onChange={(e) => setShowNotes(e.target.checked)}
-                  className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+              </div>
+            )}
+          </div>
+
+          {/* Конспект - отдельный блок */}
+          <div className="p-4 bg-[#f5f3ed] rounded-xl space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showNotes}
+                onChange={(e) => setShowNotes(e.target.checked)}
+                className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+              />
+              <span className="text-sm font-medium text-[#3d3527] flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Блок "Конспект к уроку"
+              </span>
+            </label>
+            {showNotes && (
+              <div className="ml-6">
+                <label className="block text-xs text-[#3d3527]/60 mb-1">Описание/подсказка для конспекта</label>
+                <RichTextEditor
+                  content={notesDescription}
+                  onChange={setNotesDescription}
                 />
-                <span className="text-sm text-[#3d3527]">Показывать блок "Конспект к уроку"</span>
-              </label>
-              {showNotes && (
-                <div className="ml-6">
-                  <label className="block text-xs text-[#3d3527]/60 mb-1">Описание/подсказка для конспекта</label>
-                  <RichTextEditor
-                    content={notesDescription}
-                    onChange={setNotesDescription}
-                  />
-                </div>
-              )}
-            </div>
-            
-            {/* Task/Recommendation settings */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showTask}
-                  onChange={(e) => setShowTask(e.target.checked)}
-                  className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
-                />
-                <span className="text-sm text-[#3d3527]">Показывать блок "Задание/Рекомендация"</span>
-              </label>
-              {showTask && (
-                <div className="ml-6 space-y-3">
-                  <div>
-                    <label className="block text-xs text-[#3d3527]/60 mb-2">Кому виден блок</label>
-                    <div className="space-y-1.5 bg-[#f5f3ed]/50 rounded-lg p-2">
-                      {TARIFF_OPTIONS.map(tariff => (
-                        <label key={tariff.value} className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={taskAllowedTariffs.includes(tariff.value)}
-                            onChange={() => toggleTaskTariff(tariff.value)}
-                            className="w-3.5 h-3.5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
-                          />
-                          <span className="text-xs text-[#3d3527]">{tariff.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <p className="text-xs text-[#3d3527]/50 mt-1">Если не выбрано — виден всем</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-[#3d3527]/60 mb-1">Содержимое блока</label>
-                    <RichTextEditor
-                      content={taskContent}
-                      onChange={setTaskContent}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 mt-6">

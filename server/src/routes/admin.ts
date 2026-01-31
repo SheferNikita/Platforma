@@ -13,8 +13,8 @@ const router = Router();
 router.use(authenticate);
 router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR'));
 
-const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'PSYCHOLOGIST_GROUP', 'INTERN', 'MODERATOR'] as const;
-const curatorAllowedRoles = ['MENTOR', 'PSYCHOLOGIST', 'PSYCHOLOGIST_GROUP', 'INTERN'] as const;
+const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR'] as const;
+const curatorAllowedRoles = ['MENTOR', 'PSYCHOLOGIST', 'INTERN'] as const;
 
 const createAdminSchema = z.object({
   email: z.string().email('Некорректный email'),
@@ -35,7 +35,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const isCurator = req.user!.role === 'CURATOR';
     const admins = await prisma.user.findMany({
       where: {
-        role: { in: isCurator ? [...curatorAllowedRoles] : ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'PSYCHOLOGIST_GROUP', 'INTERN', 'MODERATOR'] }
+        role: { in: isCurator ? [...curatorAllowedRoles] : ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR'] }
       },
       select: {
         id: true,
@@ -59,7 +59,7 @@ router.get('/mentors', async (req: AuthRequest, res: Response) => {
   try {
     const mentors = await prisma.user.findMany({
       where: {
-        role: { in: ['MENTOR', 'PSYCHOLOGIST', 'PSYCHOLOGIST_GROUP', 'INTERN'] },
+        role: { in: ['MENTOR', 'PSYCHOLOGIST', 'INTERN'] },
         isActive: true
       },
       select: {

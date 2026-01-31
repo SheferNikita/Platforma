@@ -68,8 +68,7 @@ export function AdminsAdmin() {
     ADMIN: { label: 'Администратор', color: 'bg-blue-100 text-blue-700', description: 'Полный доступ к админке, кроме удаления супер-админа' },
     CURATOR: { label: 'Куратор наставников', color: 'bg-teal-100 text-teal-700', description: 'Полный доступ кроме «Продукты» и «CRM»' },
     MENTOR: { label: 'Наставник', color: 'bg-green-100 text-green-700', description: 'Видит только свои мини-группы и своих учеников' },
-    PSYCHOLOGIST: { label: 'Психолог индивидуальный', color: 'bg-pink-100 text-pink-700', description: 'Индивидуальная работа с учениками, без мини-групп' },
-    PSYCHOLOGIST_GROUP: { label: 'Психолог с мини-группами', color: 'bg-fuchsia-100 text-fuchsia-700', description: 'Работа с учениками + доступ к мини-группам' },
+    PSYCHOLOGIST: { label: 'Психолог', color: 'bg-pink-100 text-pink-700', description: 'Работа с учениками + доступ к мини-группам' },
     INTERN: { label: 'Помощник', color: 'bg-lime-100 text-lime-700', description: 'Такие же права как у наставника' },
     MODERATOR: { label: 'Модератор', color: 'bg-orange-100 text-orange-700', description: 'Уроки, библиотека, общины, расписание, email' }
   };
@@ -78,7 +77,7 @@ export function AdminsAdmin() {
   const isAdmin = user?.role === 'ADMIN';
   const isCurator = user?.role === 'CURATOR';
   
-  const curatorAllowedRoles = ['MENTOR', 'PSYCHOLOGIST', 'PSYCHOLOGIST_GROUP', 'INTERN'];
+  const curatorAllowedRoles = ['MENTOR', 'PSYCHOLOGIST', 'INTERN'];
   const canEditAdmin = (adminRole: string) => {
     if (isSuperAdmin) return true;
     if (isAdmin && adminRole !== 'SUPER_ADMIN') return true;
@@ -327,9 +326,8 @@ function AdminModal({ admin, onSave, onClose, canAssignSuperAdmin, curatorMode }
               {!curatorMode && <option value="ADMIN">Администратор</option>}
               {!curatorMode && <option value="CURATOR">Куратор наставников</option>}
               <option value="MENTOR">Наставник</option>
-              <option value="PSYCHOLOGIST">Психолог индивидуальный</option>
-              <option value="PSYCHOLOGIST_GROUP">Психолог с мини-группами</option>
-              <option value="INTERN">Помощник</option>
+              <option value="PSYCHOLOGIST">Психолог</option>
+                            <option value="INTERN">Помощник</option>
               {!curatorMode && <option value="MODERATOR">Модератор</option>}
             </select>
             <p className="text-xs text-[#3d3527]/60 mt-1">
@@ -337,9 +335,8 @@ function AdminModal({ admin, onSave, onClose, canAssignSuperAdmin, curatorMode }
               {role === 'ADMIN' && 'Полный доступ к админке, кроме удаления супер-админа'}
               {role === 'CURATOR' && 'Полный доступ кроме «Продукты» и «CRM»'}
               {role === 'MENTOR' && 'Видит только свои мини-группы и своих учеников'}
-              {role === 'PSYCHOLOGIST' && 'Индивидуальная работа с учениками, без мини-групп'}
-              {role === 'PSYCHOLOGIST_GROUP' && 'Работа с учениками + доступ к мини-группам'}
-              {role === 'INTERN' && 'Такие же права как у наставника'}
+              {role === 'PSYCHOLOGIST' && 'Работа с учениками + доступ к мини-группам'}
+                            {role === 'INTERN' && 'Такие же права как у наставника'}
               {role === 'MODERATOR' && 'Уроки, библиотека, общины, расписание, email'}
             </p>
           </div>

@@ -456,9 +456,29 @@ router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
     });
 
     res.status(201).json(diary);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Save diary error:', error);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    console.error('Save diary error details:', {
+      message: error?.message,
+      code: error?.code,
+      meta: error?.meta
+    });
+    
+    // Check for specific Prisma errors
+    if (error?.code === 'P2002') {
+      return res.status(400).json({ error: 'Запись уже существует' });
+    }
+    if (error?.code === 'P2003') {
+      return res.status(400).json({ error: 'Ошибка связи с уроком или студентом' });
+    }
+    if (error?.message?.includes('timeout')) {
+      return res.status(504).json({ error: 'Превышено время ожидания. Попробуйте загрузить файл меньшего размера.' });
+    }
+    if (error?.message?.includes('too large') || error?.message?.includes('size')) {
+      return res.status(413).json({ error: 'Файл слишком большой. Максимальный размер: 10 МБ.' });
+    }
+    
+    res.status(500).json({ error: 'Ошибка сервера при сохранении дневника' });
   }
 });
 
@@ -554,9 +574,28 @@ router.post('/lessons/:lessonId/personal-notes', async (req: Request, res: Respo
     });
 
     res.status(201).json(note);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Save personal notes error:', error);
-    res.status(500).json({ error: 'Ошибка сервера' });
+    console.error('Save personal notes error details:', {
+      message: error?.message,
+      code: error?.code,
+      meta: error?.meta
+    });
+    
+    if (error?.code === 'P2002') {
+      return res.status(400).json({ error: 'Запись уже существует' });
+    }
+    if (error?.code === 'P2003') {
+      return res.status(400).json({ error: 'Ошибка связи с уроком или студентом' });
+    }
+    if (error?.message?.includes('timeout')) {
+      return res.status(504).json({ error: 'Превышено время ожидания. Попробуйте загрузить файл меньшего размера.' });
+    }
+    if (error?.message?.includes('too large') || error?.message?.includes('size')) {
+      return res.status(413).json({ error: 'Файл слишком большой. Максимальный размер: 10 МБ.' });
+    }
+    
+    res.status(500).json({ error: 'Ошибка сервера при сохранении конспекта' });
   }
 });
 
@@ -882,8 +921,9 @@ router.get('/my-materials-count', async (req: Request, res: Response) => {
 // Download diary attachment
 router.get('/attachments/diary/:id', async (req: Request, res: Response) => {
   try {
+    const attachmentId = req.params.id as string;
     const attachment = await prisma.diaryAttachment.findUnique({
-      where: { id: req.params.id }
+      where: { id: attachmentId }
     });
 
     if (!attachment) {
@@ -904,8 +944,9 @@ router.get('/attachments/diary/:id', async (req: Request, res: Response) => {
 // Download note attachment
 router.get('/attachments/note/:id', async (req: Request, res: Response) => {
   try {
+    const attachmentId = req.params.id as string;
     const attachment = await prisma.noteAttachment.findUnique({
-      where: { id: req.params.id }
+      where: { id: attachmentId }
     });
 
     if (!attachment) {

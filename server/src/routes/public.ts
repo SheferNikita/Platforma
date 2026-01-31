@@ -425,37 +425,56 @@ router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Урок не найден' });
     }
 
-    // Create new diary entry with attachments (chat style)
+    // Create diary entry first (without attachments)
     const diary = await prisma.diary.create({
       data: {
         content: content.trim(),
         studentId: student.studentId,
-        lessonId,
-        attachments: attachments?.length ? {
-          create: attachments.map((att: { filename: string; originalName: string; mimeType: string; size: number; data: string }) => ({
-            filename: att.filename,
-            originalName: att.originalName,
-            mimeType: att.mimeType,
-            size: att.size,
-            data: att.data
-          }))
-        } : undefined
-      },
-      include: {
-        attachments: {
-          select: {
-            id: true,
-            filename: true,
-            originalName: true,
-            mimeType: true,
-            size: true,
-            createdAt: true
-          }
-        }
+        lessonId
       }
     });
 
-    res.status(201).json(diary);
+    console.log('[POST diary] Created diary entry:', diary.id);
+
+    // Create attachments separately if any
+    let createdAttachments: any[] = [];
+    if (attachments?.length) {
+      try {
+        for (const att of attachments) {
+          console.log('[POST diary] Creating attachment:', att.originalName, 'size:', att.size);
+          const attachment = await prisma.diaryAttachment.create({
+            data: {
+              diaryId: diary.id,
+              filename: att.filename,
+              originalName: att.originalName,
+              mimeType: att.mimeType,
+              size: att.size,
+              data: att.data
+            },
+            select: {
+              id: true,
+              filename: true,
+              originalName: true,
+              mimeType: true,
+              size: true,
+              createdAt: true
+            }
+          });
+          createdAttachments.push(attachment);
+          console.log('[POST diary] Attachment created successfully:', attachment.id);
+        }
+      } catch (attachmentError: any) {
+        console.error('[POST diary] Error creating attachment:', attachmentError);
+        // Diary was created successfully, return it without failed attachments
+        return res.status(201).json({ 
+          ...diary, 
+          attachments: createdAttachments,
+          warning: 'Дневник сохранен, но не удалось загрузить вложение'
+        });
+      }
+    }
+
+    res.status(201).json({ ...diary, attachments: createdAttachments });
   } catch (error: any) {
     console.error('Save diary error:', error);
     console.error('Save diary error details:', {
@@ -542,38 +561,56 @@ router.post('/lessons/:lessonId/personal-notes', async (req: Request, res: Respo
       return res.status(404).json({ error: 'Урок не найден' });
     }
 
-    // Create new note entry with attachments (chat style)
+    // Create note entry first (without attachments)
     const note = await prisma.studentNote.create({
       data: {
         content: content.trim(),
         noteType: 'personal',
         studentId: student.studentId,
-        lessonId,
-        attachments: attachments?.length ? {
-          create: attachments.map((att: { filename: string; originalName: string; mimeType: string; size: number; data: string }) => ({
-            filename: att.filename,
-            originalName: att.originalName,
-            mimeType: att.mimeType,
-            size: att.size,
-            data: att.data
-          }))
-        } : undefined
-      },
-      include: {
-        attachments: {
-          select: {
-            id: true,
-            filename: true,
-            originalName: true,
-            mimeType: true,
-            size: true,
-            createdAt: true
-          }
-        }
+        lessonId
       }
     });
 
-    res.status(201).json(note);
+    console.log('[POST personal-notes] Created note entry:', note.id);
+
+    // Create attachments separately if any
+    let createdAttachments: any[] = [];
+    if (attachments?.length) {
+      try {
+        for (const att of attachments) {
+          console.log('[POST personal-notes] Creating attachment:', att.originalName, 'size:', att.size);
+          const attachment = await prisma.noteAttachment.create({
+            data: {
+              noteId: note.id,
+              filename: att.filename,
+              originalName: att.originalName,
+              mimeType: att.mimeType,
+              size: att.size,
+              data: att.data
+            },
+            select: {
+              id: true,
+              filename: true,
+              originalName: true,
+              mimeType: true,
+              size: true,
+              createdAt: true
+            }
+          });
+          createdAttachments.push(attachment);
+          console.log('[POST personal-notes] Attachment created successfully:', attachment.id);
+        }
+      } catch (attachmentError: any) {
+        console.error('[POST personal-notes] Error creating attachment:', attachmentError);
+        return res.status(201).json({ 
+          ...note, 
+          attachments: createdAttachments,
+          warning: 'Конспект сохранен, но не удалось загрузить вложение'
+        });
+      }
+    }
+
+    res.status(201).json({ ...note, attachments: createdAttachments });
   } catch (error: any) {
     console.error('Save personal notes error:', error);
     console.error('Save personal notes error details:', {

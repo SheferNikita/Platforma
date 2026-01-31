@@ -411,7 +411,8 @@ export function LessonDetailPage() {
       toast.success('Запись в дневнике сохранена!');
     } catch (error: any) {
       console.error('Save diary error:', error);
-      toast.error(error.response?.data?.error || 'Ошибка при сохранении дневника');
+      const errorMessage = error?.message || 'Ошибка при сохранении дневника';
+      toast.error(errorMessage);
     }
   };
 

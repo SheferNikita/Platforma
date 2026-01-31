@@ -702,7 +702,7 @@ function ChatDialog({
                   className="flex items-center gap-2 px-4 py-2 border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed] rounded-xl disabled:opacity-50 text-sm transition-colors"
                 >
                   <Eye className="w-4 h-4" />
-                  {submitting ? 'Отметка...' : 'Отметить просмотренным'}
+                  {submitting ? 'Отметка...' : 'Отметить выполненным'}
                 </button>
               )}
             </div>

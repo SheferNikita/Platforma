@@ -281,7 +281,13 @@ router.get('/logs', async (req: AuthRequest, res: Response) => {
   }
 });
 
-const DEFAULT_SETTINGS = [
+const DEFAULT_SETTINGS: Array<{
+  key: string;
+  label: string;
+  category: string;
+  type: 'TEXT' | 'TEXTAREA' | 'URL' | 'FILE' | 'IMAGE' | 'AUDIO';
+  value: string;
+}> = [
   { key: 'platformName', label: 'Название платформы', category: 'general', type: 'TEXT', value: 'Платформа трезвости' },
   { key: 'supportLink', label: 'Ссылка поддержки', category: 'general', type: 'URL', value: '' },
   { key: 'loginText', label: 'Текст на странице входа', category: 'general', type: 'TEXTAREA', value: '' },

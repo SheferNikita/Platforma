@@ -41,12 +41,14 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
         - New schedule events (NEW_EVENT type)
         - API endpoints: GET /api/notifications, PATCH /api/notifications/:id/read, PATCH /api/notifications/read-all, DELETE /api/notifications/:id
         - NotificationService (`server/src/services/notificationService.ts`) provides centralized notification creation
--   **User Roles:** Granular access control with roles: `SUPER_ADMIN`, `ADMIN`, `CURATOR`, `MENTOR`, `PSYCHOLOGIST`, `MODERATOR`, and `STUDENT`.
+-   **User Roles:** Granular access control with roles: `SUPER_ADMIN`, `ADMIN`, `CURATOR`, `MENTOR`, `PSYCHOLOGIST`, `PSYCHOLOGIST_GROUP`, `INTERN`, `MODERATOR`, and `STUDENT`.
     -   `SUPER_ADMIN`: Full access to all sections including audit logs and admin management
     -   `ADMIN`: Full access to all sections except audit logs; cannot create/edit/delete super-admins
-    -   `CURATOR`: Access to students, mini-groups, distribution, moderation, and lessons
-    -   `MENTOR`: Access to their own mini-groups and students (scoped by email→Contact→curatorId mapping), moderation for their students only, and lessons (view)
-    -   `PSYCHOLOGIST`: Individual work with students, access to lessons, students, moderation; NO access to mini-groups
+    -   `CURATOR`: Access to students, mini-groups, distribution, moderation, lessons, and administrators (can only create/edit MENTOR, PSYCHOLOGIST, PSYCHOLOGIST_GROUP, INTERN)
+    -   `MENTOR` (Наставник): Access to their own mini-groups and students (scoped by email→Contact→curatorId mapping), moderation for their students only, and lessons (view)
+    -   `PSYCHOLOGIST` (Психолог индивидуальный): Individual work with students, access to lessons, students, moderation; NO access to mini-groups
+    -   `PSYCHOLOGIST_GROUP` (Психолог с мини-группами): Like PSYCHOLOGIST but WITH access to their own mini-groups
+    -   `INTERN` (Помощник): Assistant role with access to mini-groups, students, moderation, lessons
     -   `MODERATOR`: Access to lessons, library, schedule, communities, and moderation
 -   **Student Tariff System:** Five-tier access control system for students:
     -   `BASIC`: Lessons only, no questions/diary/notes access

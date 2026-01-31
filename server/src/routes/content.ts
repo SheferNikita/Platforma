@@ -128,17 +128,13 @@ router.put('/modules/:id', contentRoles, async (req: AuthRequest & Request<IdPar
   try {
     const id = req.params.id;
     const data = moduleSchema.partial().parse(req.body);
+    const oldModule = await prisma.module.findUnique({ where: { id } });
     const module = await prisma.module.update({ where: { id }, data });
     
-    await prisma.adminLog.create({
-      data: {
-        userId: req.user!.id,
-        action: 'UPDATE',
-        entity: 'MODULE',
-        entityId: module.id,
-        details: data
-      }
-    });
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'MODULE', ${module.id}, ${JSON.stringify({ title: module.title })}::jsonb, ${JSON.stringify(oldModule)}::jsonb, ${JSON.stringify(module)}::jsonb, NOW())
+    `;
     
     res.json(module);
   } catch (error) {
@@ -153,16 +149,13 @@ router.put('/modules/:id', contentRoles, async (req: AuthRequest & Request<IdPar
 router.delete('/modules/:id', contentRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
+    const oldModule = await prisma.module.findUnique({ where: { id } });
     await prisma.module.delete({ where: { id } });
     
-    await prisma.adminLog.create({
-      data: {
-        userId: req.user!.id,
-        action: 'DELETE',
-        entity: 'MODULE',
-        entityId: id
-      }
-    });
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'DELETE', 'MODULE', ${id}, ${JSON.stringify({ title: oldModule?.title })}::jsonb, ${JSON.stringify(oldModule)}::jsonb, NOW())
+    `;
     
     res.json({ message: 'Модуль удален' });
   } catch (error) {
@@ -359,7 +352,14 @@ router.post('/library', moderatorRoles, async (req: AuthRequest, res: Response) 
 router.put('/library/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
+    const oldItem = await prisma.libraryItem.findUnique({ where: { id } });
     const item = await prisma.libraryItem.update({ where: { id }, data: req.body });
+    
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'LIBRARY', ${id}, ${JSON.stringify({ title: item.title })}::jsonb, ${JSON.stringify(oldItem)}::jsonb, ${JSON.stringify(item)}::jsonb, NOW())
+    `;
+    
     res.json(item);
   } catch (error) {
     console.error('Update library item error:', error);
@@ -370,7 +370,14 @@ router.put('/library/:id', moderatorRoles, async (req: AuthRequest & Request<IdP
 router.delete('/library/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
+    const oldItem = await prisma.libraryItem.findUnique({ where: { id } });
     await prisma.libraryItem.delete({ where: { id } });
+    
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'DELETE', 'LIBRARY', ${id}, ${JSON.stringify({ title: oldItem?.title })}::jsonb, ${JSON.stringify(oldItem)}::jsonb, NOW())
+    `;
+    
     res.json({ message: 'Элемент удален' });
   } catch (error) {
     console.error('Delete library item error:', error);
@@ -420,6 +427,7 @@ router.post('/schedule', moderatorRoles, async (req: AuthRequest, res: Response)
 router.put('/schedule/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
+    const oldEvent = await prisma.scheduleEvent.findUnique({ where: { id } });
     const { date, ...rest } = req.body;
     const data = date ? { ...rest, date: new Date(date).toISOString() } : rest;
     const event = await prisma.scheduleEvent.update({ 
@@ -427,6 +435,12 @@ router.put('/schedule/:id', moderatorRoles, async (req: AuthRequest & Request<Id
       data,
       include: { miniGroup: true }
     });
+    
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'SCHEDULE', ${id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(oldEvent)}::jsonb, ${JSON.stringify(event)}::jsonb, NOW())
+    `;
+    
     res.json(event);
   } catch (error) {
     console.error('Update schedule event error:', error);
@@ -437,7 +451,14 @@ router.put('/schedule/:id', moderatorRoles, async (req: AuthRequest & Request<Id
 router.delete('/schedule/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
+    const oldEvent = await prisma.scheduleEvent.findUnique({ where: { id } });
     await prisma.scheduleEvent.delete({ where: { id } });
+    
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'DELETE', 'SCHEDULE', ${id}, ${JSON.stringify({ title: oldEvent?.title })}::jsonb, ${JSON.stringify(oldEvent)}::jsonb, NOW())
+    `;
+    
     res.json({ message: 'Событие удалено' });
   } catch (error) {
     console.error('Delete schedule event error:', error);
@@ -470,7 +491,14 @@ router.post('/contacts', adminOnly, async (req: AuthRequest, res: Response) => {
 router.put('/contacts/:id', adminOnly, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
+    const oldContact = await prisma.contact.findUnique({ where: { id } });
     const contact = await prisma.contact.update({ where: { id }, data: req.body });
+    
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'CONTACT', ${id}, ${JSON.stringify({ name: contact.name })}::jsonb, ${JSON.stringify(oldContact)}::jsonb, ${JSON.stringify(contact)}::jsonb, NOW())
+    `;
+    
     res.json(contact);
   } catch (error) {
     console.error('Update contact error:', error);
@@ -481,7 +509,14 @@ router.put('/contacts/:id', adminOnly, async (req: AuthRequest & Request<IdParam
 router.delete('/contacts/:id', adminOnly, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
+    const oldContact = await prisma.contact.findUnique({ where: { id } });
     await prisma.contact.delete({ where: { id } });
+    
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'DELETE', 'CONTACT', ${id}, ${JSON.stringify({ name: oldContact?.name })}::jsonb, ${JSON.stringify(oldContact)}::jsonb, NOW())
+    `;
+    
     res.json({ message: 'Контакт удален' });
   } catch (error) {
     console.error('Delete contact error:', error);
@@ -544,6 +579,8 @@ router.put('/communities/:id', moderatorRoles, async (req: AuthRequest & Request
     const id = req.params.id;
     const { name, format, communityType, dayOfWeek, time, city, address, link, leader, leaderContact, isPublished } = req.body;
     
+    const [oldCommunity] = await prisma.$queryRaw<any[]>`SELECT * FROM "Community" WHERE id = ${id}`;
+    
     await prisma.$executeRaw`
       UPDATE "Community" SET
         name = COALESCE(${name}, name),
@@ -561,6 +598,12 @@ router.put('/communities/:id', moderatorRoles, async (req: AuthRequest & Request
       WHERE id = ${id}
     `;
     const [community] = await prisma.$queryRaw<any[]>`SELECT * FROM "Community" WHERE id = ${id}`;
+    
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'COMMUNITY', ${id}, ${JSON.stringify({ name: community?.name })}::jsonb, ${JSON.stringify(oldCommunity)}::jsonb, ${JSON.stringify(community)}::jsonb, NOW())
+    `;
+    
     res.json(community);
   } catch (error) {
     console.error('Update community error:', error);
@@ -571,7 +614,14 @@ router.put('/communities/:id', moderatorRoles, async (req: AuthRequest & Request
 router.delete('/communities/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
+    const [oldCommunity] = await prisma.$queryRaw<any[]>`SELECT * FROM "Community" WHERE id = ${id}`;
     await prisma.$executeRaw`DELETE FROM "Community" WHERE id = ${id}`;
+    
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'DELETE', 'COMMUNITY', ${id}, ${JSON.stringify({ name: oldCommunity?.name })}::jsonb, ${JSON.stringify(oldCommunity)}::jsonb, NOW())
+    `;
+    
     res.json({ message: 'Община удалена' });
   } catch (error) {
     console.error('Delete community error:', error);

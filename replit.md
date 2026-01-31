@@ -75,6 +75,14 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
     -   Public endpoint GET /api/public/platform-settings returns public-facing settings
     -   History rollback capability with PlatformSettingHistory model
     -   File uploads (logo, favicon, audio) stored as base64 in database
+-   **Audit Logging & Rollback System:** Complete change tracking for all platform entities at `/admin/audit-log`:
+    -   AdminLog model extended with `oldData` and `newData` JSONB columns for state tracking
+    -   Logs all CREATE, UPDATE, DELETE operations with before/after snapshots
+    -   Rollback capability for UPDATE (restore oldData), DELETE (recreate entity), CREATE (remove entity)
+    -   Covered entities: lessons, modules, library items, schedule events, contacts, communities
+    -   Filtering by entity type and action type in admin interface
+    -   Super admin only access for viewing logs and performing rollbacks
+    -   API endpoints: GET /api/admin/audit-logs, POST /api/admin/audit-logs/rollback/:id
 
 ## External Dependencies
 

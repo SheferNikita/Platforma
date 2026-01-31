@@ -3,14 +3,20 @@ import { NavLink } from 'react-router-dom';
 import { BookOpen, MessageSquare, Library, Calendar, Users, Building, User, AlertCircle, Users2 } from 'lucide-react';
 import { SobrietyCounter } from './SobrietyCounter';
 import { NotificationBell } from './NotificationBell';
+import { useAuth } from '../lib/auth';
 
 export function Navigation() {
+  const { user } = useAuth();
+  
+  // Тарифы без доступа к мини-группам: BASIC, FAMILY, INDIVIDUAL_PSYCHOLOGIST
+  const hasMiniGroupAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST';
+  
   const navItems = [
     { path: '/', label: 'Уроки', icon: BookOpen },
     { path: '/chats', label: 'Чаты', icon: MessageSquare },
     { path: '/library', label: 'Библиотека', icon: Library },
     { path: '/schedule', label: 'Расписание', icon: Calendar },
-    { path: '/mini-group', label: 'Мини-группа', icon: Users2 },
+    ...(hasMiniGroupAccess ? [{ path: '/mini-group', label: 'Мини-группа', icon: Users2 }] : []),
     { path: '/contacts', label: 'Контакты', icon: Users },
     { path: '/communities', label: 'Общины', icon: Building },
   ];
@@ -19,7 +25,7 @@ export function Navigation() {
     { path: '/', label: 'Уроки', icon: BookOpen },
     { path: '/chats', label: 'Чаты', icon: MessageSquare },
     { path: '/library', label: 'Библиотека', icon: Library },
-    { path: '/mini-group', label: 'Группа', icon: Users2 },
+    ...(hasMiniGroupAccess ? [{ path: '/mini-group', label: 'Группа', icon: Users2 }] : []),
     { path: '/communities', label: 'Общины', icon: Building },
     { path: '/sos', label: 'SOS', icon: AlertCircle },
   ];

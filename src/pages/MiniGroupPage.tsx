@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { PageWrapper } from '../components/PageWrapper';
 import { Users, MessageCircle, Video, Calendar, User, Mail, Phone, ExternalLink, AlertCircle } from 'lucide-react';
 import { api } from '../lib/api';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { useAuth } from '../lib/auth';
 
 interface Curator {
   id: string;
@@ -38,12 +40,23 @@ interface MiniGroup {
 }
 
 export function MiniGroupPage() {
+  const { user } = useAuth();
   const [group, setGroup] = useState<MiniGroup | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Проверка доступа по тарифу
+  const hasMiniGroupAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST';
+
   useEffect(() => {
-    loadGroup();
-  }, []);
+    if (hasMiniGroupAccess) {
+      loadGroup();
+    }
+  }, [hasMiniGroupAccess]);
+
+  // Редирект для учеников без доступа
+  if (!hasMiniGroupAccess) {
+    return <Navigate to="/" replace />;
+  }
 
   async function loadGroup() {
     try {

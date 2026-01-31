@@ -444,6 +444,34 @@ router.put('/email-templates/:id', settingsRoles, async (req: AuthRequest, res: 
     const { id } = req.params;
     const data = emailTemplateSchema.partial().parse(req.body);
     
+    const oldTemplate = await prisma.emailTemplate.findUnique({ where: { id } });
+    if (!oldTemplate) {
+      return res.status(404).json({ error: 'Шаблон не найден' });
+    }
+    
+    const changedBy = req.user!.name || req.user!.email;
+    const historyEntries: { templateId: string; field: string; oldValue: string | null; newValue: string | null; changedBy: string }[] = [];
+    
+    if (data.name !== undefined && data.name !== oldTemplate.name) {
+      historyEntries.push({ templateId: id, field: 'name', oldValue: oldTemplate.name, newValue: data.name, changedBy });
+    }
+    if (data.subject !== undefined && data.subject !== oldTemplate.subject) {
+      historyEntries.push({ templateId: id, field: 'subject', oldValue: oldTemplate.subject, newValue: data.subject, changedBy });
+    }
+    if (data.body !== undefined && data.body !== oldTemplate.body) {
+      historyEntries.push({ templateId: id, field: 'body', oldValue: oldTemplate.body, newValue: data.body, changedBy });
+    }
+    if (data.description !== undefined && data.description !== oldTemplate.description) {
+      historyEntries.push({ templateId: id, field: 'description', oldValue: oldTemplate.description || null, newValue: data.description || null, changedBy });
+    }
+    if (data.isEnabled !== undefined && data.isEnabled !== oldTemplate.isEnabled) {
+      historyEntries.push({ templateId: id, field: 'isEnabled', oldValue: String(oldTemplate.isEnabled), newValue: String(data.isEnabled), changedBy });
+    }
+    
+    for (const entry of historyEntries) {
+      await prisma.$executeRaw`INSERT INTO "EmailTemplateHistory" ("id", "templateId", "field", "oldValue", "newValue", "changedBy", "changedAt") VALUES (gen_random_uuid(), ${entry.templateId}, ${entry.field}, ${entry.oldValue}, ${entry.newValue}, ${entry.changedBy}, NOW())`;
+    }
+    
     const template = await prisma.emailTemplate.update({
       where: { id },
       data
@@ -463,6 +491,73 @@ router.delete('/email-templates/:id', settingsRoles, async (req: AuthRequest, re
   } catch (error) {
     console.error('Delete email template error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/email-templates/history', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const history = await prisma.$queryRaw<Array<{
+      id: string;
+      templateId: string;
+      field: string;
+      oldValue: string | null;
+      newValue: string | null;
+      changedBy: string;
+      changedAt: Date;
+      templateName: string;
+      templateCode: string;
+    }>>`
+      SELECT h.*, t.name as "templateName", t.code as "templateCode"
+      FROM "EmailTemplateHistory" h
+      LEFT JOIN "EmailTemplate" t ON h."templateId" = t.id
+      ORDER BY h."changedAt" DESC
+      LIMIT 100
+    `;
+    res.json(history);
+  } catch (error) {
+    console.error('Get email template history error:', error);
+    res.json([]);
+  }
+});
+
+router.post('/email-templates/rollback/:historyId', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const { historyId } = req.params;
+    
+    const historyEntry = await prisma.$queryRaw<Array<{
+      id: string;
+      templateId: string;
+      field: string;
+      oldValue: string | null;
+      newValue: string | null;
+      changedBy: string;
+    }>>`SELECT * FROM "EmailTemplateHistory" WHERE id = ${historyId}`;
+    
+    if (!historyEntry || historyEntry.length === 0) {
+      return res.status(404).json({ error: 'Запись истории не найдена' });
+    }
+    
+    const entry = historyEntry[0];
+    const changedBy = `${req.user!.name || req.user!.email} (откат)`;
+    
+    if (entry.field === 'name') {
+      await prisma.emailTemplate.update({ where: { id: entry.templateId }, data: { name: entry.oldValue || '' } });
+    } else if (entry.field === 'subject') {
+      await prisma.emailTemplate.update({ where: { id: entry.templateId }, data: { subject: entry.oldValue || '' } });
+    } else if (entry.field === 'body') {
+      await prisma.emailTemplate.update({ where: { id: entry.templateId }, data: { body: entry.oldValue || '' } });
+    } else if (entry.field === 'description') {
+      await prisma.emailTemplate.update({ where: { id: entry.templateId }, data: { description: entry.oldValue } });
+    } else if (entry.field === 'isEnabled') {
+      await prisma.emailTemplate.update({ where: { id: entry.templateId }, data: { isEnabled: entry.oldValue === 'true' } });
+    }
+    
+    await prisma.$executeRaw`INSERT INTO "EmailTemplateHistory" ("id", "templateId", "field", "oldValue", "newValue", "changedBy", "changedAt") VALUES (gen_random_uuid(), ${entry.templateId}, ${entry.field}, ${entry.newValue}, ${entry.oldValue}, ${changedBy}, NOW())`;
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Rollback email template error:', error);
+    res.status(500).json({ error: 'Ошибка отката' });
   }
 });
 

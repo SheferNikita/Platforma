@@ -33,12 +33,44 @@ interface EmailTemplate {
   isEnabled: boolean;
 }
 
+interface EmailTemplateHistory {
+  id: string;
+  templateId: string;
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+  changedBy: string;
+  changedAt: string;
+  templateName: string;
+  templateCode: string;
+}
+
+interface UnifiedHistoryItem {
+  id: string;
+  type: 'setting' | 'template';
+  label: string;
+  field?: string;
+  oldValue: string | null;
+  newValue: string | null;
+  changedBy: string;
+  changedAt: string;
+}
+
 type TabType = 'general' | 'sos' | 'email' | 'history';
+
+const fieldLabels: Record<string, string> = {
+  name: 'Название',
+  subject: 'Тема',
+  body: 'Текст',
+  description: 'Описание',
+  isEnabled: 'Статус'
+};
 
 export function SettingsAdmin() {
   const [activeTab, setActiveTab] = useState<TabType>('general');
   const [settings, setSettings] = useState<PlatformSetting[]>([]);
   const [history, setHistory] = useState<SettingHistory[]>([]);
+  const [templateHistory, setTemplateHistory] = useState<EmailTemplateHistory[]>([]);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -76,6 +108,13 @@ export function SettingsAdmin() {
       setTemplates(templatesData);
     } catch (error) {
       console.error('Load templates error:', error);
+    }
+    
+    try {
+      const templateHistoryData = await api.get<EmailTemplateHistory[]>('/admin/email-templates/history');
+      setTemplateHistory(templateHistoryData);
+    } catch (error) {
+      console.error('Load template history error:', error);
     }
     
     setLoading(false);
@@ -138,6 +177,38 @@ export function SettingsAdmin() {
       setSavingTemplate(false);
     }
   }
+
+  async function rollbackTemplate(historyId: string) {
+    try {
+      await api.post(`/admin/email-templates/rollback/${historyId}`, {});
+      toast.success('Изменение отменено');
+      loadData();
+    } catch (error) {
+      toast.error('Ошибка отката');
+    }
+  }
+
+  const unifiedHistory: UnifiedHistoryItem[] = [
+    ...history.map(h => ({
+      id: h.id,
+      type: 'setting' as const,
+      label: h.setting.label,
+      oldValue: h.oldValue,
+      newValue: h.newValue,
+      changedBy: h.changedBy,
+      changedAt: h.changedAt
+    })),
+    ...templateHistory.map(h => ({
+      id: h.id,
+      type: 'template' as const,
+      label: h.templateName || 'Шаблон',
+      field: h.field,
+      oldValue: h.oldValue,
+      newValue: h.newValue,
+      changedBy: h.changedBy,
+      changedAt: h.changedAt
+    }))
+  ].sort((a, b) => new Date(b.changedAt).getTime() - new Date(a.changedAt).getTime());
 
   function handleFileUpload(key: string, file: File) {
     const reader = new FileReader();
@@ -352,17 +423,25 @@ export function SettingsAdmin() {
       {activeTab === 'history' && (
         <div className="space-y-4">
           <h2 className="text-lg font-semibold text-[#3d3527]">История изменений</h2>
-          {history.length === 0 ? (
+          {unifiedHistory.length === 0 ? (
             <p className="text-[#3d3527]/60">История пуста</p>
           ) : (
             <div className="space-y-2">
-              {history.map(entry => (
+              {unifiedHistory.map(entry => (
                 <div
-                  key={entry.id}
+                  key={`${entry.type}-${entry.id}`}
                   className="bg-white/60 rounded-xl p-4 border border-[#e8e4da] flex items-center justify-between"
                 >
                   <div>
-                    <p className="font-medium text-[#3d3527]">{entry.setting.label}</p>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded text-xs ${entry.type === 'setting' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                        {entry.type === 'setting' ? 'Настройка' : 'Email-шаблон'}
+                      </span>
+                      <p className="font-medium text-[#3d3527]">
+                        {entry.label}
+                        {entry.field && <span className="text-[#3d3527]/60 text-sm ml-1">({fieldLabels[entry.field] || entry.field})</span>}
+                      </p>
+                    </div>
                     <p className="text-sm text-[#3d3527]/60">
                       {entry.changedBy} • {new Date(entry.changedAt).toLocaleString('ru')}
                     </p>
@@ -372,7 +451,7 @@ export function SettingsAdmin() {
                     </div>
                   </div>
                   <button
-                    onClick={() => rollback(entry.id)}
+                    onClick={() => entry.type === 'setting' ? rollback(entry.id) : rollbackTemplate(entry.id)}
                     className="flex items-center gap-1 px-3 py-1.5 bg-[var(--button-lavender)]/20 text-[var(--button-lavender-dark)] rounded-lg text-sm hover:bg-[var(--button-lavender)]/30 transition-colors"
                   >
                     <RotateCcw className="w-4 h-4" />

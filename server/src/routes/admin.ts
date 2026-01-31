@@ -281,4 +281,183 @@ router.get('/logs', async (req: AuthRequest, res: Response) => {
   }
 });
 
+const DEFAULT_SETTINGS = [
+  { key: 'platformName', label: 'Название платформы', category: 'general', type: 'TEXT', value: 'Платформа трезвости' },
+  { key: 'supportLink', label: 'Ссылка поддержки', category: 'general', type: 'URL', value: '' },
+  { key: 'loginText', label: 'Текст на странице входа', category: 'general', type: 'TEXTAREA', value: '' },
+  { key: 'logo', label: 'Логотип', category: 'general', type: 'IMAGE', value: '' },
+  { key: 'favicon', label: 'Фавикон', category: 'general', type: 'IMAGE', value: '' },
+  { key: 'sosChatLink', label: 'Ссылка на чат поддержки (SOS)', category: 'sos', type: 'URL', value: '' },
+  { key: 'sosAudioFile', label: 'Голосовой файл (SOS)', category: 'sos', type: 'AUDIO', value: '' },
+];
+
+async function ensureDefaultSettings() {
+  for (const setting of DEFAULT_SETTINGS) {
+    const existing = await prisma.platformSetting.findUnique({ where: { key: setting.key } });
+    if (!existing) {
+      await prisma.platformSetting.create({ data: setting });
+    }
+  }
+}
+
+const settingsRoles = requireRole('SUPER_ADMIN', 'ADMIN');
+
+router.get('/settings', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    await ensureDefaultSettings();
+    const settings = await prisma.platformSetting.findMany({
+      orderBy: { category: 'asc' }
+    });
+    res.json(settings);
+  } catch (error) {
+    console.error('Get settings error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+const updateSettingSchema = z.object({
+  value: z.string().nullable()
+});
+
+router.put('/settings/:key', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const { key } = req.params;
+    const { value } = updateSettingSchema.parse(req.body);
+    
+    const setting = await prisma.platformSetting.findUnique({ where: { key } });
+    if (!setting) {
+      return res.status(404).json({ error: 'Настройка не найдена' });
+    }
+    
+    await prisma.platformSettingHistory.create({
+      data: {
+        settingId: setting.id,
+        oldValue: setting.value,
+        newValue: value,
+        changedBy: req.user!.name || req.user!.email
+      }
+    });
+    
+    const updated = await prisma.platformSetting.update({
+      where: { key },
+      data: { value }
+    });
+    
+    res.json(updated);
+  } catch (error) {
+    console.error('Update setting error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/settings/history', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const history = await prisma.platformSettingHistory.findMany({
+      include: {
+        setting: { select: { key: true, label: true } }
+      },
+      orderBy: { changedAt: 'desc' },
+      take: 100
+    });
+    res.json(history);
+  } catch (error) {
+    console.error('Get settings history error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/settings/rollback/:historyId', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const { historyId } = req.params;
+    
+    const historyEntry = await prisma.platformSettingHistory.findUnique({
+      where: { id: historyId },
+      include: { setting: true }
+    });
+    
+    if (!historyEntry) {
+      return res.status(404).json({ error: 'Запись истории не найдена' });
+    }
+    
+    await prisma.platformSettingHistory.create({
+      data: {
+        settingId: historyEntry.settingId,
+        oldValue: historyEntry.setting.value,
+        newValue: historyEntry.oldValue,
+        changedBy: `${req.user!.name || req.user!.email} (откат)`
+      }
+    });
+    
+    const updated = await prisma.platformSetting.update({
+      where: { id: historyEntry.settingId },
+      data: { value: historyEntry.oldValue }
+    });
+    
+    res.json(updated);
+  } catch (error) {
+    console.error('Rollback setting error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/email-templates', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const templates = await prisma.emailTemplate.findMany({
+      orderBy: { name: 'asc' }
+    });
+    res.json(templates);
+  } catch (error) {
+    console.error('Get email templates error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+const emailTemplateSchema = z.object({
+  code: z.string().min(1),
+  name: z.string().min(1),
+  subject: z.string().min(1),
+  body: z.string().min(1),
+  description: z.string().optional(),
+  variables: z.array(z.string()).optional(),
+  isEnabled: z.boolean().optional()
+});
+
+router.post('/email-templates', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const data = emailTemplateSchema.parse(req.body);
+    const template = await prisma.emailTemplate.create({ data });
+    res.json(template);
+  } catch (error) {
+    console.error('Create email template error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/email-templates/:id', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const data = emailTemplateSchema.partial().parse(req.body);
+    
+    const template = await prisma.emailTemplate.update({
+      where: { id },
+      data
+    });
+    res.json(template);
+  } catch (error) {
+    console.error('Update email template error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/email-templates/:id', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.emailTemplate.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete email template error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;

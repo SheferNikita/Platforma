@@ -16,6 +16,7 @@ import { MiniGroupPage } from './pages/MiniGroupPage';
 import { LoginPage } from './pages/LoginPage';
 import { OnboardingSurvey } from './pages/OnboardingSurvey';
 import { AuthProvider, useAuth } from './lib/auth';
+import { SettingsProvider } from './lib/settings';
 import { AdminLayout } from './admin/components/AdminLayout';
 import { AdminLogin } from './admin/pages/AdminLogin';
 import { Dashboard } from './admin/pages/Dashboard';
@@ -34,6 +35,7 @@ import { CRMAdmin } from './admin/pages/CRMAdmin';
 import { ModerationAdmin } from './admin/pages/ModerationAdmin';
 import { AuditLogAdmin } from './admin/pages/AuditLogAdmin';
 import { DistributionAdmin } from './admin/pages/DistributionAdmin';
+import { SettingsAdmin } from './admin/pages/SettingsAdmin';
 import { PaymentPage } from './pages/PaymentPage';
 import { Toaster } from 'sonner';
 
@@ -86,6 +88,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <SettingsProvider>
         <Toaster position="top-right" richColors />
         <Routes>
           <Route path="/sos" element={<SOSPage />} />
@@ -119,6 +122,7 @@ export default function App() {
             <Route path="admins" element={<AdminsAdmin />} />
             <Route path="audit" element={<AuditLogAdmin />} />
             <Route path="distribution" element={<DistributionAdmin />} />
+            <Route path="settings" element={<SettingsAdmin />} />
           </Route>
           
           <Route
@@ -144,6 +148,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
+      </SettingsProvider>
       </AuthProvider>
     </BrowserRouter>
   );

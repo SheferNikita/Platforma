@@ -52,6 +52,7 @@ const navItems: {
   { path: '/admin/payments', label: 'Платежи', icon: CreditCard, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { path: '/admin/email', label: 'Email', icon: Mail, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { path: '/admin/admins', label: 'Администраторы', icon: Shield, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR'] },
+  { path: '/admin/settings', label: 'Настройки', icon: Settings, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { path: '/admin/audit', label: 'История изменений', icon: History, roles: ['SUPER_ADMIN'] },
 ];
 

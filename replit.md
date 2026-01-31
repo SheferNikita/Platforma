@@ -68,6 +68,13 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
     -   Modals are full-screen and scrollable on mobile (max-h-[90vh] overflow-y-auto)
     -   Responsive grids (grid-cols-1 sm:grid-cols-2 lg:grid-cols-3)
     -   Tailwind responsive prefixes preserve desktop layouts unchanged
+-   **Platform Settings System:** Centralized configuration management at `/admin/settings`:
+    -   Key-value settings stored in PlatformSetting model with history tracking
+    -   Categories: General (platformName, supportLink, loginText, logo, favicon), SOS (sosChatLink, sosAudioFile), Email templates
+    -   SettingsProvider (`src/lib/settings.tsx`) provides global access to settings on public pages
+    -   Public endpoint GET /api/public/platform-settings returns public-facing settings
+    -   History rollback capability with PlatformSettingHistory model
+    -   File uploads (logo, favicon, audio) stored as base64 in database
 
 ## External Dependencies
 

@@ -1027,4 +1027,17 @@ router.get('/attachments/note/:id', async (req: Request, res: Response) => {
   }
 });
 
+// Public platform settings
+router.get('/platform-settings', async (req: Request, res: Response) => {
+  try {
+    const settings = await prisma.platformSetting.findMany();
+    const result: Record<string, string | null> = {};
+    settings.forEach(s => { result[s.key] = s.value; });
+    res.json(result);
+  } catch (error) {
+    console.error('Get public settings error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;

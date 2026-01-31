@@ -582,7 +582,8 @@ const entityLabels: Record<string, string> = {
   SETTING: 'Настройка',
   DIARY: 'Дневник',
   NOTE: 'Заметка',
-  QUESTION: 'Вопрос'
+  QUESTION: 'Вопрос',
+  CHAT: 'Чат'
 };
 
 const actionLabelsMap: Record<string, string> = {

@@ -1040,4 +1040,31 @@ router.get('/platform-settings', async (req: Request, res: Response) => {
   }
 });
 
+// Public chats endpoint with tariff filtering
+router.get('/chats', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    let userTariff = 'BASIC';
+    
+    if (student) {
+      const studentData = await prisma.student.findUnique({
+        where: { id: student.studentId },
+        select: { tariff: true }
+      });
+      userTariff = studentData?.tariff || 'BASIC';
+    }
+    
+    const chats = await prisma.$queryRaw<any[]>`
+      SELECT * FROM "ChatLink" 
+      WHERE "isPublished" = true AND ${userTariff} = ANY(tariffs)
+      ORDER BY "order" ASC
+    `;
+    
+    res.json(chats);
+  } catch (error) {
+    console.error('Get public chats error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;

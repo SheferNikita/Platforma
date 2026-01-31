@@ -25,6 +25,7 @@ import { LibraryAdmin } from './admin/pages/LibraryAdmin';
 import { ScheduleAdmin } from './admin/pages/ScheduleAdmin';
 import { ContactsAdmin } from './admin/pages/ContactsAdmin';
 import { CommunitiesAdmin } from './admin/pages/CommunitiesAdmin';
+import { ChatsAdmin } from './admin/pages/ChatsAdmin';
 import { MiniGroupsAdmin } from './admin/pages/MiniGroupsAdmin';
 import { StudentsAdmin } from './admin/pages/StudentsAdmin';
 import { ProductsAdmin } from './admin/pages/ProductsAdmin';
@@ -112,6 +113,7 @@ export default function App() {
             <Route path="schedule" element={<ScheduleAdmin />} />
             <Route path="contacts" element={<ContactsAdmin />} />
             <Route path="communities" element={<CommunitiesAdmin />} />
+            <Route path="chats" element={<ChatsAdmin />} />
             <Route path="mini-groups" element={<MiniGroupsAdmin />} />
             <Route path="students" element={<StudentsAdmin />} />
             <Route path="moderation" element={<ModerationAdmin />} />

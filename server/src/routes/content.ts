@@ -1265,4 +1265,105 @@ router.get('/contacts/next-order', adminOnly, async (req: AuthRequest, res: Resp
   }
 });
 
+// Chat Links endpoints
+router.get('/chats', moderatorRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const chats = await prisma.$queryRaw<any[]>`
+      SELECT * FROM "ChatLink" ORDER BY "order" ASC
+    `;
+    res.json(chats);
+  } catch (error) {
+    console.error('Get chats error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/chats', moderatorRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, description, platform, icon, link, members, isSchedule, tariffs, isPublished, order } = req.body;
+    const tariffsArray = tariffs || ['BASIC', 'FAMILY', 'WITH_MENTOR', 'WITH_PSYCHOLOGIST', 'INDIVIDUAL_PSYCHOLOGIST'];
+    
+    const [chat] = await prisma.$queryRaw<any[]>`
+      INSERT INTO "ChatLink" (name, description, platform, icon, link, members, "isSchedule", tariffs, "isPublished", "order")
+      VALUES (${name}, ${description || null}, ${platform || 'Telegram'}, ${icon || 'message'}, ${link}, ${members || null}, ${isSchedule || false}, ${tariffsArray}::TEXT[], ${isPublished !== false}, ${order || 0})
+      RETURNING *
+    `;
+    
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'CHAT', ${chat.id}, ${JSON.stringify({ name: chat.name })}::jsonb, ${JSON.stringify(chat)}::jsonb, NOW())
+    `;
+    
+    res.status(201).json(chat);
+  } catch (error) {
+    console.error('Create chat error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/chats/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description, platform, icon, link, members, isSchedule, tariffs, isPublished, order } = req.body;
+    
+    const [oldChat] = await prisma.$queryRaw<any[]>`SELECT * FROM "ChatLink" WHERE id = ${id}::uuid`;
+    
+    const [chat] = await prisma.$queryRaw<any[]>`
+      UPDATE "ChatLink" SET
+        name = COALESCE(${name}, name),
+        description = ${description},
+        platform = COALESCE(${platform}, platform),
+        icon = COALESCE(${icon}, icon),
+        link = COALESCE(${link}, link),
+        members = ${members || null},
+        "isSchedule" = COALESCE(${isSchedule}, "isSchedule"),
+        tariffs = COALESCE(${tariffs}::TEXT[], tariffs),
+        "isPublished" = COALESCE(${isPublished}, "isPublished"),
+        "order" = COALESCE(${order}, "order"),
+        "updatedAt" = NOW()
+      WHERE id = ${id}::uuid
+      RETURNING *
+    `;
+    
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'CHAT', ${id}, ${JSON.stringify({ name: chat?.name })}::jsonb, ${JSON.stringify(oldChat)}::jsonb, ${JSON.stringify(chat)}::jsonb, NOW())
+    `;
+    
+    res.json(chat);
+  } catch (error) {
+    console.error('Update chat error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/chats/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const [oldChat] = await prisma.$queryRaw<any[]>`SELECT * FROM "ChatLink" WHERE id = ${id}::uuid`;
+    
+    await prisma.$executeRaw`DELETE FROM "ChatLink" WHERE id = ${id}::uuid`;
+    
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'DELETE', 'CHAT', ${id}, ${JSON.stringify({ name: oldChat?.name })}::jsonb, ${JSON.stringify(oldChat)}::jsonb, NOW())
+    `;
+    
+    res.json({ message: 'Чат удален' });
+  } catch (error) {
+    console.error('Delete chat error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/chats/next-order', moderatorRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const [result] = await prisma.$queryRaw<any[]>`SELECT MAX("order") as max_order FROM "ChatLink"`;
+    res.json({ nextOrder: (result?.max_order || 0) + 1 });
+  } catch (error) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;

@@ -101,31 +101,31 @@ model Module {
 }
 
 model Lesson {
-  id                  String             @id @default(uuid())
-  moduleId            String
-  title               String
-  description         String?
-  content             String?
-  duration            String?
-  order               Int                @default(0)
-  isPublished         Boolean            @default(false)
-  isTextOnly          Boolean            @default(false)
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  publishAt           DateTime?
-  showDiary           Boolean            @default(true)
-  showNotes           Boolean            @default(true)
-  diaryDescription    String?            @default("Запишите свои мысли, эмоции и впечатления от пройденного урока")
-  notesDescription    String?            @default("Запишите основные моменты урока, важные понятия и выводы")
-  showTask            Boolean            @default(false)
-  taskContent         String?
-  taskAllowedTariffs  String[]           @default([])
-  diaries             Diary[]
-  module              Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  attachments         LessonAttachment[]
-  progress            LessonProgress[]
-  videos              LessonVideo[]
-  notes               StudentNote[]
+  id                 String             @id @default(uuid())
+  moduleId           String
+  title              String
+  description        String?
+  content            String?
+  duration           String?
+  order              Int                @default(0)
+  isPublished        Boolean            @default(false)
+  isTextOnly         Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  publishAt          DateTime?
+  showDiary          Boolean            @default(true)
+  showNotes          Boolean            @default(true)
+  diaryDescription   String?            @default("Запишите свои мысли, эмоции и впечатления от пройденного урока")
+  notesDescription   String?            @default("Запишите основные моменты урока, важные понятия и выводы")
+  showTask           Boolean            @default(false)
+  taskAllowedTariffs String[]           @default([])
+  taskContent        String?
+  diaries            Diary[]
+  module             Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  attachments        LessonAttachment[]
+  progress           LessonProgress[]
+  videos             LessonVideo[]
+  notes              StudentNote[]
 }
 
 model LessonVideo {
@@ -231,9 +231,9 @@ model LibraryItem {
   content        String?
   order          Int      @default(0)
   isPublished    Boolean  @default(false)
-  allowedTariffs String[] @default([])
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  allowedTariffs String[] @default([])
 }
 
 model ScheduleEvent {
@@ -268,16 +268,23 @@ model Contact {
 }
 
 model Community {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  address     String?
-  city        String?
-  phone       String?
-  schedule    String?
-  isPublished Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  address       String?
+  city          String?
+  phone         String?
+  schedule      String?
+  isPublished   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  format        String?  @default("offline") @db.VarChar(20)
+  communityType String?  @default("mixed") @db.VarChar(30)
+  dayOfWeek     String?  @db.VarChar(50)
+  time          String?  @db.VarChar(20)
+  leader        String?  @db.VarChar(255)
+  leaderContact String?  @db.VarChar(255)
+  link          String?  @db.VarChar(500)
 }
 
 model MiniGroup {
@@ -469,6 +476,7 @@ enum UserRole {
   INTERN
   MODERATOR
   STUDENT
+  PSYCHOLOGIST_GROUP
 }
 
 enum StudentTariff {

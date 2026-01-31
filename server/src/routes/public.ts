@@ -396,16 +396,23 @@ router.get('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
 
 // Save new student diary entry for a lesson
 router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
+  console.log('[POST diary] === START ===');
   try {
+    console.log('[POST diary] Getting student from token...');
     const student = await getStudentFromToken(req);
     if (!student) {
+      console.log('[POST diary] No student found - unauthorized');
       return res.status(401).json({ error: 'Требуется авторизация' });
     }
+    console.log('[POST diary] Student found:', student.studentId);
 
     const lessonId = req.params.lessonId as string;
     const { content, attachments } = req.body;
+    
+    console.log('[POST diary] LessonId:', lessonId);
+    console.log('[POST diary] Content length:', content?.length || 0);
+    console.log('[POST diary] Attachments count:', attachments?.length || 0);
 
-    console.log('[POST diary] Received attachments:', attachments?.length || 0, 'files');
     if (attachments?.length) {
       console.log('[POST diary] First attachment:', {
         filename: attachments[0].filename,
@@ -416,16 +423,21 @@ router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
     }
 
     if (!content || !content.trim()) {
+      console.log('[POST diary] Error: empty content');
       return res.status(400).json({ error: 'Текст дневника обязателен' });
     }
 
     // Verify lesson exists
+    console.log('[POST diary] Checking if lesson exists...');
     const lesson = await prisma.lesson.findUnique({ where: { id: lessonId } });
     if (!lesson) {
+      console.log('[POST diary] Error: lesson not found');
       return res.status(404).json({ error: 'Урок не найден' });
     }
+    console.log('[POST diary] Lesson found:', lesson.id);
 
     // Create diary entry first (without attachments)
+    console.log('[POST diary] Creating diary entry...');
     const diary = await prisma.diary.create({
       data: {
         content: content.trim(),
@@ -433,6 +445,7 @@ router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
         lessonId
       }
     });
+    console.log('[POST diary] Diary entry created:', diary.id);
 
     console.log('[POST diary] Created diary entry:', diary.id);
 
@@ -476,11 +489,13 @@ router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
 
     res.status(201).json({ ...diary, attachments: createdAttachments });
   } catch (error: any) {
+    console.error('[POST diary] === ERROR ===');
     console.error('Save diary error:', error);
     console.error('Save diary error details:', {
       message: error?.message,
       code: error?.code,
-      meta: error?.meta
+      meta: error?.meta,
+      name: error?.name
     });
     
     // Check for specific Prisma errors
@@ -488,16 +503,27 @@ router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Запись уже существует' });
     }
     if (error?.code === 'P2003') {
-      return res.status(400).json({ error: 'Ошибка связи с уроком или студентом' });
+      return res.status(400).json({ error: 'Ошибка связи с уроком или студентом. Проверьте, что вы авторизованы.' });
     }
-    if (error?.message?.includes('timeout')) {
-      return res.status(504).json({ error: 'Превышено время ожидания. Попробуйте загрузить файл меньшего размера.' });
+    if (error?.code === 'P2025') {
+      return res.status(404).json({ error: 'Урок или студент не найден' });
+    }
+    if (error?.message?.includes('timeout') || error?.message?.includes('ETIMEDOUT')) {
+      return res.status(504).json({ error: 'Превышено время ожидания подключения к базе данных' });
     }
     if (error?.message?.includes('too large') || error?.message?.includes('size')) {
       return res.status(413).json({ error: 'Файл слишком большой. Максимальный размер: 10 МБ.' });
     }
+    if (error?.message?.includes('ECONNREFUSED') || error?.message?.includes('connect')) {
+      return res.status(503).json({ error: 'Ошибка подключения к базе данных' });
+    }
     
-    res.status(500).json({ error: 'Ошибка сервера при сохранении дневника' });
+    // Return detailed error in development, generic in production
+    const errorMessage = process.env.NODE_ENV === 'production' 
+      ? 'Ошибка сервера при сохранении дневника'
+      : `Ошибка: ${error?.message || 'неизвестная ошибка'}`;
+    
+    res.status(500).json({ error: errorMessage });
   }
 });
 

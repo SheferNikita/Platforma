@@ -315,30 +315,6 @@ function ChatModal({ chat, onSave, onClose }: ChatModalProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#3d3527] mb-1">Количество участников</label>
-            <input
-              type="number"
-              value={form.members}
-              onChange={e => setForm({ ...form, members: e.target.value })}
-              className="w-full px-3 py-2 border border-[#e8e4da] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--button-lavender-dark)]/20"
-              placeholder="247"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="isSchedule"
-              checked={form.isSchedule}
-              onChange={e => setForm({ ...form, isSchedule: e.target.checked })}
-              className="rounded border-[#e8e4da]"
-            />
-            <label htmlFor="isSchedule" className="text-sm text-[#3d3527]">
-              Ведёт на страницу расписания
-            </label>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-[#3d3527] mb-2">Видимость по тарифам</label>
             <div className="space-y-2">
               {TARIFF_OPTIONS.map(tariff => (

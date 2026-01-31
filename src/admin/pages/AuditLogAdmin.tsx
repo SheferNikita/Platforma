@@ -207,14 +207,16 @@ export function AuditLogAdmin() {
                     </div>
                   </div>
                   
-                  <button
-                    onClick={(e) => { e.stopPropagation(); rollback(log.id); }}
-                    disabled={rolling === log.id}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-[var(--button-lavender)]/20 text-[var(--button-lavender-dark)] rounded-lg text-sm hover:bg-[var(--button-lavender)]/30 transition-colors disabled:opacity-50 self-start"
-                  >
-                    <RotateCcw className={`w-4 h-4 ${rolling === log.id ? 'animate-spin' : ''}`} />
-                    Отменить
-                  </button>
+                  {(log.oldData || log.newData) && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); rollback(log.id); }}
+                      disabled={rolling === log.id}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-[var(--button-lavender)]/20 text-[var(--button-lavender-dark)] rounded-lg text-sm hover:bg-[var(--button-lavender)]/30 transition-colors disabled:opacity-50 self-start"
+                    >
+                      <RotateCcw className={`w-4 h-4 ${rolling === log.id ? 'animate-spin' : ''}`} />
+                      Отменить
+                    </button>
+                  )}
                 </div>
               </div>
               

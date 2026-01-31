@@ -7,39 +7,253 @@ datasource db {
   url      = "postgresql://gen_user:9.U82o%7D%3Bs8BX7V@31.130.150.167:5432/Platform"
 }
 
+model User {
+  id                 String         @id @default(uuid())
+  email              String         @unique
+  password           String
+  name               String
+  role               UserRole       @default(STUDENT)
+  isActive           Boolean        @default(true)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  adminLogs          AdminLog[]
+  diaryReplies       Diary[]        @relation("DiaryReplies")
+  notifications      Notification[]
+  sessions           Session[]
+  assignedStudents   Student[]      @relation("AssignedPsychologist")
+  student            Student?
+  studentNoteReplies StudentNote[]  @relation("StudentNoteReplies")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Student {
+  id                     String            @id @default(uuid())
+  userId                 String            @unique
+  phone                  String?
+  sobrietyDate           DateTime?
+  notes                  String?
+  city                   String?
+  gender                 String?
+  age                    Int?
+  addictionType          String?
+  surveyCompleted        Boolean           @default(false)
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  isClergy               Boolean?          @default(false)
+  assignedPsychologistId String?
+  tariff                 StudentTariff     @default(WITH_MENTOR)
+  diaries                Diary[]
+  enrollments            Enrollment[]
+  progress               LessonProgress[]
+  miniGroups             MiniGroupMember[]
+  moduleAccess           ModuleAccess[]
+  payments               Payment[]
+  assignedPsychologist   User?             @relation("AssignedPsychologist", fields: [assignedPsychologistId], references: [id])
+  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentNotes           StudentNote[]
+}
+
+model ModuleAccess {
+  id         String    @id @default(uuid())
+  studentId  String
+  moduleId   String
+  expiresAt  DateTime?
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  accessFrom DateTime?
+  module     Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  student    Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, moduleId])
+}
+
 model AdminLog {
-  id        String   @id
+  id        String   @id @default(uuid())
   userId    String
   action    String
   entity    String
   entityId  String?
   details   Json?
   createdAt DateTime @default(now())
-  User      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 }
 
-model Community {
-  id            String   @id
-  name          String
-  description   String?
-  address       String?
-  city          String?
-  phone         String?
-  schedule      String?
-  isPublished   Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime
-  format        String?  @default("offline") @db.VarChar(20)
-  communityType String?  @default("mixed") @db.VarChar(30)
-  dayOfWeek     String?  @db.VarChar(50)
-  time          String?  @db.VarChar(20)
-  leader        String?  @db.VarChar(255)
-  leaderContact String?  @db.VarChar(255)
-  link          String?  @db.VarChar(500)
+model Module {
+  id          String          @id @default(uuid())
+  title       String
+  description String?
+  order       Int             @default(0)
+  isPublished Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  lessons     Lesson[]
+  access      ModuleAccess[]
+  products    ProductModule[]
+}
+
+model Lesson {
+  id                  String             @id @default(uuid())
+  moduleId            String
+  title               String
+  description         String?
+  content             String?
+  duration            String?
+  order               Int                @default(0)
+  isPublished         Boolean            @default(false)
+  isTextOnly          Boolean            @default(false)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  publishAt           DateTime?
+  showDiary           Boolean            @default(true)
+  showNotes           Boolean            @default(true)
+  diaryDescription    String?            @default("Запишите свои мысли, эмоции и впечатления от пройденного урока")
+  notesDescription    String?            @default("Запишите основные моменты урока, важные понятия и выводы")
+  showTask            Boolean            @default(false)
+  taskContent         String?
+  taskAllowedTariffs  String[]           @default([])
+  diaries             Diary[]
+  module              Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  attachments         LessonAttachment[]
+  progress            LessonProgress[]
+  videos              LessonVideo[]
+  notes               StudentNote[]
+}
+
+model LessonVideo {
+  id        String   @id @default(uuid())
+  lessonId  String
+  title     String?
+  url       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}
+
+model LessonAttachment {
+  id           String   @id @default(uuid())
+  lessonId     String
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+  createdAt    DateTime @default(now())
+  lesson       Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}
+
+model LessonProgress {
+  id          String    @id @default(uuid())
+  studentId   String
+  lessonId    String
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, lessonId])
+}
+
+model Diary {
+  id          String            @id @default(uuid())
+  studentId   String
+  lessonId    String
+  content     String
+  reply       String?
+  repliedAt   DateTime?
+  repliedById String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  lesson      Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  repliedBy   User?             @relation("DiaryReplies", fields: [repliedById], references: [id])
+  student     Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  attachments DiaryAttachment[]
+}
+
+model StudentNote {
+  id          String           @id @default(uuid())
+  studentId   String
+  lessonId    String
+  content     String
+  noteType    String           @default("question")
+  reply       String?
+  repliedAt   DateTime?
+  repliedById String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  attachments NoteAttachment[]
+  lesson      Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  repliedBy   User?            @relation("StudentNoteReplies", fields: [repliedById], references: [id])
+  student     Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model DiaryAttachment {
+  id           String   @id @default(uuid())
+  diaryId      String
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  data         String
+  createdAt    DateTime @default(now())
+  diary        Diary    @relation(fields: [diaryId], references: [id], onDelete: Cascade)
+}
+
+model NoteAttachment {
+  id           String      @id @default(uuid())
+  noteId       String
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  data         String
+  createdAt    DateTime    @default(now())
+  note         StudentNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+}
+
+model LibraryItem {
+  id             String   @id @default(uuid())
+  title          String
+  description    String?
+  type           String
+  url            String?
+  downloadUrl    String?
+  content        String?
+  order          Int      @default(0)
+  isPublished    Boolean  @default(false)
+  allowedTariffs String[] @default([])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ScheduleEvent {
+  id          String     @id @default(uuid())
+  title       String
+  description String?
+  date        DateTime
+  time        String?
+  location    String?
+  isOnline    Boolean    @default(false)
+  link        String?
+  miniGroupId String?
+  isPublished Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  miniGroup   MiniGroup? @relation(fields: [miniGroupId], references: [id])
 }
 
 model Contact {
-  id          String      @id
+  id          String      @id @default(uuid())
   name        String
   role        String?
   phone       String?
@@ -49,246 +263,84 @@ model Contact {
   order       Int         @default(0)
   isPublished Boolean     @default(false)
   createdAt   DateTime    @default(now())
-  updatedAt   DateTime
-  MiniGroup   MiniGroup[]
+  updatedAt   DateTime    @updatedAt
+  miniGroups  MiniGroup[]
 }
 
-model Diary {
-  id              String            @id
-  studentId       String
-  lessonId        String
-  content         String
-  reply           String?
-  repliedAt       DateTime?
-  repliedById     String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime
-  Lesson          Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  User            User?             @relation(fields: [repliedById], references: [id])
-  Student         Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  DiaryAttachment DiaryAttachment[]
-}
-
-model DiaryAttachment {
-  id           String   @id
-  diaryId      String
-  filename     String
-  originalName String
-  mimeType     String
-  size         Int
-  data         String
-  createdAt    DateTime @default(now())
-  Diary        Diary    @relation(fields: [diaryId], references: [id], onDelete: Cascade)
-}
-
-model EmailJob {
-  id        String    @id
-  to        String
-  subject   String
-  body      String
-  status    String    @default("pending")
-  error     String?
-  sentAt    DateTime?
-  createdAt DateTime  @default(now())
-}
-
-model EmailTemplate {
+model Community {
   id          String   @id @default(uuid())
-  key         String   @unique
   name        String
-  subject     String
-  body        String
-  variables   String[]
   description String?
-  isActive    Boolean  @default(true)
+  address     String?
+  city        String?
+  phone       String?
+  schedule    String?
+  isPublished Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
-model Enrollment {
-  id        String    @id
-  studentId String
-  productId String
-  expiresAt DateTime?
-  isActive  Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  Product   Product   @relation(fields: [productId], references: [id])
-  Student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@unique([studentId, productId])
-}
-
-model Lesson {
-  id                 String             @id
-  moduleId           String
-  title              String
-  description        String?
-  content            String?
-  duration           String?
-  order              Int                @default(0)
-  isPublished        Boolean            @default(false)
-  isTextOnly         Boolean            @default(false)
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime
-  publishAt          DateTime?
-  showDiary          Boolean            @default(true)
-  showNotes          Boolean            @default(true)
-  diaryDescription   String?            @default("Запишите свои мысли, эмоции и впечатления от пройденного урока")
-  notesDescription   String?            @default("Запишите основные моменты урока, важные понятия и выводы")
-  showTask           Boolean            @default(false)
-  taskAllowedTariffs String[]           @default([])
-  taskContent        String?
-  Diary              Diary[]
-  Module             Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  LessonAttachment   LessonAttachment[]
-  LessonProgress     LessonProgress[]
-  LessonVideo        LessonVideo[]
-  StudentNote        StudentNote[]
-}
-
-model LessonAttachment {
-  id           String   @id
-  lessonId     String
-  filename     String
-  originalName String
-  mimeType     String
-  size         Int
-  url          String
-  createdAt    DateTime @default(now())
-  Lesson       Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-}
-
-model LessonProgress {
-  id          String    @id
-  studentId   String
-  lessonId    String
-  isCompleted Boolean   @default(false)
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime
-  Lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  Student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-
-  @@unique([studentId, lessonId])
-}
-
-model LessonVideo {
-  id        String   @id
-  lessonId  String
-  title     String?
-  url       String
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  Lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-}
-
-model LibraryItem {
-  id             String   @id
-  title          String
-  description    String?
-  type           String
-  url            String?
-  downloadUrl    String?
-  content        String?
-  order          Int      @default(0)
-  isPublished    Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime
-  allowedTariffs String[] @default([])
-}
-
-model Metric {
-  id        String   @id
-  type      String
-  value     Float
-  date      DateTime
-  metadata  Json?
-  createdAt DateTime @default(now())
-}
-
 model MiniGroup {
-  id              String            @id
-  title           String
-  description     String?
-  chatLink        String?
-  curatorId       String?
-  isPublished     Boolean           @default(false)
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime
-  Contact         Contact?          @relation(fields: [curatorId], references: [id])
-  MiniGroupMember MiniGroupMember[]
-  ScheduleEvent   ScheduleEvent[]
+  id          String            @id @default(uuid())
+  title       String
+  description String?
+  chatLink    String?
+  curatorId   String?
+  isPublished Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  curator     Contact?          @relation(fields: [curatorId], references: [id])
+  members     MiniGroupMember[]
+  events      ScheduleEvent[]
 }
 
 model MiniGroupMember {
-  id          String    @id
+  id          String    @id @default(uuid())
   miniGroupId String
   studentId   String
   joinedAt    DateTime  @default(now())
-  MiniGroup   MiniGroup @relation(fields: [miniGroupId], references: [id], onDelete: Cascade)
-  Student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  miniGroup   MiniGroup @relation(fields: [miniGroupId], references: [id], onDelete: Cascade)
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([miniGroupId, studentId])
 }
 
-model Module {
-  id            String          @id
-  title         String
-  description   String?
-  order         Int             @default(0)
-  isPublished   Boolean         @default(false)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime
-  Lesson        Lesson[]
-  ModuleAccess  ModuleAccess[]
-  ProductModule ProductModule[]
+model Product {
+  id                 String          @id @default(uuid())
+  name               String
+  description        String?
+  price              Float
+  currency           String          @default("RUB")
+  accessDuration     Int?
+  emailSubject       String?
+  emailTemplate      String?
+  isActive           Boolean         @default(true)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  accessDurationType String          @default("unlimited")
+  accessExpiresAt    DateTime?
+  offerUrl           String?
+  defaultTariff      StudentTariff?
+  startDate          DateTime?
+  enrollments        Enrollment[]
+  orders             Order[]
+  payments           Payment[]
+  modules            ProductModule[]
 }
 
-model ModuleAccess {
-  id         String    @id
-  studentId  String
-  moduleId   String
-  expiresAt  DateTime?
-  isActive   Boolean   @default(true)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime
-  accessFrom DateTime?
-  Module     Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  Student    Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+model ProductModule {
+  id        String   @id @default(uuid())
+  productId String
+  moduleId  String
+  createdAt DateTime @default(now())
+  module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@unique([studentId, moduleId])
-}
-
-model NoteAttachment {
-  id           String      @id
-  noteId       String
-  filename     String
-  originalName String
-  mimeType     String
-  size         Int
-  data         String
-  createdAt    DateTime    @default(now())
-  StudentNote  StudentNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
-}
-
-model Notification {
-  id        String           @id
-  userId    String
-  type      NotificationType
-  title     String
-  message   String
-  link      String?
-  relatedId String?
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
-  User      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-  @@index([userId, isRead])
+  @@unique([productId, moduleId])
 }
 
 model Order {
-  id                 String               @id
+  id                 String               @id @default(uuid())
   firstName          String
   lastName           String
   phone              String
@@ -299,7 +351,7 @@ model Order {
   robokassaInvId     Int?                 @unique
   paidAt             DateTime?
   createdAt          DateTime             @default(now())
-  updatedAt          DateTime
+  updatedAt          DateTime             @updatedAt
   source             String?              @default("MANUAL") @db.VarChar(50)
   tildaTranId        String?              @db.VarChar(100)
   tildaOrderId       String?              @db.VarChar(100)
@@ -307,8 +359,92 @@ model Order {
   utmMedium          String?              @db.VarChar(255)
   utmCampaign        String?              @db.VarChar(255)
   comment            String?
-  Product            Product              @relation(fields: [productId], references: [id])
+  product            Product              @relation(fields: [productId], references: [id])
   OrderStatusHistory OrderStatusHistory[]
+}
+
+model Enrollment {
+  id        String    @id @default(uuid())
+  studentId String
+  productId String
+  expiresAt DateTime?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  product   Product   @relation(fields: [productId], references: [id])
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, productId])
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  studentId      String
+  productId      String
+  amount         Float
+  currency       String        @default("RUB")
+  status         PaymentStatus @default(PENDING)
+  paymentMethod  String?
+  robokassaInvId Int?          @unique
+  robokassaData  Json?
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  product        Product       @relation(fields: [productId], references: [id])
+  student        Student       @relation(fields: [studentId], references: [id])
+}
+
+model EmailTemplate {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  subject   String
+  body      String
+  variables String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailJob {
+  id        String    @id @default(uuid())
+  to        String
+  subject   String
+  body      String
+  status    String    @default("pending")
+  error     String?
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model Setting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Metric {
+  id        String   @id @default(uuid())
+  type      String
+  value     Float
+  date      DateTime
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  link      String?
+  relatedId String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
 }
 
 model OrderStatusHistory {
@@ -324,151 +460,36 @@ model OrderStatusHistory {
   @@index([orderId], map: "idx_order_status_history_order")
 }
 
-model Payment {
-  id             String        @id
-  studentId      String
-  productId      String
-  amount         Float
-  currency       String        @default("RUB")
-  status         PaymentStatus @default(PENDING)
-  paymentMethod  String?
-  robokassaInvId Int?          @unique
-  robokassaData  Json?
-  paidAt         DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime
-  Product        Product       @relation(fields: [productId], references: [id])
-  Student        Student       @relation(fields: [studentId], references: [id])
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  CURATOR
+  MENTOR
+  PSYCHOLOGIST
+  INTERN
+  MODERATOR
+  STUDENT
 }
 
-model Product {
-  id                 String          @id
-  name               String
-  description        String?
-  price              Float
-  currency           String          @default("RUB")
-  accessDuration     Int?
-  emailSubject       String?
-  emailTemplate      String?
-  isActive           Boolean         @default(true)
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime
-  accessDurationType String          @default("unlimited")
-  accessExpiresAt    DateTime?
-  offerUrl           String?
-  defaultTariff      StudentTariff?
-  startDate          DateTime?
-  Enrollment         Enrollment[]
-  Order              Order[]
-  Payment            Payment[]
-  ProductModule      ProductModule[]
+enum StudentTariff {
+  BASIC
+  FAMILY
+  WITH_MENTOR
+  WITH_PSYCHOLOGIST
+  INDIVIDUAL_PSYCHOLOGIST
 }
 
-model ProductModule {
-  id        String   @id
-  productId String
-  moduleId  String
-  createdAt DateTime @default(now())
-  Module    Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  Product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@unique([productId, moduleId])
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
 }
 
-model ScheduleEvent {
-  id          String     @id
-  title       String
-  description String?
-  date        DateTime
-  time        String?
-  location    String?
-  isOnline    Boolean    @default(false)
-  link        String?
-  miniGroupId String?
-  isPublished Boolean    @default(false)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime
-  MiniGroup   MiniGroup? @relation(fields: [miniGroupId], references: [id])
-}
-
-model Session {
-  id        String   @id
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Setting {
-  id        String   @id
-  key       String   @unique
-  value     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime
-}
-
-model Student {
-  id                                        String            @id
-  userId                                    String            @unique
-  phone                                     String?
-  sobrietyDate                              DateTime?
-  notes                                     String?
-  city                                      String?
-  gender                                    String?
-  age                                       Int?
-  addictionType                             String?
-  surveyCompleted                           Boolean           @default(false)
-  createdAt                                 DateTime          @default(now())
-  updatedAt                                 DateTime
-  isClergy                                  Boolean?          @default(false)
-  assignedPsychologistId                    String?
-  tariff                                    StudentTariff     @default(WITH_MENTOR)
-  Diary                                     Diary[]
-  Enrollment                                Enrollment[]
-  LessonProgress                            LessonProgress[]
-  MiniGroupMember                           MiniGroupMember[]
-  ModuleAccess                              ModuleAccess[]
-  Payment                                   Payment[]
-  User_Student_assignedPsychologistIdToUser User?             @relation("Student_assignedPsychologistIdToUser", fields: [assignedPsychologistId], references: [id])
-  User_Student_userIdToUser                 User              @relation("Student_userIdToUser", fields: [userId], references: [id], onDelete: Cascade)
-  StudentNote                               StudentNote[]
-}
-
-model StudentNote {
-  id             String           @id
-  studentId      String
-  lessonId       String
-  content        String
-  noteType       String           @default("question")
-  reply          String?
-  repliedAt      DateTime?
-  repliedById    String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime
-  NoteAttachment NoteAttachment[]
-  Lesson         Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  User           User?            @relation(fields: [repliedById], references: [id])
-  Student        Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
-}
-
-model User {
-  id                                           String                   @id
-  email                                        String                   @unique
-  password                                     String
-  name                                         String
-  role                                         UserRole                 @default(STUDENT)
-  isActive                                     Boolean                  @default(true)
-  createdAt                                    DateTime                 @default(now())
-  updatedAt                                    DateTime
-  AdminLog                                     AdminLog[]
-  Diary                                        Diary[]
-  Notification                                 Notification[]
-  Session                                      Session[]
-  Student_Student_assignedPsychologistIdToUser Student[]                @relation("Student_assignedPsychologistIdToUser")
-  Student_Student_userIdToUser                 Student?                 @relation("Student_userIdToUser")
-  StudentNote                                  StudentNote[]
-  settingChanges                               PlatformSettingHistory[]
+enum OrderStatus {
+  NEW
+  PAID
+  CANCELLED
 }
 
 enum NotificationType {
@@ -494,63 +515,4 @@ enum NotificationType {
   WELCOME
   NEW_LIBRARY_ITEM
   INCOMPLETE_LESSON
-}
-
-enum OrderStatus {
-  NEW
-  PAID
-  CANCELLED
-}
-
-enum PaymentStatus {
-  PENDING
-  COMPLETED
-  FAILED
-  REFUNDED
-}
-
-enum StudentTariff {
-  BASIC
-  FAMILY
-  WITH_MENTOR
-  WITH_PSYCHOLOGIST
-  INDIVIDUAL_PSYCHOLOGIST
-}
-
-enum UserRole {
-  SUPER_ADMIN
-  ADMIN
-  CURATOR
-  MENTOR
-  PSYCHOLOGIST
-  INTERN
-  MODERATOR
-  STUDENT
-  PSYCHOLOGIST_GROUP
-}
-
-model PlatformSetting {
-  id          String                   @id @default(uuid())
-  key         String                   @unique
-  value       String?
-  label       String
-  description String?
-  category    String                   @default("general")
-  type        String                   @default("text")
-  isActive    Boolean                  @default(true)
-  createdAt   DateTime                 @default(now())
-  updatedAt   DateTime                 @default(now()) @updatedAt
-  history     PlatformSettingHistory[]
-}
-
-model PlatformSettingHistory {
-  id            String          @id @default(uuid())
-  settingId     String
-  previousValue String?
-  newValue      String?
-  changedById   String
-  changeReason  String?
-  createdAt     DateTime        @default(now())
-  PlatformSetting PlatformSetting @relation(fields: [settingId], references: [id], onDelete: Cascade)
-  User          User            @relation(fields: [changedById], references: [id], onDelete: Restrict)
 }

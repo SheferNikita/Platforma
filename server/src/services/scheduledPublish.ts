@@ -17,7 +17,7 @@ export async function publishScheduledLessons(): Promise<number> {
       isPublished: false
     },
     include: {
-      Module: true
+      module: true
     }
   });
 
@@ -41,7 +41,7 @@ export async function publishScheduledLessons(): Promise<number> {
 
       const studentsWithAccess = await prisma.student.findMany({
         where: {
-          ModuleAccess: {
+          moduleAccess: {
             some: {
               moduleId: lesson.moduleId,
               isActive: true,
@@ -51,29 +51,28 @@ export async function publishScheduledLessons(): Promise<number> {
               ]
             }
           },
-          User_Student_userIdToUser: {
+          user: {
             isActive: true
           }
         },
         include: {
-          User_Student_userIdToUser: true
+          user: true
         }
       });
 
       console.log(`[ScheduledPublish] Sending notifications to ${studentsWithAccess.length} students`);
 
       for (const student of studentsWithAccess) {
-        const user = student.User_Student_userIdToUser;
         try {
           const emailHtml = getNewLessonEmailTemplate({
-            studentName: user.name,
+            studentName: student.user.name,
             lessonTitle: lesson.title,
-            moduleName: lesson.Module.title,
+            moduleName: lesson.module.title,
             lessonUrl: `${PLATFORM_URL}/lessons/${lesson.id}`
           });
 
           await sendEmail(
-            user.email,
+            student.user.email,
             `Открыт новый урок: ${lesson.title}`,
             emailHtml
           );
@@ -82,10 +81,10 @@ export async function publishScheduledLessons(): Promise<number> {
             student.userId,
             lesson.title,
             lesson.id,
-            lesson.Module.title
+            lesson.module.title
           );
         } catch (emailError) {
-          console.error(`[ScheduledPublish] Failed to send email to ${user.email}:`, emailError);
+          console.error(`[ScheduledPublish] Failed to send email to ${student.user.email}:`, emailError);
         }
       }
     } catch (error) {

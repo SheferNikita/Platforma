@@ -11,9 +11,10 @@ const PLATFORM_URL = 'https://schkola-trezvosti.ru';
 const router = Router();
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'ADMIN'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR'));
 
-const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR'] as const;
+const adminRoles = ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'PSYCHOLOGIST_GROUP', 'INTERN', 'MODERATOR'] as const;
+const curatorAllowedRoles = ['MENTOR', 'PSYCHOLOGIST', 'PSYCHOLOGIST_GROUP', 'INTERN'] as const;
 
 const createAdminSchema = z.object({
   email: z.string().email('Некорректный email'),
@@ -31,9 +32,10 @@ const updateAdminSchema = z.object({
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
+    const isCurator = req.user!.role === 'CURATOR';
     const admins = await prisma.user.findMany({
       where: {
-        role: { in: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR'] }
+        role: { in: isCurator ? [...curatorAllowedRoles] : ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'PSYCHOLOGIST_GROUP', 'INTERN', 'MODERATOR'] }
       },
       select: {
         id: true,
@@ -57,7 +59,7 @@ router.get('/mentors', async (req: AuthRequest, res: Response) => {
   try {
     const mentors = await prisma.user.findMany({
       where: {
-        role: { in: ['MENTOR', 'PSYCHOLOGIST', 'INTERN'] },
+        role: { in: ['MENTOR', 'PSYCHOLOGIST', 'PSYCHOLOGIST_GROUP', 'INTERN'] },
         isActive: true
       },
       select: {
@@ -82,6 +84,10 @@ router.post('/', async (req: AuthRequest, res: Response) => {
 
     if (req.user!.role !== 'SUPER_ADMIN' && data.role === 'SUPER_ADMIN') {
       return res.status(403).json({ error: 'Только супер-админ может создавать супер-админов' });
+    }
+    
+    if (req.user!.role === 'CURATOR' && !curatorAllowedRoles.includes(data.role as any)) {
+      return res.status(403).json({ error: 'Вы можете создавать только наставников, психологов и помощников' });
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -167,6 +173,15 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
         return res.status(403).json({ error: 'Только супер-админ может назначать роль супер-админа' });
       }
     }
+    
+    if (req.user!.role === 'CURATOR') {
+      if (!curatorAllowedRoles.includes(targetAdmin.role as any)) {
+        return res.status(403).json({ error: 'Вы можете редактировать только наставников, психологов и помощников' });
+      }
+      if (data.role && !curatorAllowedRoles.includes(data.role as any)) {
+        return res.status(403).json({ error: 'Вы можете назначать только роли наставника, психолога или помощника' });
+      }
+    }
 
     const updateData: any = { ...data };
     if (data.password) {
@@ -221,6 +236,10 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 
     if (req.user!.role !== 'SUPER_ADMIN' && targetAdmin.role === 'SUPER_ADMIN') {
       return res.status(403).json({ error: 'Недостаточно прав для удаления супер-админа' });
+    }
+    
+    if (req.user!.role === 'CURATOR' && !curatorAllowedRoles.includes(targetAdmin.role as any)) {
+      return res.status(403).json({ error: 'Вы можете удалять только наставников, психологов и помощников' });
     }
 
     await prisma.user.delete({

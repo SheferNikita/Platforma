@@ -16,7 +16,7 @@ interface Mentor {
   id: string;
   name: string;
   email: string;
-  role: 'MENTOR' | 'PSYCHOLOGIST' | 'INTERN';
+  role: 'MENTOR' | 'PSYCHOLOGIST' | 'PSYCHOLOGIST_GROUP' | 'INTERN';
 }
 
 interface ScheduleEvent {
@@ -290,7 +290,7 @@ function MiniGroupForm({ group, mentors, onSave, onClose }: {
   };
 
   const getRoleLabel = (role: string) => {
-    return role === 'INTERN' ? '(Стажер)' : '';
+    return role === 'INTERN' ? '(Помощник)' : '';
   };
 
   return (
@@ -412,7 +412,7 @@ function MiniGroupSettings({ group, mentors, onSave, onClose, onRefresh, onDelet
   };
 
   const getRoleLabel = (role: string) => {
-    return role === 'INTERN' ? '(Стажер)' : '';
+    return role === 'INTERN' ? '(Помощник)' : '';
   };
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [showEventForm, setShowEventForm] = useState(false);

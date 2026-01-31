@@ -11,7 +11,7 @@ const router = Router();
 router.use(express.json({ limit: '50mb' }));
 
 router.use(authenticate);
-router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR'));
+router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'PSYCHOLOGIST_GROUP', 'INTERN', 'MODERATOR'));
 
 interface AttachmentInfo {
   id: string;

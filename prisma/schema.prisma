@@ -394,13 +394,16 @@ model Payment {
 }
 
 model EmailTemplate {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  subject   String
-  body      String
-  variables String[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  subject     String
+  body        String   @db.Text
+  description String?
+  variables   String[]
+  isEnabled   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model EmailJob {
@@ -515,4 +518,35 @@ enum NotificationType {
   WELCOME
   NEW_LIBRARY_ITEM
   INCOMPLETE_LESSON
+}
+
+model PlatformSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String?  @db.Text
+  label     String
+  category  String
+  type      SettingType @default(TEXT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  history   PlatformSettingHistory[]
+}
+
+model PlatformSettingHistory {
+  id        String   @id @default(uuid())
+  settingId String
+  oldValue  String?  @db.Text
+  newValue  String?  @db.Text
+  changedBy String
+  changedAt DateTime @default(now())
+  setting   PlatformSetting @relation(fields: [settingId], references: [id], onDelete: Cascade)
+}
+
+enum SettingType {
+  TEXT
+  TEXTAREA
+  URL
+  FILE
+  IMAGE
+  AUDIO
 }

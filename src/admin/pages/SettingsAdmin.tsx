@@ -50,14 +50,8 @@ export function SettingsAdmin() {
 
   async function loadData() {
     try {
-      const [settingsData, historyData, templatesData] = await Promise.all([
-        api.get<PlatformSetting[]>('/admin/settings'),
-        api.get<SettingHistory[]>('/admin/settings/history'),
-        api.get<EmailTemplate[]>('/admin/email-templates')
-      ]);
+      const settingsData = await api.get<PlatformSetting[]>('/admin/settings');
       setSettings(settingsData);
-      setHistory(historyData);
-      setTemplates(templatesData);
       
       const values: Record<string, string> = {};
       settingsData.forEach(s => { values[s.key] = s.value || ''; });
@@ -65,9 +59,23 @@ export function SettingsAdmin() {
     } catch (error) {
       console.error('Load settings error:', error);
       toast.error('Ошибка загрузки настроек');
-    } finally {
-      setLoading(false);
     }
+    
+    try {
+      const historyData = await api.get<SettingHistory[]>('/admin/settings/history');
+      setHistory(historyData);
+    } catch (error) {
+      console.error('Load history error:', error);
+    }
+    
+    try {
+      const templatesData = await api.get<EmailTemplate[]>('/admin/email-templates');
+      setTemplates(templatesData);
+    } catch (error) {
+      console.error('Load templates error:', error);
+    }
+    
+    setLoading(false);
   }
 
   async function saveSetting(key: string) {

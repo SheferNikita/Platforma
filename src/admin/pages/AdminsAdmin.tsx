@@ -68,15 +68,29 @@ export function AdminsAdmin() {
     ADMIN: { label: 'Администратор', color: 'bg-blue-100 text-blue-700', description: 'Полный доступ к админке, кроме удаления супер-админа' },
     CURATOR: { label: 'Куратор наставников', color: 'bg-teal-100 text-teal-700', description: 'Полный доступ кроме «Продукты» и «CRM»' },
     MENTOR: { label: 'Наставник', color: 'bg-green-100 text-green-700', description: 'Видит только свои мини-группы и своих учеников' },
-    PSYCHOLOGIST: { label: 'Психолог', color: 'bg-pink-100 text-pink-700', description: 'Индивидуальная работа с учениками, без мини-групп' },
-    INTERN: { label: 'Стажер', color: 'bg-lime-100 text-lime-700', description: 'Такие же права как у наставника' },
+    PSYCHOLOGIST: { label: 'Психолог индивидуальный', color: 'bg-pink-100 text-pink-700', description: 'Индивидуальная работа с учениками, без мини-групп' },
+    PSYCHOLOGIST_GROUP: { label: 'Психолог с мини-группами', color: 'bg-fuchsia-100 text-fuchsia-700', description: 'Работа с учениками + доступ к мини-группам' },
+    INTERN: { label: 'Помощник', color: 'bg-lime-100 text-lime-700', description: 'Такие же права как у наставника' },
     MODERATOR: { label: 'Модератор', color: 'bg-orange-100 text-orange-700', description: 'Уроки, библиотека, общины, расписание, email' }
   };
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const isAdmin = user?.role === 'ADMIN';
+  const isCurator = user?.role === 'CURATOR';
+  
+  const curatorAllowedRoles = ['MENTOR', 'PSYCHOLOGIST', 'PSYCHOLOGIST_GROUP', 'INTERN'];
+  const canEditAdmin = (adminRole: string) => {
+    if (isSuperAdmin) return true;
+    if (isAdmin && adminRole !== 'SUPER_ADMIN') return true;
+    if (isCurator && curatorAllowedRoles.includes(adminRole)) return true;
+    return false;
+  };
+  
+  const filteredAdmins = isCurator 
+    ? admins.filter(a => curatorAllowedRoles.includes(a.role))
+    : admins;
 
-  if (!isSuperAdmin && !isAdmin) {
+  if (!isSuperAdmin && !isAdmin && !isCurator) {
     return (
       <div className="text-center py-12">
         <Shield className="w-16 h-16 text-[#3d3527]/20 mx-auto mb-4" />
@@ -106,10 +120,10 @@ export function AdminsAdmin() {
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#a67c52]"></div>
           </div>
-        ) : admins.length === 0 ? (
+        ) : filteredAdmins.length === 0 ? (
           <div className="text-center py-12 text-[#3d3527]/60">Администраторы не найдены</div>
         ) : (
-          admins.map((admin) => (
+          filteredAdmins.map((admin) => (
             <div key={admin.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
@@ -122,7 +136,7 @@ export function AdminsAdmin() {
                   </div>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
-                  {(isSuperAdmin || admin.role !== 'SUPER_ADMIN') && (
+                  {canEditAdmin(admin.role) && (
                     <button
                       onClick={() => { setEditingAdmin(admin); setShowModal(true); }}
                       className="p-2 hover:bg-[#f5f3ed] rounded-lg"
@@ -130,7 +144,7 @@ export function AdminsAdmin() {
                       <Edit className="w-4 h-4 text-[#3d3527]" />
                     </button>
                   )}
-                  {admin.id !== user?.id && (isSuperAdmin || admin.role !== 'SUPER_ADMIN') && (
+                  {admin.id !== user?.id && canEditAdmin(admin.role) && (
                     <button
                       onClick={() => deleteAdmin(admin.id)}
                       className="p-2 hover:bg-red-50 rounded-lg"
@@ -175,12 +189,12 @@ export function AdminsAdmin() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#a67c52] mx-auto"></div>
                 </td>
               </tr>
-            ) : admins.length === 0 ? (
+            ) : filteredAdmins.length === 0 ? (
               <tr>
                 <td colSpan={5} className="text-center py-12 text-[#3d3527]/60">Администраторы не найдены</td>
               </tr>
             ) : (
-              admins.map((admin) => (
+              filteredAdmins.map((admin) => (
                 <tr key={admin.id} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -208,7 +222,7 @@ export function AdminsAdmin() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex justify-end gap-2">
-                      {(isSuperAdmin || admin.role !== 'SUPER_ADMIN') && (
+                      {canEditAdmin(admin.role) && (
                         <button
                           onClick={() => { setEditingAdmin(admin); setShowModal(true); }}
                           className="p-2 hover:bg-[#f5f3ed] rounded-lg"
@@ -216,7 +230,7 @@ export function AdminsAdmin() {
                           <Edit className="w-4 h-4 text-[#3d3527]" />
                         </button>
                       )}
-                      {admin.id !== user?.id && (isSuperAdmin || admin.role !== 'SUPER_ADMIN') && (
+                      {admin.id !== user?.id && canEditAdmin(admin.role) && (
                         <button
                           onClick={() => deleteAdmin(admin.id)}
                           className="p-2 hover:bg-red-50 rounded-lg"
@@ -239,17 +253,18 @@ export function AdminsAdmin() {
           onSave={saveAdmin}
           onClose={() => { setShowModal(false); setEditingAdmin(null); }}
           canAssignSuperAdmin={isSuperAdmin}
+          curatorMode={isCurator}
         />
       )}
     </div>
   );
 }
 
-function AdminModal({ admin, onSave, onClose, canAssignSuperAdmin }: { admin: Admin | null; onSave: (data: any) => void; onClose: () => void; canAssignSuperAdmin: boolean }) {
+function AdminModal({ admin, onSave, onClose, canAssignSuperAdmin, curatorMode }: { admin: Admin | null; onSave: (data: any) => void; onClose: () => void; canAssignSuperAdmin: boolean; curatorMode: boolean }) {
   const [name, setName] = useState(admin?.name || '');
   const [email, setEmail] = useState(admin?.email || '');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState(admin?.role || 'ADMIN');
+  const [role, setRole] = useState(admin?.role || (curatorMode ? 'MENTOR' : 'ADMIN'));
   const [isActive, setIsActive] = useState(admin?.isActive ?? true);
 
   return (
@@ -309,12 +324,13 @@ function AdminModal({ admin, onSave, onClose, canAssignSuperAdmin }: { admin: Ad
               className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
             >
               {canAssignSuperAdmin && <option value="SUPER_ADMIN">Супер-администратор</option>}
-              <option value="ADMIN">Администратор</option>
-              <option value="CURATOR">Куратор наставников</option>
+              {!curatorMode && <option value="ADMIN">Администратор</option>}
+              {!curatorMode && <option value="CURATOR">Куратор наставников</option>}
               <option value="MENTOR">Наставник</option>
-              <option value="PSYCHOLOGIST">Психолог</option>
-              <option value="INTERN">Стажер</option>
-              <option value="MODERATOR">Модератор</option>
+              <option value="PSYCHOLOGIST">Психолог индивидуальный</option>
+              <option value="PSYCHOLOGIST_GROUP">Психолог с мини-группами</option>
+              <option value="INTERN">Помощник</option>
+              {!curatorMode && <option value="MODERATOR">Модератор</option>}
             </select>
             <p className="text-xs text-[#3d3527]/60 mt-1">
               {role === 'SUPER_ADMIN' && 'Полный доступ ко всему, включая историю изменений'}
@@ -322,6 +338,7 @@ function AdminModal({ admin, onSave, onClose, canAssignSuperAdmin }: { admin: Ad
               {role === 'CURATOR' && 'Полный доступ кроме «Продукты» и «CRM»'}
               {role === 'MENTOR' && 'Видит только свои мини-группы и своих учеников'}
               {role === 'PSYCHOLOGIST' && 'Индивидуальная работа с учениками, без мини-групп'}
+              {role === 'PSYCHOLOGIST_GROUP' && 'Работа с учениками + доступ к мини-группам'}
               {role === 'INTERN' && 'Такие же права как у наставника'}
               {role === 'MODERATOR' && 'Уроки, библиотека, общины, расписание, email'}
             </p>

@@ -38,10 +38,17 @@ interface LessonGroup {
 function parseReply(reply: any): ReplyHistoryItem[] {
   if (!reply) return [];
   if (Array.isArray(reply)) return reply;
+  if (typeof reply === 'object') {
+    if (reply.text) {
+      return [reply as ReplyHistoryItem];
+    }
+    return [];
+  }
   if (typeof reply === 'string') {
     try {
       const parsed = JSON.parse(reply);
       if (Array.isArray(parsed)) return parsed;
+      if (typeof parsed === 'object' && parsed.text) return [parsed];
       return [{ text: reply, authorId: 'legacy', authorName: 'Наставник', authorRole: 'MENTOR', createdAt: new Date().toISOString() }];
     } catch {
       return [{ text: reply, authorId: 'legacy', authorName: 'Наставник', authorRole: 'MENTOR', createdAt: new Date().toISOString() }];
@@ -86,7 +93,8 @@ export function MentorResponsesPage() {
       try {
         const meResponse = await api.get('/auth/me') as { user: { tariff?: string } };
         const tariff = meResponse.user?.tariff || 'BASIC';
-        if (tariff === 'BASIC' || tariff === 'FAMILY') {
+        const allowedTariffs = ['WITH_MENTOR', 'WITH_PSYCHOLOGIST', 'INDIVIDUAL_PSYCHOLOGIST'];
+        if (!allowedTariffs.includes(tariff)) {
           navigate('/lessons');
           return;
         }
@@ -97,7 +105,7 @@ export function MentorResponsesPage() {
           setExpandedLesson(data[0].lessonId);
         }
       } catch (err: any) {
-        if (err.message?.includes('403') || err.message?.includes('тариф')) {
+        if (err.status === 403) {
           navigate('/lessons');
           return;
         }

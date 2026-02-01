@@ -72,11 +72,18 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
     -   Tailwind responsive prefixes preserve desktop layouts unchanged
 -   **Platform Settings System:** Centralized configuration management at `/admin/settings`:
     -   Key-value settings stored in PlatformSetting model with history tracking
-    -   Categories: General (platformName, supportLink, loginText, logo, favicon), SOS (sosChatLink, sosAudioFile), Email templates
+    -   Categories: General (platformName, supportLink, loginText, logo, favicon), SOS (sosChatLink, sosAudioFile), Visibility, Email templates
     -   SettingsProvider (`src/lib/settings.tsx`) provides global access to settings on public pages
     -   Public endpoint GET /api/public/platform-settings returns public-facing settings
     -   History rollback capability with PlatformSettingHistory model
     -   File uploads (logo, favicon, audio) stored as base64 in database
+    -   **Section Visibility Settings:** Admin can control visibility of platform sections:
+        - 10 configurable sections: Lessons, Mentor Responses, Chats, Library, Schedule, Mini-group, Contacts, Communities, SOS, Profile
+        - Each section can be enabled/disabled globally or restricted to specific tariffs
+        - Settings stored as JSON: `{"enabled": true, "tariffs": ["ALL"]}` or `{"enabled": true, "tariffs": ["BASIC", "WITH_MENTOR"]}`
+        - Navigation automatically hides sections based on settings and user tariff
+        - Pages protected by SectionGuard component or direct redirects for complex pages
+        - Use case: Hide incomplete sections from students during development
 -   **Audit Logging & Rollback System:** Complete change tracking for all platform entities at `/admin/audit-log`:
     -   AdminLog model extended with `oldData` and `newData` JSONB columns for state tracking
     -   Logs all CREATE, UPDATE, DELETE operations with before/after snapshots

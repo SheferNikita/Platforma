@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useAuth } from '../lib/auth';
+import { useSettings } from '../lib/settings';
 
 interface Curator {
   id: string;
@@ -41,20 +42,34 @@ interface MiniGroup {
 
 export function MiniGroupPage() {
   const { user } = useAuth();
+  const { isSectionVisible, loading: settingsLoading } = useSettings();
   const [group, setGroup] = useState<MiniGroup | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Проверка доступа по тарифу
   const hasMiniGroupAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST';
+  // Проверка видимости раздела
+  const isSectionEnabled = isSectionVisible('mini_group', user?.tariff);
 
   useEffect(() => {
-    if (hasMiniGroupAccess) {
+    if (hasMiniGroupAccess && isSectionEnabled && !settingsLoading) {
       loadGroup();
     }
-  }, [hasMiniGroupAccess]);
+  }, [hasMiniGroupAccess, isSectionEnabled, settingsLoading]);
 
-  // Редирект для учеников без доступа
-  if (!hasMiniGroupAccess) {
+  // Ожидание загрузки настроек
+  if (settingsLoading) {
+    return (
+      <PageWrapper>
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--button-lavender)]"></div>
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  // Редирект для учеников без доступа или если раздел скрыт
+  if (!hasMiniGroupAccess || !isSectionEnabled) {
     return <Navigate to="/" replace />;
   }
 

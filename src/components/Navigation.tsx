@@ -4,34 +4,47 @@ import { BookOpen, MessageSquare, Library, Calendar, Users, Building, User, Aler
 import { SobrietyCounter } from './SobrietyCounter';
 import { NotificationBell } from './NotificationBell';
 import { useAuth } from '../lib/auth';
+import { useSettings } from '../lib/settings';
 
 export function Navigation() {
   const { user } = useAuth();
+  const { isSectionVisible } = useSettings();
+  const userTariff = user?.tariff;
   
   // Тарифы без доступа к мини-группам: BASIC, FAMILY, RELATIVE, INDIVIDUAL_PSYCHOLOGIST
   const hasMiniGroupAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST';
   // Тарифы с доступом к ответам наставника (не BASIC, FAMILY, RELATIVE)
   const hasMentorResponsesAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST' || user?.tariff === 'INDIVIDUAL_PSYCHOLOGIST';
   
-  const navItems = [
-    { path: '/', label: 'Уроки', icon: BookOpen },
-    ...(hasMentorResponsesAccess ? [{ path: '/mentor-responses', label: 'Ответы', icon: MessageCircle }] : []),
-    { path: '/chats', label: 'Чаты', icon: MessageSquare },
-    { path: '/library', label: 'Библиотека', icon: Library },
-    { path: '/schedule', label: 'Расписание', icon: Calendar },
-    ...(hasMiniGroupAccess ? [{ path: '/mini-group', label: 'Мини-группа', icon: Users2 }] : []),
-    { path: '/contacts', label: 'Контакты', icon: Users },
-    { path: '/communities', label: 'Общины', icon: Building },
+  const allNavItems = [
+    { path: '/', label: 'Уроки', icon: BookOpen, section: 'lessons' as const },
+    { path: '/mentor-responses', label: 'Ответы', icon: MessageCircle, section: 'mentor_responses' as const, tariffCheck: hasMentorResponsesAccess },
+    { path: '/chats', label: 'Чаты', icon: MessageSquare, section: 'chats' as const },
+    { path: '/library', label: 'Библиотека', icon: Library, section: 'library' as const },
+    { path: '/schedule', label: 'Расписание', icon: Calendar, section: 'schedule' as const },
+    { path: '/mini-group', label: 'Мини-группа', icon: Users2, section: 'mini_group' as const, tariffCheck: hasMiniGroupAccess },
+    { path: '/contacts', label: 'Контакты', icon: Users, section: 'contacts' as const },
+    { path: '/communities', label: 'Общины', icon: Building, section: 'communities' as const },
   ];
 
-  const mobileNavItems = [
-    { path: '/', label: 'Уроки', icon: BookOpen },
-    ...(hasMentorResponsesAccess ? [{ path: '/mentor-responses', label: 'Ответы', icon: MessageCircle }] : []),
-    { path: '/chats', label: 'Чаты', icon: MessageSquare },
-    { path: '/library', label: 'Библиотека', icon: Library },
-    ...(hasMiniGroupAccess ? [{ path: '/mini-group', label: 'Группа', icon: Users2 }] : []),
-    { path: '/sos', label: 'SOS', icon: AlertCircle },
+  const navItems = allNavItems.filter(item => {
+    if (item.tariffCheck === false) return false;
+    return isSectionVisible(item.section, userTariff);
+  });
+
+  const allMobileNavItems = [
+    { path: '/', label: 'Уроки', icon: BookOpen, section: 'lessons' as const },
+    { path: '/mentor-responses', label: 'Ответы', icon: MessageCircle, section: 'mentor_responses' as const, tariffCheck: hasMentorResponsesAccess },
+    { path: '/chats', label: 'Чаты', icon: MessageSquare, section: 'chats' as const },
+    { path: '/library', label: 'Библиотека', icon: Library, section: 'library' as const },
+    { path: '/mini-group', label: 'Группа', icon: Users2, section: 'mini_group' as const, tariffCheck: hasMiniGroupAccess },
+    { path: '/sos', label: 'SOS', icon: AlertCircle, section: 'sos' as const },
   ];
+
+  const mobileNavItems = allMobileNavItems.filter(item => {
+    if (item.tariffCheck === false) return false;
+    return isSectionVisible(item.section, userTariff);
+  });
 
   return (
     <>

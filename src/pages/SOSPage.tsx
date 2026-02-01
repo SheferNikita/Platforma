@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { X, Play, Pause, Phone, MessageCircle, Heart } from 'lucide-react';
+import { useSettings } from '../lib/settings';
+import { useAuth } from '../lib/auth';
 
 export function SOSPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isSectionVisible, loading: settingsLoading } = useSettings();
+  
   const [breathPhase, setBreathPhase] = useState<'inhale' | 'hold' | 'exhale' | 'pause'>('pause');
   const [isBreathingActive, setIsBreathingActive] = useState(false);
   const [breathTimer, setBreathTimer] = useState(60);
@@ -169,6 +174,19 @@ export function SOSPage() {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Проверка видимости раздела (после всех hooks)
+  if (settingsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#fdfbf7] via-[#e3ebf1] to-[#f5f3ed]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--button-lavender)]"></div>
+      </div>
+    );
+  }
+  
+  if (!isSectionVisible('sos', user?.tariff)) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#fdfbf7] via-[#e3ebf1] to-[#f5f3ed] relative overflow-x-hidden">

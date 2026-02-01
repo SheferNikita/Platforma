@@ -285,7 +285,7 @@ const DEFAULT_SETTINGS: Array<{
   key: string;
   label: string;
   category: string;
-  type: 'TEXT' | 'TEXTAREA' | 'URL' | 'FILE' | 'IMAGE' | 'AUDIO';
+  type: 'TEXT' | 'TEXTAREA' | 'URL' | 'FILE' | 'IMAGE' | 'AUDIO' | 'JSON';
   value: string;
 }> = [
   { key: 'platformName', label: 'Название платформы', category: 'general', type: 'TEXT', value: 'Платформа трезвости' },
@@ -295,6 +295,16 @@ const DEFAULT_SETTINGS: Array<{
   { key: 'favicon', label: 'Фавикон', category: 'general', type: 'IMAGE', value: '' },
   { key: 'sosChatLink', label: 'Ссылка на чат поддержки (SOS)', category: 'sos', type: 'URL', value: '' },
   { key: 'sosAudioFile', label: 'Голосовой файл (SOS)', category: 'sos', type: 'AUDIO', value: '' },
+  { key: 'visibility_lessons', label: 'Уроки', category: 'visibility', type: 'JSON', value: '{"enabled":true,"tariffs":["ALL"]}' },
+  { key: 'visibility_mentor_responses', label: 'Ответы наставника', category: 'visibility', type: 'JSON', value: '{"enabled":true,"tariffs":["ALL"]}' },
+  { key: 'visibility_chats', label: 'Чаты', category: 'visibility', type: 'JSON', value: '{"enabled":true,"tariffs":["ALL"]}' },
+  { key: 'visibility_library', label: 'Библиотека', category: 'visibility', type: 'JSON', value: '{"enabled":true,"tariffs":["ALL"]}' },
+  { key: 'visibility_schedule', label: 'Расписание', category: 'visibility', type: 'JSON', value: '{"enabled":true,"tariffs":["ALL"]}' },
+  { key: 'visibility_mini_group', label: 'Мини-группа', category: 'visibility', type: 'JSON', value: '{"enabled":true,"tariffs":["ALL"]}' },
+  { key: 'visibility_contacts', label: 'Контакты', category: 'visibility', type: 'JSON', value: '{"enabled":true,"tariffs":["ALL"]}' },
+  { key: 'visibility_communities', label: 'Общины', category: 'visibility', type: 'JSON', value: '{"enabled":true,"tariffs":["ALL"]}' },
+  { key: 'visibility_sos', label: 'SOS', category: 'visibility', type: 'JSON', value: '{"enabled":true,"tariffs":["ALL"]}' },
+  { key: 'visibility_profile', label: 'Профиль', category: 'visibility', type: 'JSON', value: '{"enabled":true,"tariffs":["ALL"]}' },
 ];
 
 async function ensureDefaultSettings() {

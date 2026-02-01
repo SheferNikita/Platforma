@@ -1,7 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, Upload, Save, RotateCcw, Mail, History, AlertCircle, Check, X, Play, Pause, Edit2, Loader2 } from 'lucide-react';
+import { Settings, Upload, Save, RotateCcw, Mail, History, AlertCircle, Check, X, Play, Pause, Edit2, Loader2, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { api } from '../../lib/api';
 import { toast } from 'sonner';
+
+interface VisibilitySetting {
+  enabled: boolean;
+  tariffs: string[];
+}
+
+const TARIFF_OPTIONS = [
+  { value: 'ALL', label: 'Все тарифы' },
+  { value: 'BASIC', label: 'Базовый' },
+  { value: 'FAMILY', label: 'Семейный' },
+  { value: 'RELATIVE', label: 'Родственник' },
+  { value: 'WITH_MENTOR', label: 'С наставником' },
+  { value: 'WITH_PSYCHOLOGIST', label: 'С психологом' },
+  { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивидуальный психолог' },
+];
+
+const SECTION_ICONS: Record<string, string> = {
+  visibility_lessons: '📚',
+  visibility_mentor_responses: '💬',
+  visibility_chats: '💬',
+  visibility_library: '📖',
+  visibility_schedule: '📅',
+  visibility_mini_group: '👥',
+  visibility_contacts: '📞',
+  visibility_communities: '🏛️',
+  visibility_sos: '🚨',
+  visibility_profile: '👤',
+};
 
 interface PlatformSetting {
   id: string;
@@ -56,7 +84,7 @@ interface UnifiedHistoryItem {
   changedAt: string;
 }
 
-type TabType = 'general' | 'sos' | 'email' | 'history';
+type TabType = 'general' | 'sos' | 'visibility' | 'email' | 'history';
 
 const fieldLabels: Record<string, string> = {
   name: 'Название',
@@ -221,6 +249,58 @@ export function SettingsAdmin() {
 
   const generalSettings = settings.filter(s => s.category === 'general');
   const sosSettings = settings.filter(s => s.category === 'sos');
+  const visibilitySettings = settings.filter(s => s.category === 'visibility');
+
+  function parseVisibility(value: string | null): VisibilitySetting {
+    try {
+      return value ? JSON.parse(value) : { enabled: true, tariffs: ['ALL'] };
+    } catch {
+      return { enabled: true, tariffs: ['ALL'] };
+    }
+  }
+
+  async function saveVisibility(key: string, newValue: VisibilitySetting) {
+    setSaving(key);
+    try {
+      await api.put(`/admin/settings/${key}`, { value: JSON.stringify(newValue) });
+      toast.success('Настройка сохранена');
+      loadData();
+    } catch (error) {
+      toast.error('Ошибка сохранения');
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  function toggleVisibilityEnabled(key: string) {
+    const current = parseVisibility(editedValues[key]);
+    const newValue = { ...current, enabled: !current.enabled };
+    setEditedValues(prev => ({ ...prev, [key]: JSON.stringify(newValue) }));
+    saveVisibility(key, newValue);
+  }
+
+  function toggleTariff(key: string, tariff: string) {
+    const current = parseVisibility(editedValues[key]);
+    let newTariffs: string[];
+    
+    if (tariff === 'ALL') {
+      newTariffs = current.tariffs.includes('ALL') ? [] : ['ALL'];
+    } else {
+      const withoutAll = current.tariffs.filter(t => t !== 'ALL');
+      if (withoutAll.includes(tariff)) {
+        newTariffs = withoutAll.filter(t => t !== tariff);
+      } else {
+        newTariffs = [...withoutAll, tariff];
+      }
+      if (newTariffs.length === 0) {
+        newTariffs = ['ALL'];
+      }
+    }
+    
+    const newValue = { ...current, tariffs: newTariffs };
+    setEditedValues(prev => ({ ...prev, [key]: JSON.stringify(newValue) }));
+    saveVisibility(key, newValue);
+  }
 
   if (loading) {
     return (
@@ -241,6 +321,7 @@ export function SettingsAdmin() {
         {[
           { id: 'general' as TabType, label: 'Общие', icon: Settings },
           { id: 'sos' as TabType, label: 'SOS', icon: AlertCircle },
+          { id: 'visibility' as TabType, label: 'Видимость', icon: Eye },
           { id: 'email' as TabType, label: 'Email-уведомления', icon: Mail },
           { id: 'history' as TabType, label: 'История', icon: History },
         ].map(tab => (
@@ -284,6 +365,101 @@ export function SettingsAdmin() {
             onSave={saveSetting}
             onFileUpload={handleFileUpload}
           />
+        </div>
+      )}
+
+      {activeTab === 'visibility' && (
+        <div className="space-y-6">
+          <div className="bg-white/60 rounded-xl p-6 border border-[#e8e4da]">
+            <h2 className="text-lg font-semibold text-[#3d3527] mb-2">Видимость разделов</h2>
+            <p className="text-sm text-[#3d3527]/60 mb-6">
+              Управляйте видимостью разделов платформы для учеников. Отключённые разделы не будут показываться в навигации.
+              Вы можете ограничить доступ для определённых тарифов.
+            </p>
+            
+            <div className="space-y-4">
+              {visibilitySettings.map(setting => {
+                const visibility = parseVisibility(editedValues[setting.key]);
+                const icon = SECTION_ICONS[setting.key] || '📁';
+                
+                return (
+                  <div
+                    key={setting.key}
+                    className={`p-4 rounded-xl border transition-all ${
+                      visibility.enabled 
+                        ? 'bg-green-50/50 border-green-200' 
+                        : 'bg-gray-50/50 border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{icon}</span>
+                        <div>
+                          <h3 className="font-medium text-[#3d3527]">{setting.label}</h3>
+                          <p className="text-xs text-[#3d3527]/50">
+                            {visibility.tariffs.includes('ALL') 
+                              ? 'Доступен всем тарифам' 
+                              : `Доступен: ${visibility.tariffs.map(t => TARIFF_OPTIONS.find(o => o.value === t)?.label || t).join(', ')}`
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => toggleVisibilityEnabled(setting.key)}
+                        disabled={saving === setting.key}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                          visibility.enabled
+                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        } ${saving === setting.key ? 'opacity-50' : ''}`}
+                      >
+                        {saving === setting.key ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : visibility.enabled ? (
+                          <Eye className="w-4 h-4" />
+                        ) : (
+                          <EyeOff className="w-4 h-4" />
+                        )}
+                        {visibility.enabled ? 'Виден' : 'Скрыт'}
+                      </button>
+                    </div>
+                    
+                    {visibility.enabled && (
+                      <div className="mt-4 pt-4 border-t border-[#e8e4da]/50">
+                        <p className="text-sm text-[#3d3527]/70 mb-2">Доступен для тарифов:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {TARIFF_OPTIONS.map(option => {
+                            const isSelected = option.value === 'ALL' 
+                              ? visibility.tariffs.includes('ALL')
+                              : visibility.tariffs.includes(option.value);
+                            const isAllSelected = visibility.tariffs.includes('ALL');
+                            
+                            return (
+                              <button
+                                key={option.value}
+                                onClick={() => toggleTariff(setting.key, option.value)}
+                                disabled={saving === setting.key}
+                                className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
+                                  isSelected
+                                    ? 'bg-[var(--button-lavender)] text-white'
+                                    : isAllSelected && option.value !== 'ALL'
+                                    ? 'bg-[var(--button-lavender)]/30 text-[var(--button-lavender-dark)] opacity-50'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                } ${saving === setting.key ? 'opacity-50' : ''}`}
+                              >
+                                {option.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 

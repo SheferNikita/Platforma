@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PageWrapper } from '../components/PageWrapper';
 import { MessageCircle, BookOpen, FileText, ArrowLeft, ChevronDown, ChevronUp, Loader2, User, Volume2, Send, Mic, StopCircle, Paperclip, X, Image, File } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
+import { useSettings } from '../lib/settings';
+import { useAuth } from '../lib/auth';
 
 interface AttachmentItem {
   filename: string;
@@ -100,6 +102,8 @@ const fileToBase64 = (file: File): Promise<string> => {
 
 export function MentorResponsesPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isSectionVisible, loading: settingsLoading } = useSettings();
   const [lessons, setLessons] = useState<LessonGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,6 +123,9 @@ export function MentorResponsesPage() {
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Проверка видимости раздела
+  const isSectionEnabled = isSectionVisible('mentor_responses', user?.tariff);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -337,6 +344,22 @@ export function MentorResponsesPage() {
       setIsSubmitting(false);
     }
   };
+
+  // Ожидание загрузки настроек
+  if (settingsLoading) {
+    return (
+      <PageWrapper>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--button-lavender)]" />
+        </div>
+      </PageWrapper>
+    );
+  }
+  
+  // Редирект если раздел скрыт
+  if (!isSectionEnabled) {
+    return <Navigate to="/" replace />;
+  }
 
   if (loading) {
     return (

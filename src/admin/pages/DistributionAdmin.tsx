@@ -530,7 +530,15 @@ export function DistributionAdmin() {
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-[#3d3527] truncate">{student.user.name}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-medium text-[#3d3527] truncate">{student.user.name}</p>
+                            {student.tariff && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-md text-xs font-semibold">
+                                <CreditCard className="w-3 h-3" />
+                                {TARIFF_LABELS[student.tariff] || student.tariff}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-[#3d3527]/60 truncate">{student.user.email}</p>
                         </div>
                         
@@ -572,12 +580,6 @@ export function DistributionAdmin() {
 
                       {student.surveyCompleted ? (
                         <div className="flex flex-wrap gap-1.5 md:gap-2 mt-3 ml-8 md:ml-9">
-                          {student.tariff && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium">
-                              <CreditCard className="w-3 h-3" />
-                              {TARIFF_LABELS[student.tariff] || student.tariff}
-                            </span>
-                          )}
                           {student.city && (
                             <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs">
                               <MapPin className="w-3 h-3" />
@@ -609,17 +611,9 @@ export function DistributionAdmin() {
                           ))}
                         </div>
                       ) : (
-                        <div className="flex flex-wrap items-center gap-2 mt-3 ml-8 md:ml-9">
-                          {student.tariff && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium">
-                              <CreditCard className="w-3 h-3" />
-                              {TARIFF_LABELS[student.tariff] || student.tariff}
-                            </span>
-                          )}
-                          <span className="inline-flex items-center gap-1 text-amber-600 text-xs">
-                            <AlertCircle className="w-3 h-3" />
-                            Опрос не пройден
-                          </span>
+                        <div className="flex items-center gap-2 mt-3 ml-8 md:ml-9 text-amber-600 text-xs">
+                          <AlertCircle className="w-3 h-3" />
+                          Опрос не пройден
                         </div>
                       )}
                     </div>

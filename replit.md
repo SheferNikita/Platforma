@@ -41,7 +41,7 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
         - New schedule events (NEW_EVENT type)
         - API endpoints: GET /api/notifications, PATCH /api/notifications/:id/read, PATCH /api/notifications/read-all, DELETE /api/notifications/:id
         - NotificationService (`server/src/services/notificationService.ts`) provides centralized notification creation
--   **User Roles:** Granular access control with roles: `SUPER_ADMIN`, `ADMIN`, `CURATOR`, `MENTOR`, `PSYCHOLOGIST`, `INTERN`, `MODERATOR`, and `STUDENT`.
+-   **User Roles:** Granular access control with roles: `SUPER_ADMIN`, `ADMIN`, `CURATOR`, `MENTOR`, `PSYCHOLOGIST`, `INTERN`, `MODERATOR`, `ADMIN_ASSISTANT`, and `STUDENT`.
     -   `SUPER_ADMIN`: Full access to all sections including audit logs and admin management
     -   `ADMIN`: Full access to all sections except audit logs; cannot create/edit/delete super-admins
     -   `CURATOR`: Access to students, mini-groups, distribution, moderation, lessons, and administrators (can only create/edit MENTOR, PSYCHOLOGIST, INTERN)
@@ -49,6 +49,7 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
     -   `PSYCHOLOGIST` (Психолог): Work with students + access to their own mini-groups (combined individual and group work)
     -   `INTERN` (Помощник): Assistant role with access to mini-groups, students, moderation, lessons
     -   `MODERATOR`: Access to lessons, library, schedule, communities, and moderation
+    -   `ADMIN_ASSISTANT` (Помощник админа): Access to students page only with full CRUD permissions
 -   **Student Tariff System:** Six-tier access control system for students:
     -   `BASIC`: Lessons only, no questions/diary/notes access
     -   `FAMILY`: Lessons only, no questions/diary/notes access

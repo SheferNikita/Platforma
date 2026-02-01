@@ -1,9 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../db';
-import { UserRole } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'CURATOR' | 'MENTOR' | 'PSYCHOLOGIST' | 'INTERN' | 'MODERATOR' | 'ADMIN_ASSISTANT' | 'STUDENT';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -68,6 +69,5 @@ export function requireRole(...roles: UserRole[]) {
 }
 
 export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
-  const adminRoles: UserRole[] = ['SUPER_ADMIN', 'ADMIN'];
-  return requireRole(...adminRoles)(req, res, next);
+  return requireRole('SUPER_ADMIN', 'ADMIN')(req, res, next);
 }

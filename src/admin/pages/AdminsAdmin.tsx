@@ -70,7 +70,8 @@ export function AdminsAdmin() {
     MENTOR: { label: 'Наставник', color: 'bg-green-100 text-green-700', description: 'Видит только свои мини-группы и своих учеников' },
     PSYCHOLOGIST: { label: 'Психолог', color: 'bg-pink-100 text-pink-700', description: 'Работа с учениками + доступ к мини-группам' },
     INTERN: { label: 'Помощник', color: 'bg-lime-100 text-lime-700', description: 'Такие же права как у наставника' },
-    MODERATOR: { label: 'Модератор', color: 'bg-orange-100 text-orange-700', description: 'Уроки, библиотека, общины, расписание, email' }
+    MODERATOR: { label: 'Модератор', color: 'bg-orange-100 text-orange-700', description: 'Уроки, библиотека, общины, расписание, email' },
+    ADMIN_ASSISTANT: { label: 'Помощник админа', color: 'bg-amber-100 text-amber-700', description: 'Доступ только к списку учеников' }
   };
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
@@ -327,8 +328,9 @@ function AdminModal({ admin, onSave, onClose, canAssignSuperAdmin, curatorMode }
               {!curatorMode && <option value="CURATOR">Куратор наставников</option>}
               <option value="MENTOR">Наставник</option>
               <option value="PSYCHOLOGIST">Психолог</option>
-                            <option value="INTERN">Помощник</option>
+              <option value="INTERN">Помощник</option>
               {!curatorMode && <option value="MODERATOR">Модератор</option>}
+              {!curatorMode && <option value="ADMIN_ASSISTANT">Помощник админа</option>}
             </select>
             <p className="text-xs text-[#3d3527]/60 mt-1">
               {role === 'SUPER_ADMIN' && 'Полный доступ ко всему, включая историю изменений'}
@@ -336,8 +338,9 @@ function AdminModal({ admin, onSave, onClose, canAssignSuperAdmin, curatorMode }
               {role === 'CURATOR' && 'Полный доступ кроме «Продукты» и «CRM»'}
               {role === 'MENTOR' && 'Видит только свои мини-группы и своих учеников'}
               {role === 'PSYCHOLOGIST' && 'Работа с учениками + доступ к мини-группам'}
-                            {role === 'INTERN' && 'Такие же права как у наставника'}
+              {role === 'INTERN' && 'Такие же права как у наставника'}
               {role === 'MODERATOR' && 'Уроки, библиотека, общины, расписание, email'}
+              {role === 'ADMIN_ASSISTANT' && 'Доступ только к списку учеников'}
             </p>
           </div>
           {admin && (

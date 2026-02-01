@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { BookOpen, MessageSquare, Library, Calendar, Users, Building, User, AlertCircle, Users2 } from 'lucide-react';
+import { BookOpen, MessageSquare, Library, Calendar, Users, Building, User, AlertCircle, Users2, MessageCircle } from 'lucide-react';
 import { SobrietyCounter } from './SobrietyCounter';
 import { NotificationBell } from './NotificationBell';
 import { useAuth } from '../lib/auth';
@@ -10,9 +10,12 @@ export function Navigation() {
   
   // Тарифы без доступа к мини-группам: BASIC, FAMILY, INDIVIDUAL_PSYCHOLOGIST
   const hasMiniGroupAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST';
+  // Тарифы с доступом к ответам наставника
+  const hasMentorResponsesAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST' || user?.tariff === 'INDIVIDUAL_PSYCHOLOGIST';
   
   const navItems = [
     { path: '/', label: 'Уроки', icon: BookOpen },
+    ...(hasMentorResponsesAccess ? [{ path: '/mentor-responses', label: 'Ответы', icon: MessageCircle }] : []),
     { path: '/chats', label: 'Чаты', icon: MessageSquare },
     { path: '/library', label: 'Библиотека', icon: Library },
     { path: '/schedule', label: 'Расписание', icon: Calendar },
@@ -23,10 +26,10 @@ export function Navigation() {
 
   const mobileNavItems = [
     { path: '/', label: 'Уроки', icon: BookOpen },
+    ...(hasMentorResponsesAccess ? [{ path: '/mentor-responses', label: 'Ответы', icon: MessageCircle }] : []),
     { path: '/chats', label: 'Чаты', icon: MessageSquare },
     { path: '/library', label: 'Библиотека', icon: Library },
     ...(hasMiniGroupAccess ? [{ path: '/mini-group', label: 'Группа', icon: Users2 }] : []),
-    { path: '/communities', label: 'Общины', icon: Building },
     { path: '/sos', label: 'SOS', icon: AlertCircle },
   ];
 
@@ -102,7 +105,7 @@ export function Navigation() {
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.5'/%3E%3C/svg%3E")`
           }}></div>
           
-          <div className="grid grid-cols-6 relative z-10">
+          <div className={`grid relative z-10 ${mobileNavItems.length === 7 ? 'grid-cols-7' : mobileNavItems.length === 6 ? 'grid-cols-6' : 'grid-cols-5'}`}>
             {mobileNavItems.map((item) => (
               <NavLink
                 key={item.path}

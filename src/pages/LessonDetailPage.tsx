@@ -8,7 +8,7 @@ import { api } from '../lib/api';
 import { KinescopeMultiPlayer } from '../components/KinescopePlayer';
 import { useSettings } from '../lib/settings';
 
-type StudentTariff = 'BASIC' | 'FAMILY' | 'WITH_MENTOR' | 'WITH_PSYCHOLOGIST' | 'INDIVIDUAL_PSYCHOLOGIST';
+type StudentTariff = 'BASIC' | 'FAMILY' | 'RELATIVE' | 'WITH_MENTOR' | 'WITH_PSYCHOLOGIST' | 'INDIVIDUAL_PSYCHOLOGIST';
 
 const canAccessMentorFeatures = (tariff: StudentTariff | null): boolean => {
   if (!tariff) return false;

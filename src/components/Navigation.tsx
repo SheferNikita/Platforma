@@ -8,9 +8,9 @@ import { useAuth } from '../lib/auth';
 export function Navigation() {
   const { user } = useAuth();
   
-  // Тарифы без доступа к мини-группам: BASIC, FAMILY, INDIVIDUAL_PSYCHOLOGIST
+  // Тарифы без доступа к мини-группам: BASIC, FAMILY, RELATIVE, INDIVIDUAL_PSYCHOLOGIST
   const hasMiniGroupAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST';
-  // Тарифы с доступом к ответам наставника
+  // Тарифы с доступом к ответам наставника (не BASIC, FAMILY, RELATIVE)
   const hasMentorResponsesAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST' || user?.tariff === 'INDIVIDUAL_PSYCHOLOGIST';
   
   const navItems = [

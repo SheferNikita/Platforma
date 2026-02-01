@@ -408,8 +408,8 @@ export function ProfileTab() {
             </div>
           </div>
 
-          {/* My Content - Diaries & Notes - скрыто для BASIC и FAMILY */}
-          {profile?.tariff && profile.tariff !== 'BASIC' && profile.tariff !== 'FAMILY' && (
+          {/* My Content - Diaries & Notes - скрыто для BASIC, FAMILY и RELATIVE */}
+          {profile?.tariff && profile.tariff !== 'BASIC' && profile.tariff !== 'FAMILY' && profile.tariff !== 'RELATIVE' && (
             <div className="border-2 border-[var(--sky-light)]/40 bg-gradient-to-br from-white/90 to-white/50 rounded-2xl p-6 md:p-8 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)]">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] rounded-xl flex items-center justify-center shadow-lg">

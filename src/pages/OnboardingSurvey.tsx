@@ -43,13 +43,13 @@ export function OnboardingSurvey() {
     return <Navigate to="/login" replace />;
   }
 
-  // Redirect if survey already completed or tariff is BASIC/FAMILY (no survey needed)
+  // Redirect if survey already completed or tariff is BASIC/FAMILY/RELATIVE (no survey needed)
   if (!authLoading && user?.surveyCompleted) {
     return <Navigate to="/" replace />;
   }
   
-  // Skip survey for BASIC and FAMILY tariffs
-  if (!authLoading && user && (user.tariff === 'BASIC' || user.tariff === 'FAMILY')) {
+  // Skip survey for BASIC, FAMILY and RELATIVE tariffs
+  if (!authLoading && user && (user.tariff === 'BASIC' || user.tariff === 'FAMILY' || user.tariff === 'RELATIVE')) {
     return <Navigate to="/" replace />;
   }
 

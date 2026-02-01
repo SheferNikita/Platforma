@@ -28,7 +28,7 @@ export function MyNotesPage() {
       try {
         const meResponse = await api.get('/auth/me') as { user: { tariff?: string } };
         const tariff = meResponse.user?.tariff || 'WITH_MENTOR';
-        if (tariff === 'BASIC' || tariff === 'FAMILY') {
+        if (tariff === 'BASIC' || tariff === 'FAMILY' || tariff === 'RELATIVE') {
           navigate('/lessons');
           return;
         }

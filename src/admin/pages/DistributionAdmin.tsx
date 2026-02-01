@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../../lib/api';
-import { Users2, UserPlus, Check, RefreshCw, Search, ChevronRight, MapPin, User, Calendar, AlertCircle, Church, Filter, X, Brain } from 'lucide-react';
+import { Users2, UserPlus, Check, RefreshCw, Search, ChevronRight, MapPin, User, Calendar, AlertCircle, Church, Filter, X, Brain, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 
 const GENDER_LABELS: Record<string, string> = {
@@ -20,6 +20,15 @@ const ADDICTION_LABELS: Record<string, string> = {
   food: 'Пищевая',
   codependency: 'Зав. у родств.',
   other: 'Другая'
+};
+
+const TARIFF_LABELS: Record<string, string> = {
+  BASIC: 'Базовый',
+  FAMILY: 'Семейный',
+  RELATIVE: 'Родственник',
+  WITH_MENTOR: 'С наставником',
+  WITH_PSYCHOLOGIST: 'С психологом',
+  INDIVIDUAL_PSYCHOLOGIST: 'Индивидуальный'
 };
 
 const ADDICTION_OPTIONS = [
@@ -563,6 +572,12 @@ export function DistributionAdmin() {
 
                       {student.surveyCompleted ? (
                         <div className="flex flex-wrap gap-1.5 md:gap-2 mt-3 ml-8 md:ml-9">
+                          {student.tariff && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium">
+                              <CreditCard className="w-3 h-3" />
+                              {TARIFF_LABELS[student.tariff] || student.tariff}
+                            </span>
+                          )}
                           {student.city && (
                             <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs">
                               <MapPin className="w-3 h-3" />
@@ -594,9 +609,17 @@ export function DistributionAdmin() {
                           ))}
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 mt-3 ml-8 md:ml-9 text-amber-600 text-xs">
-                          <AlertCircle className="w-3 h-3" />
-                          Опрос не пройден
+                        <div className="flex flex-wrap items-center gap-2 mt-3 ml-8 md:ml-9">
+                          {student.tariff && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium">
+                              <CreditCard className="w-3 h-3" />
+                              {TARIFF_LABELS[student.tariff] || student.tariff}
+                            </span>
+                          )}
+                          <span className="inline-flex items-center gap-1 text-amber-600 text-xs">
+                            <AlertCircle className="w-3 h-3" />
+                            Опрос не пройден
+                          </span>
                         </div>
                       )}
                     </div>
@@ -697,6 +720,7 @@ export function DistributionAdmin() {
                   <tr className="border-b border-[#d4c9b0]/30">
                     <th className="text-left py-3 px-4 text-sm font-medium text-[#3d3527]/60">Имя</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-[#3d3527]/60">Email</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-[#3d3527]/60">Тариф</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-[#3d3527]/60">Психолог</th>
                     <th className="text-right py-3 px-4 text-sm font-medium text-[#3d3527]/60">Действия</th>
                   </tr>
@@ -709,6 +733,14 @@ export function DistributionAdmin() {
                       </td>
                       <td className="py-3 px-4">
                         <p className="text-sm text-[#3d3527]/70">{student.user.email}</p>
+                      </td>
+                      <td className="py-3 px-4">
+                        {student.tariff && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium">
+                            <CreditCard className="w-3 h-3" />
+                            {TARIFF_LABELS[student.tariff] || student.tariff}
+                          </span>
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         {student.assignedPsychologist ? (

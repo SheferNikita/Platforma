@@ -12,6 +12,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { SOSPage } from './pages/SOSPage';
 import { MyDiariesPage } from './pages/MyDiariesPage';
 import { MyNotesPage } from './pages/MyNotesPage';
+import { MentorResponsesPage } from './pages/MentorResponsesPage';
 import { MiniGroupPage } from './pages/MiniGroupPage';
 import { LoginPage } from './pages/LoginPage';
 import { OnboardingSurvey } from './pages/OnboardingSurvey';
@@ -147,6 +148,7 @@ export default function App() {
             <Route path="profile" element={<ProfilePage />} />
             <Route path="my-diaries" element={<MyDiariesPage />} />
             <Route path="my-notes" element={<MyNotesPage />} />
+            <Route path="mentor-responses" element={<MentorResponsesPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

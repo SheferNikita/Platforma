@@ -1176,4 +1176,175 @@ router.get('/chats', async (req: Request, res: Response) => {
   }
 });
 
+// Get all mentor responses for student (grouped by lessons)
+router.get('/mentor-responses', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    // Check tariff - only WITH_MENTOR, WITH_PSYCHOLOGIST, INDIVIDUAL_PSYCHOLOGIST have access
+    const studentData = await prisma.student.findUnique({
+      where: { id: student.studentId },
+      select: { tariff: true }
+    });
+
+    const allowedTariffs = ['WITH_MENTOR', 'WITH_PSYCHOLOGIST', 'INDIVIDUAL_PSYCHOLOGIST'];
+    if (!studentData?.tariff || !allowedTariffs.includes(studentData.tariff)) {
+      return res.status(403).json({ error: 'Недоступно для вашего тарифа' });
+    }
+
+    // Get all diaries with replies
+    const diaries = await prisma.diary.findMany({
+      where: {
+        studentId: student.studentId,
+        reply: { not: null }
+      },
+      include: {
+        lesson: {
+          select: {
+            id: true,
+            title: true,
+            order: true,
+            module: { select: { id: true, title: true, order: true } }
+          }
+        },
+        repliedBy: { select: { name: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Get all notes with replies
+    const notes = await prisma.studentNote.findMany({
+      where: {
+        studentId: student.studentId,
+        reply: { not: null }
+      },
+      include: {
+        lesson: {
+          select: {
+            id: true,
+            title: true,
+            order: true,
+            module: { select: { id: true, title: true, order: true } }
+          }
+        },
+        repliedBy: { select: { name: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    // Group by lessons
+    const lessonMap = new Map<string, {
+      lessonId: string;
+      lessonTitle: string;
+      lessonOrder: number;
+      moduleId: string;
+      moduleTitle: string;
+      moduleOrder: number;
+      items: Array<{
+        id: string;
+        type: 'diary' | 'note';
+        noteType?: string;
+        content: string;
+        reply: any;
+        createdAt: string;
+        repliedAt: string | null;
+        repliedByName: string | null;
+      }>;
+    }>();
+
+    // Process diaries
+    for (const diary of diaries) {
+      if (!diary.lesson) continue;
+      
+      const key = diary.lesson.id;
+      if (!lessonMap.has(key)) {
+        lessonMap.set(key, {
+          lessonId: diary.lesson.id,
+          lessonTitle: diary.lesson.title,
+          lessonOrder: diary.lesson.order,
+          moduleId: diary.lesson.module?.id || '',
+          moduleTitle: diary.lesson.module?.title || '',
+          moduleOrder: diary.lesson.module?.order || 0,
+          items: []
+        });
+      }
+
+      let replyData = null;
+      try {
+        replyData = diary.reply ? JSON.parse(diary.reply) : null;
+      } catch {
+        replyData = diary.reply;
+      }
+
+      lessonMap.get(key)!.items.push({
+        id: diary.id,
+        type: 'diary',
+        content: diary.content,
+        reply: replyData,
+        createdAt: diary.createdAt.toISOString(),
+        repliedAt: diary.repliedAt?.toISOString() || null,
+        repliedByName: diary.repliedBy?.name || null
+      });
+    }
+
+    // Process notes
+    for (const note of notes) {
+      if (!note.lesson) continue;
+      
+      const key = note.lesson.id;
+      if (!lessonMap.has(key)) {
+        lessonMap.set(key, {
+          lessonId: note.lesson.id,
+          lessonTitle: note.lesson.title,
+          lessonOrder: note.lesson.order,
+          moduleId: note.lesson.module?.id || '',
+          moduleTitle: note.lesson.module?.title || '',
+          moduleOrder: note.lesson.module?.order || 0,
+          items: []
+        });
+      }
+
+      let replyData = null;
+      try {
+        replyData = note.reply ? JSON.parse(note.reply) : null;
+      } catch {
+        replyData = note.reply;
+      }
+
+      lessonMap.get(key)!.items.push({
+        id: note.id,
+        type: 'note',
+        noteType: note.noteType || 'personal',
+        content: note.content,
+        reply: replyData,
+        createdAt: note.createdAt.toISOString(),
+        repliedAt: note.repliedAt?.toISOString() || null,
+        repliedByName: note.repliedBy?.name || null
+      });
+    }
+
+    // Convert to array and sort by module order, then lesson order
+    const result = Array.from(lessonMap.values())
+      .sort((a, b) => {
+        if (a.moduleOrder !== b.moduleOrder) {
+          return a.moduleOrder - b.moduleOrder;
+        }
+        return a.lessonOrder - b.lessonOrder;
+      });
+
+    // Sort items within each lesson by date (newest first)
+    for (const lesson of result) {
+      lesson.items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Get mentor responses error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;

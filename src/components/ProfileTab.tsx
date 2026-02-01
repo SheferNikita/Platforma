@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Award, BookOpen, Target, Settings, Camera, CheckCircle, Trophy, Star, FileText, Lock, LogOut, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Award, BookOpen, Target, Settings, Camera, CheckCircle, Trophy, Star, FileText, Lock, LogOut, Loader2, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
@@ -421,7 +421,24 @@ export function ProfileTab() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <button
+                  onClick={() => navigate('/mentor-responses')}
+                  className="group relative overflow-hidden p-6 rounded-xl border-2 border-[var(--button-lavender)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-white/80 hover:shadow-[0_8px_20px_rgba(139,149,188,0.3)] transition-all duration-300 transform hover:-translate-y-1 text-left"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                  <div className="relative z-10">
+                    <div className="w-12 h-12 mb-4 bg-gradient-to-br from-[var(--button-lavender-dark)]/20 to-[var(--button-lavender-light)]/20 rounded-lg flex items-center justify-center">
+                      <MessageCircle className="w-6 h-6 text-[var(--button-lavender-dark)]" />
+                    </div>
+                    <h5 className="text-base mb-2">Ответы от наставника</h5>
+                    <p className="text-xs opacity-70 leading-relaxed">Все диалоги по урокам в одном месте</p>
+                    <div className="mt-4 text-sm opacity-60 flex items-center gap-1">
+                      <span className="ml-auto">→</span>
+                    </div>
+                  </div>
+                </button>
+
                 <button
                   onClick={() => navigate('/my-diaries')}
                   className="group relative overflow-hidden p-6 rounded-xl border-2 border-[var(--button-lavender)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-white/80 hover:shadow-[0_8px_20px_rgba(139,149,188,0.3)] transition-all duration-300 transform hover:-translate-y-1 text-left"

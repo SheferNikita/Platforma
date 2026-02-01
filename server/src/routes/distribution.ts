@@ -16,6 +16,7 @@ router.get('/unassigned', async (req: AuthRequest, res: Response) => {
       },
       select: {
         id: true,
+        tariff: true,
         city: true,
         gender: true,
         age: true,

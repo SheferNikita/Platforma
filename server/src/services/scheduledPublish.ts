@@ -17,7 +17,7 @@ export async function publishScheduledLessons(): Promise<number> {
       isPublished: false
     },
     include: {
-      module: true
+      Module: true
     }
   });
 
@@ -67,7 +67,7 @@ export async function publishScheduledLessons(): Promise<number> {
           const emailHtml = getNewLessonEmailTemplate({
             studentName: student.user.name,
             lessonTitle: lesson.title,
-            moduleName: lesson.module.title,
+            moduleName: lesson.Module.title,
             lessonUrl: `${PLATFORM_URL}/lessons/${lesson.id}`
           });
 
@@ -81,7 +81,7 @@ export async function publishScheduledLessons(): Promise<number> {
             student.userId,
             lesson.title,
             lesson.id,
-            lesson.module.title
+            lesson.Module.title
           );
         } catch (emailError) {
           console.error(`[ScheduledPublish] Failed to send email to ${student.user.email}:`, emailError);

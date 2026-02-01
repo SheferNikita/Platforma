@@ -1,8 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PageWrapper } from '../components/PageWrapper';
-import { MessageCircle, BookOpen, FileText, Calendar, ArrowLeft, ChevronDown, ChevronUp, Loader2, User, Volume2 } from 'lucide-react';
+import { MessageCircle, BookOpen, FileText, ArrowLeft, ChevronDown, ChevronUp, Loader2, User, Volume2, Send, Mic, StopCircle, Paperclip, X, Image, File } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { toast } from 'sonner';
+
+interface AttachmentItem {
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  data: string;
+}
 
 interface ReplyHistoryItem {
   text: string;
@@ -12,6 +21,7 @@ interface ReplyHistoryItem {
   createdAt: string;
   audioData?: string;
   audioDuration?: number;
+  attachments?: AttachmentItem[];
 }
 
 interface DialogItem {
@@ -79,6 +89,15 @@ function getTypeIcon(item: DialogItem) {
   return <FileText className="w-4 h-4" />;
 }
 
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+};
+
 export function MentorResponsesPage() {
   const navigate = useNavigate();
   const [lessons, setLessons] = useState<LessonGroup[]>([]);
@@ -87,6 +106,19 @@ export function MentorResponsesPage() {
   const [expandedLesson, setExpandedLesson] = useState<string | null>(null);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  
+  const [replyingTo, setReplyingTo] = useState<{ id: string; type: 'diary' | 'note' } | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -146,9 +178,169 @@ export function MentorResponsesPage() {
     return replies.filter(r => r.authorRole !== 'STUDENT').length;
   };
 
+  const startRecording = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error('Ваш браузер не поддерживает запись аудио');
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(audioBlob);
+        stream.getTracks().forEach(track => track.stop());
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+
+      toast.success('Запись началась');
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          toast.error('Доступ к микрофону запрещен');
+        } else if (error.name === 'NotFoundError') {
+          toast.error('Микрофон не найден');
+        } else {
+          toast.error('Не удалось получить доступ к микрофону');
+        }
+      }
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      toast.success('Запись остановлена');
+    }
+  };
+
+  const removeAudio = () => {
+    setAudioBlob(null);
+    setRecordingTime(0);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      setAttachedFiles(prev => [...prev, ...Array.from(files)]);
+      toast.success(`Файл прикреплён`);
+    }
+    e.target.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const getFileIcon = (file: File) => {
+    if (file.type.startsWith('image/')) return <Image className="w-4 h-4" />;
+    return <File className="w-4 h-4" />;
+  };
+
+  const openReplyForm = (item: DialogItem) => {
+    setReplyingTo({ id: item.id, type: item.type });
+    setReplyText('');
+    setAttachedFiles([]);
+    setAudioBlob(null);
+    setRecordingTime(0);
+  };
+
+  const closeReplyForm = () => {
+    setReplyingTo(null);
+    setReplyText('');
+    setAttachedFiles([]);
+    setAudioBlob(null);
+    setRecordingTime(0);
+  };
+
+  const submitReply = async () => {
+    if (!replyingTo) return;
+    if (!replyText.trim() && !audioBlob) {
+      toast.error('Напишите текст или запишите голосовое сообщение');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      let audioData: string | undefined;
+      if (audioBlob) {
+        audioData = await fileToBase64(new window.File([audioBlob], 'audio.webm', { type: 'audio/webm' }));
+      }
+
+      const attachments = await Promise.all(
+        attachedFiles.map(async (file) => ({
+          filename: `${Date.now()}_${file.name}`,
+          originalName: file.name,
+          mimeType: file.type,
+          size: file.size,
+          data: await fileToBase64(file)
+        }))
+      );
+
+      const endpoint = replyingTo.type === 'diary' 
+        ? `/public/diary/${replyingTo.id}/student-reply`
+        : `/public/note/${replyingTo.id}/student-reply`;
+
+      const response = await api.post<{ success: boolean; message: ReplyHistoryItem }>(endpoint, {
+        reply: replyText.trim(),
+        audioData,
+        audioDuration: recordingTime,
+        attachments: attachments.length > 0 ? attachments : undefined
+      });
+
+      if (response.success) {
+        setLessons(prev => prev.map(lesson => ({
+          ...lesson,
+          items: lesson.items.map(item => {
+            if (item.id === replyingTo.id) {
+              const existingReplies = parseReply(item.reply);
+              return {
+                ...item,
+                reply: [...existingReplies, response.message]
+              };
+            }
+            return item;
+          })
+        })));
+
+        toast.success('Ответ отправлен');
+        closeReplyForm();
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Ошибка при отправке');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
-      <PageWrapper title="Ответы от наставника">
+      <PageWrapper>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-[var(--button-lavender)]" />
         </div>
@@ -158,7 +350,7 @@ export function MentorResponsesPage() {
 
   if (error) {
     return (
-      <PageWrapper title="Ответы от наставника">
+      <PageWrapper>
         <div className="text-center py-12">
           <p className="text-red-500">{error}</p>
           <button
@@ -173,7 +365,7 @@ export function MentorResponsesPage() {
   }
 
   return (
-    <PageWrapper title="Ответы от наставника">
+    <PageWrapper>
       <div className="max-w-4xl mx-auto">
         <button
           onClick={() => navigate(-1)}
@@ -338,8 +530,137 @@ export function MentorResponsesPage() {
                                       {reply.text}
                                     </p>
                                   )}
+                                  
+                                  {reply.attachments && reply.attachments.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      {reply.attachments.map((att, attIdx) => (
+                                        <div key={attIdx} className="flex items-center gap-2 bg-white/70 px-2 py-1 rounded text-xs">
+                                          {att.mimeType?.startsWith('image/') ? (
+                                            <Image className="w-3 h-3 text-[#8b7355]" />
+                                          ) : (
+                                            <File className="w-3 h-3 text-[#8b7355]" />
+                                          )}
+                                          <span className="text-[#8b7355]">{att.originalName}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                 </div>
                               ))}
+
+                              {replyingTo?.id === item.id ? (
+                                <div className="bg-white rounded-lg p-4 border border-[var(--button-lavender)]/30">
+                                  <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileSelect}
+                                    className="hidden"
+                                    multiple
+                                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+                                  />
+                                  
+                                  <textarea
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
+                                    placeholder="Напишите ответ..."
+                                    className="w-full p-3 border border-[#e8e4da] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[var(--button-lavender)]/30 text-sm"
+                                    rows={3}
+                                  />
+                                  
+                                  {attachedFiles.length > 0 && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                      {attachedFiles.map((file, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 bg-[#f5f3ed] px-2 py-1 rounded-lg text-sm">
+                                          {getFileIcon(file)}
+                                          <span className="text-xs text-[#8b7355] max-w-[100px] truncate">{file.name}</span>
+                                          <button onClick={() => removeFile(idx)} className="text-red-400 hover:text-red-600">
+                                            <X className="w-3 h-3" />
+                                          </button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  
+                                  {audioBlob && (
+                                    <div className="mt-2 flex items-center gap-2 bg-[var(--button-lavender)]/10 px-3 py-2 rounded-lg">
+                                      <Volume2 className="w-4 h-4 text-[var(--button-lavender)]" />
+                                      <span className="text-sm text-[var(--button-lavender-dark)]">
+                                        Голосовое сообщение ({formatTime(recordingTime)})
+                                      </span>
+                                      <button onClick={removeAudio} className="ml-auto text-red-400 hover:text-red-600">
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  )}
+                                  
+                                  {isRecording && (
+                                    <div className="mt-2 flex items-center gap-2 text-red-500">
+                                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                                      <span className="text-sm">Запись: {formatTime(recordingTime)}</span>
+                                    </div>
+                                  )}
+                                  
+                                  <div className="mt-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="p-2 rounded-lg hover:bg-[#f5f3ed] transition-colors"
+                                        title="Прикрепить файл"
+                                      >
+                                        <Paperclip className="w-5 h-5 text-[#8b7355]" />
+                                      </button>
+                                      
+                                      {isRecording ? (
+                                        <button
+                                          onClick={stopRecording}
+                                          className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                                          title="Остановить запись"
+                                        >
+                                          <StopCircle className="w-5 h-5" />
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={startRecording}
+                                          className="p-2 rounded-lg hover:bg-[#f5f3ed] transition-colors"
+                                          title="Записать голосовое"
+                                          disabled={!!audioBlob}
+                                        >
+                                          <Mic className={`w-5 h-5 ${audioBlob ? 'text-[#8b7355]/30' : 'text-[#8b7355]'}`} />
+                                        </button>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={closeReplyForm}
+                                        className="px-4 py-2 text-sm text-[#8b7355] hover:bg-[#f5f3ed] rounded-lg transition-colors"
+                                      >
+                                        Отмена
+                                      </button>
+                                      <button
+                                        onClick={submitReply}
+                                        disabled={isSubmitting || (!replyText.trim() && !audioBlob)}
+                                        className="px-4 py-2 text-sm bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-lg hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                      >
+                                        {isSubmitting ? (
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                          <Send className="w-4 h-4" />
+                                        )}
+                                        Отправить
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => openReplyForm(item)}
+                                  className="w-full mt-2 py-2 text-sm text-[var(--button-lavender-dark)] hover:bg-[var(--button-lavender)]/10 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                >
+                                  <MessageCircle className="w-4 h-4" />
+                                  Ответить
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>

@@ -1347,4 +1347,200 @@ router.get('/mentor-responses', async (req: Request, res: Response) => {
   }
 });
 
+// Student reply to diary
+router.post('/diary/:id/student-reply', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const { id } = req.params;
+    const { reply, audioData, audioDuration, attachments } = req.body;
+
+    if (!reply?.trim() && !audioData) {
+      return res.status(400).json({ error: 'Необходим текст или голосовое сообщение' });
+    }
+
+    // Verify diary belongs to student
+    const diary = await prisma.diary.findFirst({
+      where: { id, studentId: student.studentId },
+      select: { reply: true }
+    });
+
+    if (!diary) {
+      return res.status(404).json({ error: 'Запись не найдена' });
+    }
+
+    // Get student user data
+    const studentData = await prisma.student.findUnique({
+      where: { id: student.studentId },
+      include: { user: { select: { id: true, name: true } } }
+    });
+
+    if (!studentData?.user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    // Parse existing reply history
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; attachments?: any[] }> = [];
+    
+    if (diary.reply) {
+      try {
+        const parsed = JSON.parse(diary.reply);
+        if (Array.isArray(parsed)) {
+          replyHistory = parsed;
+        } else {
+          replyHistory = [{ 
+            text: diary.reply, 
+            authorId: 'legacy', 
+            authorName: 'Наставник',
+            authorRole: 'MENTOR',
+            createdAt: new Date().toISOString() 
+          }];
+        }
+      } catch {
+        replyHistory = [{ 
+          text: diary.reply, 
+          authorId: 'legacy', 
+          authorName: 'Наставник',
+          authorRole: 'MENTOR',
+          createdAt: new Date().toISOString() 
+        }];
+      }
+    }
+
+    // Create new message
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; attachments?: any[] } = {
+      text: audioData ? '🎤 Голосовое сообщение' : reply,
+      authorId: studentData.user.id,
+      authorName: studentData.user.name,
+      authorRole: 'STUDENT',
+      createdAt: new Date().toISOString()
+    };
+
+    if (audioData) {
+      newMessage.audioData = audioData.includes(',') ? audioData.split(',')[1] : audioData;
+      newMessage.audioDuration = audioDuration;
+    }
+
+    if (attachments && attachments.length > 0) {
+      newMessage.attachments = attachments;
+    }
+
+    replyHistory.push(newMessage);
+
+    // Update diary
+    await prisma.diary.update({
+      where: { id },
+      data: {
+        reply: JSON.stringify(replyHistory)
+      }
+    });
+
+    res.json({ success: true, message: newMessage });
+  } catch (error) {
+    console.error('Student reply to diary error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Student reply to note
+router.post('/note/:id/student-reply', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const { id } = req.params;
+    const { reply, audioData, audioDuration, attachments } = req.body;
+
+    if (!reply?.trim() && !audioData) {
+      return res.status(400).json({ error: 'Необходим текст или голосовое сообщение' });
+    }
+
+    // Verify note belongs to student
+    const note = await prisma.studentNote.findFirst({
+      where: { id, studentId: student.studentId },
+      select: { reply: true }
+    });
+
+    if (!note) {
+      return res.status(404).json({ error: 'Запись не найдена' });
+    }
+
+    // Get student user data
+    const studentData = await prisma.student.findUnique({
+      where: { id: student.studentId },
+      include: { user: { select: { id: true, name: true } } }
+    });
+
+    if (!studentData?.user) {
+      return res.status(404).json({ error: 'Пользователь не найден' });
+    }
+
+    // Parse existing reply history
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; attachments?: any[] }> = [];
+    
+    if (note.reply) {
+      try {
+        const parsed = JSON.parse(note.reply);
+        if (Array.isArray(parsed)) {
+          replyHistory = parsed;
+        } else {
+          replyHistory = [{ 
+            text: note.reply, 
+            authorId: 'legacy', 
+            authorName: 'Наставник',
+            authorRole: 'MENTOR',
+            createdAt: new Date().toISOString() 
+          }];
+        }
+      } catch {
+        replyHistory = [{ 
+          text: note.reply, 
+          authorId: 'legacy', 
+          authorName: 'Наставник',
+          authorRole: 'MENTOR',
+          createdAt: new Date().toISOString() 
+        }];
+      }
+    }
+
+    // Create new message
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; attachments?: any[] } = {
+      text: audioData ? '🎤 Голосовое сообщение' : reply,
+      authorId: studentData.user.id,
+      authorName: studentData.user.name,
+      authorRole: 'STUDENT',
+      createdAt: new Date().toISOString()
+    };
+
+    if (audioData) {
+      newMessage.audioData = audioData.includes(',') ? audioData.split(',')[1] : audioData;
+      newMessage.audioDuration = audioDuration;
+    }
+
+    if (attachments && attachments.length > 0) {
+      newMessage.attachments = attachments;
+    }
+
+    replyHistory.push(newMessage);
+
+    // Update note
+    await prisma.studentNote.update({
+      where: { id },
+      data: {
+        reply: JSON.stringify(replyHistory)
+      }
+    });
+
+    res.json({ success: true, message: newMessage });
+  } catch (error) {
+    console.error('Student reply to note error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;

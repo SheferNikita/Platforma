@@ -49,15 +49,16 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
     -   `PSYCHOLOGIST` (Психолог): Work with students + access to their own mini-groups (combined individual and group work)
     -   `INTERN` (Помощник): Assistant role with access to mini-groups, students, moderation, lessons
     -   `MODERATOR`: Access to lessons, library, schedule, communities, and moderation
--   **Student Tariff System:** Five-tier access control system for students:
+-   **Student Tariff System:** Six-tier access control system for students:
     -   `BASIC`: Lessons only, no questions/diary/notes access
     -   `FAMILY`: Lessons only, no questions/diary/notes access
+    -   `RELATIVE`: Родственник участника - lessons only, no questions/diary/notes/mentor responses access
     -   `WITH_MENTOR`: Full access including diary, notes, questions + mini-group assignment
     -   `WITH_PSYCHOLOGIST`: Full access including diary, notes, questions + mini-group assignment
     -   `INDIVIDUAL_PSYCHOLOGIST`: Full access but no mini-groups, assigned to individual psychologist
     -   Products have `defaultTariff` field for automatic tariff assignment on purchase
     -   Distribution page has two tabs: "Групповые" (group assignment) and "Индивидуальные" (psychologist assignment)
-    -   Public pages (MyDiariesPage, MyNotesPage, LessonDetailPage) check tariff and hide/redirect for BASIC/FAMILY
+    -   Public pages (MyDiariesPage, MyNotesPage, MentorResponsesPage, LessonDetailPage) check tariff and hide/redirect for BASIC/FAMILY/RELATIVE
 -   **Module Access Control:** System for managing student access to specific modules, including expiration dates.
 -   **Mini-Groups:** Enhanced management of mini-groups, including curator assignment, chat links, and dedicated scheduling within group settings.
 -   **Authentication:** Dual mechanism supporting both HttpOnly cookies (`sameSite: 'none'`, `secure: true`) and a fallback to `localStorage` with `Authorization` headers for iframe compatibility.

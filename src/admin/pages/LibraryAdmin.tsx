@@ -18,6 +18,7 @@ interface LibraryItem {
 const TARIFF_OPTIONS = [
   { value: 'BASIC', label: 'Базовый' },
   { value: 'FAMILY', label: 'Для родственников' },
+  { value: 'RELATIVE', label: 'Родственник участника' },
   { value: 'WITH_MENTOR', label: 'С наставником' },
   { value: 'WITH_PSYCHOLOGIST', label: 'С психологом' },
   { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивидуальный с психологом' },

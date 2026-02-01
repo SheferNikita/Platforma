@@ -396,6 +396,7 @@ export function StudentsAdmin() {
 const TARIFF_OPTIONS = [
   { value: 'BASIC', label: 'Базовый', description: 'Только просмотр уроков' },
   { value: 'FAMILY', label: 'Для родственников', description: 'Только просмотр уроков' },
+  { value: 'RELATIVE', label: 'Родственник участника', description: 'Только просмотр уроков' },
   { value: 'WITH_MENTOR', label: 'С наставником', description: 'Полный доступ + мини-группы' },
   { value: 'WITH_PSYCHOLOGIST', label: 'С психологом', description: 'Полный доступ + мини-группы' },
   { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивидуально с психологом', description: 'Полный доступ, без мини-групп' },

@@ -100,6 +100,7 @@ const initialFilters: Filters = {
 const tariffLabels: Record<string, string> = {
   BASIC: 'Базовый',
   FAMILY: 'Семейный',
+  RELATIVE: 'Родственник участника',
   WITH_MENTOR: 'С наставником',
   WITH_PSYCHOLOGIST: 'С психологом',
   INDIVIDUAL_PSYCHOLOGIST: 'Индивидуальный'

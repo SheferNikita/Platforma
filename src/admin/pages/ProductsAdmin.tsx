@@ -124,9 +124,16 @@ export function ProductsAdmin() {
                   </button>
                 </div>
               </div>
-              <h3 className="text-base md:text-lg font-bold text-[#3d3527] mb-2 truncate">{product.name}</h3>
+              <h3 className="text-base md:text-lg font-bold text-[#3d3527] mb-2 truncate">
+                {product.name.replace('[PREPAY] ', '')}
+              </h3>
               <p className="text-sm text-[#3d3527]/60 mb-4 line-clamp-2">{product.description}</p>
-              <div className="flex items-center justify-end">
+              <div className="flex items-center justify-end gap-2">
+                {product.name.startsWith('[PREPAY]') && (
+                  <span className="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700">
+                    Предоплата
+                  </span>
+                )}
                 <span className={`px-2 py-1 rounded-full text-xs ${product.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
                   {product.isActive ? 'Активен' : 'Неактивен'}
                 </span>
@@ -196,7 +203,16 @@ const TARIFF_OPTIONS = [
 ];
 
 function ProductModal({ product, onSave, onClose }: { product: Product | null; onSave: (data: any) => void; onClose: () => void }) {
-  const [name, setName] = useState(product?.name || '');
+  const parseProductName = (fullName: string) => {
+    if (fullName.startsWith('[PREPAY] ')) {
+      return { name: fullName.replace('[PREPAY] ', ''), isPrepayment: true };
+    }
+    return { name: fullName, isPrepayment: false };
+  };
+  
+  const parsed = parseProductName(product?.name || '');
+  const [name, setName] = useState(parsed.name);
+  const [isPrepayment, setIsPrepayment] = useState(parsed.isPrepayment);
   const [description, setDescription] = useState(product?.description || '');
   const [startDate, setStartDate] = useState(product?.startDate?.split('T')[0] || '');
   const [accessExpiresAt, setAccessExpiresAt] = useState(product?.accessExpiresAt?.split('T')[0] || '');
@@ -222,8 +238,9 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
   };
 
   const handleSave = () => {
+    const fullName = isPrepayment ? `[PREPAY] ${name}` : name;
     onSave({
-      name,
+      name: fullName,
       description,
       price: 0,
       startDate: startDate || null,
@@ -320,15 +337,30 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
             )}
           </div>
 
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              id="isActive"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              className="w-4 h-4 rounded border-[#d4c9b0]"
-            />
-            <label htmlFor="isActive" className="text-sm text-[#3d3527]">Продукт активен</label>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="isActive"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="w-4 h-4 rounded border-[#d4c9b0]"
+              />
+              <label htmlFor="isActive" className="text-sm text-[#3d3527]">Продукт активен</label>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="isPrepayment"
+                checked={isPrepayment}
+                onChange={(e) => setIsPrepayment(e.target.checked)}
+                className="w-4 h-4 rounded border-[#d4c9b0] accent-amber-500"
+              />
+              <label htmlFor="isPrepayment" className="text-sm text-[#3d3527]">
+                Предоплата
+                <span className="text-xs text-[#3d3527]/60 ml-1">(ученику ставится метка)</span>
+              </label>
+            </div>
           </div>
         </div>
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">

@@ -78,12 +78,13 @@ export function StudentsAdmin() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [filterMiniGroup, setFilterMiniGroup] = useState<string>('');
   const [filterTariff, setFilterTariff] = useState<string>('all');
+  const [filterPrepayment, setFilterPrepayment] = useState<string>('all');
   const [miniGroups, setMiniGroups] = useState<MiniGroup[]>([]);
 
   useEffect(() => {
     loadStudents();
     loadMiniGroups();
-  }, [search, filterStatus, filterMiniGroup, filterTariff]);
+  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment]);
 
   useEffect(() => {
     loadStats();
@@ -122,6 +123,12 @@ export function StudentsAdmin() {
 
       if (filterTariff !== 'all') {
         filtered = filtered.filter(s => s.student?.tariff === filterTariff);
+      }
+      if (filterPrepayment !== 'all') {
+        const hasPrepay = filterPrepayment === 'yes';
+        filtered = filtered.filter(s => 
+          hasPrepay ? s.student?.notes?.includes('[PREPAYMENT]') : !s.student?.notes?.includes('[PREPAYMENT]')
+        );
       }
       
       setStudents(filtered);
@@ -164,9 +171,10 @@ export function StudentsAdmin() {
     setFilterStatus('all');
     setFilterMiniGroup('');
     setFilterTariff('all');
+    setFilterPrepayment('all');
   }
 
-  const hasActiveFilters = filterStatus !== 'all' || filterMiniGroup !== '' || filterTariff !== 'all';
+  const hasActiveFilters = filterStatus !== 'all' || filterMiniGroup !== '' || filterTariff !== 'all' || filterPrepayment !== 'all';
 
   return (
     <div className="space-y-6">
@@ -361,6 +369,18 @@ export function StudentsAdmin() {
                 <option value="INDIVIDUAL_PSYCHOLOGIST">Индивид. психолог</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-[#3d3527] mb-1">Предоплата</label>
+              <select
+                value={filterPrepayment}
+                onChange={(e) => setFilterPrepayment(e.target.value)}
+                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              >
+                <option value="all">Все</option>
+                <option value="yes">С предоплатой</option>
+                <option value="no">Без предоплаты</option>
+              </select>
+            </div>
             <div className="flex items-end sm:col-span-2 lg:col-span-1">
               <button
                 onClick={clearFilters}
@@ -396,6 +416,11 @@ export function StudentsAdmin() {
                     <span className={`px-2 py-0.5 rounded-full text-xs ${student.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {student.isActive ? 'Активен' : 'Неактивен'}
                     </span>
+                    {student.student?.notes?.includes('[PREPAYMENT]') && (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700">
+                        Предоплата
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-[#3d3527]/60 truncate">{student.email}</p>
                   <p className="text-xs text-[#3d3527]/50 mt-1">{student.student?.progress?.length || 0} уроков пройдено</p>
@@ -480,23 +505,30 @@ export function StudentsAdmin() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-lg text-xs ${
-                      student.student?.tariff === 'BASIC' ? 'bg-gray-100 text-gray-700' :
-                      student.student?.tariff === 'FAMILY' ? 'bg-purple-100 text-purple-700' :
-                      student.student?.tariff === 'RELATIVE' ? 'bg-orange-100 text-orange-700' :
-                      student.student?.tariff === 'WITH_MENTOR' ? 'bg-green-100 text-green-700' :
-                      student.student?.tariff === 'WITH_PSYCHOLOGIST' ? 'bg-pink-100 text-pink-700' :
-                      student.student?.tariff === 'INDIVIDUAL_PSYCHOLOGIST' ? 'bg-blue-100 text-blue-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {student.student?.tariff === 'BASIC' ? 'Базовый' :
-                       student.student?.tariff === 'FAMILY' ? 'Для родственников' :
-                       student.student?.tariff === 'RELATIVE' ? 'Родственник' :
-                       student.student?.tariff === 'WITH_MENTOR' ? 'С наставником' :
-                       student.student?.tariff === 'WITH_PSYCHOLOGIST' ? 'С психологом' :
-                       student.student?.tariff === 'INDIVIDUAL_PSYCHOLOGIST' ? 'Индивид. психолог' :
-                       'Не указан'}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      <span className={`px-2 py-1 rounded-lg text-xs ${
+                        student.student?.tariff === 'BASIC' ? 'bg-gray-100 text-gray-700' :
+                        student.student?.tariff === 'FAMILY' ? 'bg-purple-100 text-purple-700' :
+                        student.student?.tariff === 'RELATIVE' ? 'bg-orange-100 text-orange-700' :
+                        student.student?.tariff === 'WITH_MENTOR' ? 'bg-green-100 text-green-700' :
+                        student.student?.tariff === 'WITH_PSYCHOLOGIST' ? 'bg-pink-100 text-pink-700' :
+                        student.student?.tariff === 'INDIVIDUAL_PSYCHOLOGIST' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {student.student?.tariff === 'BASIC' ? 'Базовый' :
+                         student.student?.tariff === 'FAMILY' ? 'Для родственников' :
+                         student.student?.tariff === 'RELATIVE' ? 'Родственник' :
+                         student.student?.tariff === 'WITH_MENTOR' ? 'С наставником' :
+                         student.student?.tariff === 'WITH_PSYCHOLOGIST' ? 'С психологом' :
+                         student.student?.tariff === 'INDIVIDUAL_PSYCHOLOGIST' ? 'Индивид. психолог' :
+                         'Не указан'}
+                      </span>
+                      {student.student?.notes?.includes('[PREPAYMENT]') && (
+                        <span className="px-2 py-1 rounded-lg text-xs bg-amber-100 text-amber-700">
+                          Предоплата
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${student.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -587,11 +619,19 @@ const TARIFF_OPTIONS = [
 ];
 
 function StudentModal({ student, onSave, onClose }: { student: Student | null; onSave: (data: any) => void; onClose: () => void }) {
+  const parseNotes = (rawNotes: string) => {
+    const hasPrepayment = rawNotes?.includes('[PREPAYMENT]') || false;
+    const cleanNotes = rawNotes?.replace('[PREPAYMENT]', '').trim() || '';
+    return { notes: cleanNotes, hasPrepayment };
+  };
+  
+  const parsedNotes = parseNotes(student?.student?.notes || '');
   const [name, setName] = useState(student?.name || '');
   const [email, setEmail] = useState(student?.email || '');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState(student?.student?.phone || '');
-  const [notes, setNotes] = useState(student?.student?.notes || '');
+  const [notes, setNotes] = useState(parsedNotes.notes);
+  const [hasPrepayment, setHasPrepayment] = useState(parsedNotes.hasPrepayment);
   const [sendCredentials, setSendCredentials] = useState(true);
   const [tariff, setTariff] = useState((student?.student as any)?.tariff || 'WITH_MENTOR');
   const [newPassword, setNewPassword] = useState('');
@@ -772,6 +812,18 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
               {TARIFF_OPTIONS.find(o => o.value === tariff)?.description}
             </p>
           </div>
+          <label className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl cursor-pointer">
+            <input
+              type="checkbox"
+              checked={hasPrepayment}
+              onChange={(e) => setHasPrepayment(e.target.checked)}
+              className="w-5 h-5 rounded border-amber-300 text-amber-500 focus:ring-amber-500"
+            />
+            <div>
+              <p className="font-medium text-amber-800">Предоплата</p>
+              <p className="text-sm text-amber-600">Ученик внес только предоплату</p>
+            </div>
+          </label>
           {!student && (
             <label className="flex items-center gap-3 p-3 bg-[#f5f3ed] rounded-xl cursor-pointer">
               <input
@@ -790,11 +842,14 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
         <div className="flex justify-end gap-3 mt-6">
           <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
           <button
-            onClick={() => onSave({ 
-              name, email, password, phone, notes, 
-              sendCredentials: !student && sendCredentials,
-              tariff
-            })}
+            onClick={() => {
+              const fullNotes = hasPrepayment ? `[PREPAYMENT] ${notes}`.trim() : notes;
+              onSave({ 
+                name, email, password, phone, notes: fullNotes, 
+                sendCredentials: !student && sendCredentials,
+                tariff
+              });
+            }}
             className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
           >
             Сохранить

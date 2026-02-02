@@ -611,6 +611,18 @@ async function processSuccessfulPayment(orderId: string) {
     }
   }
 
+  if (student && order.product.name.startsWith('[PREPAY]')) {
+    if (!student.notes?.includes('[PREPAYMENT]')) {
+      const newNotes = student.notes 
+        ? `[PREPAYMENT] ${student.notes}` 
+        : '[PREPAYMENT]';
+      await prisma.student.update({
+        where: { id: student.id },
+        data: { notes: newNotes }
+      });
+    }
+  }
+
   if (isNewUser) {
     try {
       const appUrl = process.env.APP_URL || 'https://your-platform.com';

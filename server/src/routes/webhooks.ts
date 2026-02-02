@@ -388,6 +388,18 @@ router.post('/tilda', async (req: Request, res: Response) => {
               });
               console.log(`Tilda webhook: Updated student tariff to ${dbProduct.defaultTariff}`);
             }
+            
+            if (dbProduct.name.startsWith('[PREPAY]')) {
+              const studentNotes = existingUser.student.notes || '';
+              if (!studentNotes.includes('[PREPAYMENT]')) {
+                const newNotes = studentNotes ? `[PREPAYMENT] ${studentNotes}` : '[PREPAYMENT]';
+                await prisma.student.update({
+                  where: { id: existingUser.student.id },
+                  data: { notes: newNotes }
+                });
+                console.log(`Tilda webhook: Added prepayment tag to student`);
+              }
+            }
           } else {
             console.error(`Tilda webhook: Cannot grant access - no student record found for user`);
           }

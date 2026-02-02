@@ -152,6 +152,22 @@ router.post('/result', async (req, res) => {
       }
     });
 
+    if (payment.product.name.startsWith('[PREPAY]')) {
+      const student = await prisma.student.findUnique({
+        where: { id: payment.studentId },
+        select: { notes: true }
+      });
+      if (student && !student.notes?.includes('[PREPAYMENT]')) {
+        const newNotes = student.notes 
+          ? `[PREPAYMENT] ${student.notes}` 
+          : '[PREPAYMENT]';
+        await prisma.student.update({
+          where: { id: payment.studentId },
+          data: { notes: newNotes }
+        });
+      }
+    }
+
     if (payment.student.user.email) {
       try {
         const emailData = await emailTemplateService.getPaymentConfirmationEmail(

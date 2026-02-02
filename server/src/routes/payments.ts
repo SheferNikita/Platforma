@@ -166,6 +166,18 @@ router.post('/result', async (req, res) => {
           data: { notes: newNotes }
         });
       }
+    } else {
+      const student = await prisma.student.findUnique({
+        where: { id: payment.studentId },
+        select: { notes: true }
+      });
+      if (student?.notes?.includes('[PREPAYMENT]')) {
+        const newNotes = student.notes.replace('[PREPAYMENT]', '').trim();
+        await prisma.student.update({
+          where: { id: payment.studentId },
+          data: { notes: newNotes || null }
+        });
+      }
     }
 
     if (payment.student.user.email) {

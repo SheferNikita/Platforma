@@ -389,22 +389,40 @@ router.post('/tilda', async (req: Request, res: Response) => {
               console.log(`Tilda webhook: Updated student tariff to ${dbProduct.defaultTariff}`);
             }
             
-            if (dbProduct.name.startsWith('[PREPAY]')) {
-              const studentNotes = existingUser.student.notes || '';
-              if (!studentNotes.includes('[PREPAYMENT]')) {
-                const newNotes = studentNotes ? `[PREPAYMENT] ${studentNotes}` : '[PREPAYMENT]';
-                await prisma.student.update({
-                  where: { id: existingUser.student.id },
-                  data: { notes: newNotes }
-                });
-                console.log(`Tilda webhook: Added prepayment tag to student`);
-              }
-            }
           } else {
             console.error(`Tilda webhook: Cannot grant access - no student record found for user`);
           }
         } else {
           console.warn(`Tilda webhook: No matching product found for "${productName}"`);
+        }
+      }
+    }
+
+    if (existingUser?.student && matchedProducts.length > 0) {
+      const hasPrepayProduct = matchedProducts.some(p => p.name.startsWith('[PREPAY]'));
+      const student = await prisma.student.findUnique({
+        where: { id: existingUser.student.id },
+        select: { notes: true }
+      });
+      
+      if (student) {
+        const currentNotes = student.notes || '';
+        const hasPrepayTag = currentNotes.includes('[PREPAYMENT]');
+        
+        if (hasPrepayProduct && !hasPrepayTag) {
+          const newNotes = currentNotes ? `[PREPAYMENT] ${currentNotes}` : '[PREPAYMENT]';
+          await prisma.student.update({
+            where: { id: existingUser.student.id },
+            data: { notes: newNotes }
+          });
+          console.log(`Tilda webhook: Added prepayment tag to student`);
+        } else if (!hasPrepayProduct && hasPrepayTag) {
+          const newNotes = currentNotes.replace('[PREPAYMENT]', '').replace(/\s+/g, ' ').trim();
+          await prisma.student.update({
+            where: { id: existingUser.student.id },
+            data: { notes: newNotes || null }
+          });
+          console.log(`Tilda webhook: Removed prepayment tag from student`);
         }
       }
     }

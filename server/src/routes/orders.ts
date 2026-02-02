@@ -621,6 +621,12 @@ async function processSuccessfulPayment(orderId: string) {
         data: { notes: newNotes }
       });
     }
+  } else if (student && student.notes?.includes('[PREPAYMENT]')) {
+    const newNotes = student.notes.replace('[PREPAYMENT]', '').trim();
+    await prisma.student.update({
+      where: { id: student.id },
+      data: { notes: newNotes || null }
+    });
   }
 
   if (isNewUser) {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Settings, Upload, Save, RotateCcw, Mail, History, AlertCircle, Check, X, Play, Pause, Edit2, Loader2, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { api } from '../../lib/api';
 import { toast } from 'sonner';
+import { EmailTemplateEditor } from '../../components/EmailTemplateEditor';
 
 interface VisibilitySetting {
   enabled: boolean;
@@ -561,18 +562,13 @@ export function SettingsAdmin() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-[#3d3527] mb-1">Текст письма</label>
-                <textarea
-                  value={templateForm.body}
-                  onChange={(e) => setTemplateForm(prev => ({ ...prev, body: e.target.value }))}
-                  rows={10}
-                  className="w-full px-4 py-2 border border-[#d4c9b0] rounded-lg focus:ring-2 focus:ring-[var(--button-lavender)] focus:border-transparent font-mono text-sm"
+                <label className="block text-sm font-medium text-[#3d3527] mb-2">Текст письма</label>
+                <EmailTemplateEditor
+                  key={editingTemplate.id}
+                  content={templateForm.body}
+                  onChange={(html) => setTemplateForm(prev => ({ ...prev, body: html }))}
+                  variables={editingTemplate.variables || []}
                 />
-                {editingTemplate.variables && editingTemplate.variables.length > 0 && (
-                  <p className="text-xs text-[#3d3527]/60 mt-2">
-                    Доступные переменные: {editingTemplate.variables.map(v => `{{${v}}}`).join(', ')}
-                  </p>
-                )}
               </div>
             </div>
             

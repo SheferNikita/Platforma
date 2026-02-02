@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
+import { useSettings } from '../../lib/settings';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -10,6 +11,7 @@ export function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login, logout, user, isAdmin, loading: authLoading } = useAuth();
+  const { settings } = useSettings();
   const navigate = useNavigate();
 
   // Clear any existing session when visiting admin login
@@ -53,11 +55,19 @@ export function AdminLogin() {
       <div className="relative w-full max-w-md mx-4">
         <div className="bg-white/80 backdrop-blur-md rounded-3xl border-2 border-[#d4c9b0]/30 shadow-xl p-4 md:p-8">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <Lock className="w-8 h-8 text-white" />
-            </div>
+            {settings.logo ? (
+              <img 
+                src={settings.logo} 
+                alt={settings.platformName || 'Платформа'} 
+                className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-lg object-cover"
+              />
+            ) : (
+              <div className="w-16 h-16 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <Lock className="w-8 h-8 text-white" />
+              </div>
+            )}
             <h1 className="text-2xl font-bold text-[#3d3527]">Вход в админ-панель</h1>
-            <p className="text-[#3d3527]/60 mt-2">Платформа по трезвости</p>
+            <p className="text-[#3d3527]/60 mt-2">{settings.platformName || 'Платформа по трезвости'}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">

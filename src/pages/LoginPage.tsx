@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
+import { useSettings } from '../lib/settings';
 import { Lock, Mail, Eye, EyeOff, Heart, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -11,6 +12,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { settings } = useSettings();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,11 +47,19 @@ export function LoginPage() {
           
           <div className="relative z-10">
             <div className="text-center mb-8">
-              <div className="w-20 h-20 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg transform rotate-3">
-                <Heart className="w-10 h-10 text-white" />
-              </div>
+              {settings.logo ? (
+                <img 
+                  src={settings.logo} 
+                  alt={settings.platformName || 'Платформа'} 
+                  className="w-20 h-20 rounded-2xl mx-auto mb-4 shadow-lg object-cover"
+                />
+              ) : (
+                <div className="w-20 h-20 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg transform rotate-3">
+                  <Heart className="w-10 h-10 text-white" />
+                </div>
+              )}
               <h1 className="text-2xl font-bold text-[#3d3527]">Вход на платформу</h1>
-              <p className="text-[#3d3527]/60 mt-2">Путь к трезвой жизни</p>
+              <p className="text-[#3d3527]/60 mt-2">{settings.platformName || 'Платформа трезвости'}</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -109,13 +119,20 @@ export function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-[#b5cad9]/30 text-center">
-              <p className="text-sm text-[#3d3527]/60">
-                Доступ на платформу предоставляется после оплаты курса.
-                <br />
-                По вопросам обращайтесь к администратору.
-              </p>
-            </div>
+            {settings.loginText ? (
+              <div 
+                className="mt-8 pt-6 border-t border-[#b5cad9]/30 text-center text-sm text-[#3d3527]/60"
+                dangerouslySetInnerHTML={{ __html: settings.loginText.replace(/\n/g, '<br />') }}
+              />
+            ) : (
+              <div className="mt-8 pt-6 border-t border-[#b5cad9]/30 text-center">
+                <p className="text-sm text-[#3d3527]/60">
+                  Доступ на платформу предоставляется после оплаты курса.
+                  <br />
+                  По вопросам обращайтесь к администратору.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -8,7 +8,7 @@ import { useSettings } from '../lib/settings';
 
 export function Navigation() {
   const { user } = useAuth();
-  const { isSectionVisible } = useSettings();
+  const { isSectionVisible, settings } = useSettings();
   const userTariff = user?.tariff;
   
   // Тарифы без доступа к мини-группам: BASIC, FAMILY, RELATIVE, INDIVIDUAL_PSYCHOLOGIST
@@ -57,6 +57,15 @@ export function Navigation() {
         <div className="max-w-[1800px] mx-auto px-3 lg:px-6">
           <div className="flex items-center justify-between gap-2 relative z-10">
             <div className="flex items-center gap-0.5 lg:gap-1 overflow-x-auto scrollbar-hide">
+              {settings.logo && (
+                <NavLink to="/" className="flex-shrink-0 mr-2 lg:mr-4">
+                  <img 
+                    src={settings.logo} 
+                    alt={settings.platformName || 'Платформа'} 
+                    className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg object-cover"
+                  />
+                </NavLink>
+              )}
               {navItems.map((item) => (
                 <NavLink
                   key={item.path}

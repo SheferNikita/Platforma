@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { LessonsPage } from './pages/LessonsPage';
@@ -17,7 +17,7 @@ import { MiniGroupPage } from './pages/MiniGroupPage';
 import { LoginPage } from './pages/LoginPage';
 import { OnboardingSurvey } from './pages/OnboardingSurvey';
 import { AuthProvider, useAuth } from './lib/auth';
-import { SettingsProvider } from './lib/settings';
+import { SettingsProvider, useSettings } from './lib/settings';
 import { AdminLayout } from './admin/components/AdminLayout';
 import { AdminLogin } from './admin/pages/AdminLogin';
 import { Dashboard } from './admin/pages/Dashboard';
@@ -86,11 +86,36 @@ function ProtectedStudentRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function DynamicHead() {
+  const { settings } = useSettings();
+
+  useEffect(() => {
+    if (settings.platformName) {
+      document.title = settings.platformName;
+    }
+  }, [settings.platformName]);
+
+  useEffect(() => {
+    if (settings.favicon) {
+      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = settings.favicon;
+    }
+  }, [settings.favicon]);
+
+  return null;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <SettingsProvider>
+        <DynamicHead />
         <Toaster position="top-right" richColors />
         <Routes>
           <Route path="/sos" element={<SOSPage />} />

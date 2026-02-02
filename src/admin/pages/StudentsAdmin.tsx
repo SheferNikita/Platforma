@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks, Shuffle } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks, Shuffle, TrendingUp, BarChart3, UserCheck, UserX } from 'lucide-react';
 import { toast } from 'sonner';
+
+interface StudentsStats {
+  total: number;
+  active: number;
+  inactive: number;
+  withoutMiniGroup: number;
+  averageProgress: number;
+  tariffCounts: Record<string, number>;
+  miniGroupStats: { id: string; title: string; memberCount: number }[];
+}
 
 interface MiniGroupMembership {
   miniGroup: {
@@ -45,9 +55,20 @@ interface ModuleAccess {
   accessId: string | null;
 }
 
+const TARIFF_LABELS: Record<string, { label: string; color: string }> = {
+  BASIC: { label: 'Базовый', color: 'bg-gray-100 text-gray-700' },
+  FAMILY: { label: 'Для родственников', color: 'bg-purple-100 text-purple-700' },
+  RELATIVE: { label: 'Родственник', color: 'bg-orange-100 text-orange-700' },
+  WITH_MENTOR: { label: 'С наставником', color: 'bg-green-100 text-green-700' },
+  WITH_PSYCHOLOGIST: { label: 'С психологом', color: 'bg-pink-100 text-pink-700' },
+  INDIVIDUAL_PSYCHOLOGIST: { label: 'Индивид. психолог', color: 'bg-blue-100 text-blue-700' }
+};
+
 export function StudentsAdmin() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<StudentsStats | null>(null);
+  const [showDashboard, setShowDashboard] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
@@ -64,10 +85,21 @@ export function StudentsAdmin() {
     loadMiniGroups();
   }, [search, filterStatus, filterMiniGroup, filterTariff]);
 
+  useEffect(() => {
+    loadStats();
+  }, []);
+
   async function loadMiniGroups() {
     try {
       const groups = await api.get<MiniGroup[]>('/content/mini-groups');
       setMiniGroups(groups);
+    } catch (error) {}
+  }
+
+  async function loadStats() {
+    try {
+      const data = await api.get<StudentsStats>('/students/stats');
+      setStats(data);
     } catch (error) {}
   }
 
@@ -143,13 +175,123 @@ export function StudentsAdmin() {
           <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Ученики</h1>
           <p className="text-sm md:text-base text-[#3d3527]/60 mt-1">Управление учениками платформы</p>
         </div>
-        <button
-          onClick={() => { setEditingStudent(null); setShowModal(true); }}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow w-full sm:w-auto"
-        >
-          <Plus className="w-5 h-5" /> <span className="sm:inline">Добавить ученика</span>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowDashboard(!showDashboard)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-colors ${showDashboard ? 'bg-[#a67c52]/10 text-[#a67c52]' : 'bg-white/60 text-[#3d3527]/60 hover:bg-white'} border border-[#d4c9b0]/30`}
+            title={showDashboard ? 'Скрыть статистику' : 'Показать статистику'}
+          >
+            <BarChart3 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => { setEditingStudent(null); setShowModal(true); }}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow"
+          >
+            <Plus className="w-5 h-5" /> <span className="sm:inline">Добавить ученика</span>
+          </button>
+        </div>
       </div>
+
+      {showDashboard && stats && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-lg flex items-center justify-center">
+                  <Users2 className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-[#3d3527]">{stats.total}</p>
+                  <p className="text-xs text-[#3d3527]/60">Всего учеников</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                  <UserCheck className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-[#3d3527]">{stats.active}</p>
+                  <p className="text-xs text-[#3d3527]/60">Активных</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-[#3d3527]">{stats.averageProgress}%</p>
+                  <p className="text-xs text-[#3d3527]/60">Ср. прогресс</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <UserX className="w-5 h-5 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-[#3d3527]">{stats.withoutMiniGroup}</p>
+                  <p className="text-xs text-[#3d3527]/60">Без группы</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
+              <h3 className="text-sm font-semibold text-[#3d3527] mb-3">Распределение по тарифам</h3>
+              <div className="space-y-2">
+                {Object.entries(stats.tariffCounts).map(([tariff, count]) => {
+                  const info = TARIFF_LABELS[tariff] || { label: tariff, color: 'bg-gray-100 text-gray-700' };
+                  const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
+                  return (
+                    <div key={tariff} className="flex items-center gap-3">
+                      <span className={`px-2 py-1 rounded-lg text-xs ${info.color} min-w-[120px]`}>{info.label}</span>
+                      <div className="flex-1 bg-[#f5f3ed] rounded-full h-2">
+                        <div 
+                          className="bg-gradient-to-r from-[#a67c52] to-[#c4a57b] h-2 rounded-full transition-all"
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium text-[#3d3527] min-w-[40px] text-right">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
+              <h3 className="text-sm font-semibold text-[#3d3527] mb-3">Мини-группы</h3>
+              <div className="space-y-2 max-h-[180px] overflow-y-auto">
+                {stats.miniGroupStats.length === 0 ? (
+                  <p className="text-sm text-[#3d3527]/60">Нет мини-групп</p>
+                ) : (
+                  stats.miniGroupStats.map((group) => {
+                    const maxMembers = Math.max(...stats.miniGroupStats.map(g => g.memberCount), 1);
+                    const percentage = (group.memberCount / maxMembers) * 100;
+                    return (
+                      <div key={group.id} className="flex items-center gap-3">
+                        <span className="text-sm text-[#3d3527] min-w-[140px] truncate" title={group.title}>{group.title}</span>
+                        <div className="flex-1 bg-[#f5f3ed] rounded-full h-2">
+                          <div 
+                            className="bg-gradient-to-r from-[#a67c52] to-[#c4a57b] h-2 rounded-full transition-all"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-[#3d3527] min-w-[30px] text-right">{group.memberCount}</span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white/80 backdrop-blur-md rounded-xl md:rounded-2xl border border-[#d4c9b0]/30 p-3 md:p-4">
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">

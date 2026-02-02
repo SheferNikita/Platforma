@@ -70,6 +70,89 @@ async function getMentorStudentIds(userId: string): Promise<string[]> {
   return Array.from(studentIds);
 }
 
+router.get('/stats', async (req: AuthRequest, res: Response) => {
+  try {
+    if (!['SUPER_ADMIN', 'ADMIN'].includes(req.user!.role)) {
+      return res.status(403).json({ error: 'Доступ запрещен' });
+    }
+
+    const students = await prisma.student.findMany({
+      include: {
+        user: { select: { isActive: true } },
+        progress: true,
+        miniGroups: {
+          include: { miniGroup: { select: { id: true, title: true } } }
+        }
+      }
+    });
+
+    const totalLessons = await prisma.lesson.count({ where: { isPublished: true } });
+
+    const tariffCounts: Record<string, number> = {
+      BASIC: 0,
+      FAMILY: 0,
+      RELATIVE: 0,
+      WITH_MENTOR: 0,
+      WITH_PSYCHOLOGIST: 0,
+      INDIVIDUAL_PSYCHOLOGIST: 0
+    };
+
+    let totalProgress = 0;
+    let studentsWithProgress = 0;
+    let withoutMiniGroup = 0;
+    let activeCount = 0;
+    let inactiveCount = 0;
+
+    students.forEach(student => {
+      const tariff = student.tariff || 'WITH_MENTOR';
+      if (tariffCounts[tariff] !== undefined) {
+        tariffCounts[tariff]++;
+      }
+
+      if (student.user.isActive) {
+        activeCount++;
+      } else {
+        inactiveCount++;
+      }
+
+      if (student.progress.length > 0 && totalLessons > 0) {
+        totalProgress += (student.progress.length / totalLessons) * 100;
+        studentsWithProgress++;
+      }
+
+      if (student.miniGroups.length === 0) {
+        withoutMiniGroup++;
+      }
+    });
+
+    const miniGroups = await prisma.miniGroup.findMany({
+      include: {
+        _count: { select: { members: true } }
+      },
+      orderBy: { title: 'asc' }
+    });
+
+    const miniGroupStats = miniGroups.map(g => ({
+      id: g.id,
+      title: g.title,
+      memberCount: g._count.members
+    }));
+
+    res.json({
+      total: students.length,
+      active: activeCount,
+      inactive: inactiveCount,
+      withoutMiniGroup,
+      averageProgress: studentsWithProgress > 0 ? Math.round(totalProgress / studentsWithProgress) : 0,
+      tariffCounts,
+      miniGroupStats
+    });
+  } catch (error) {
+    console.error('Get students stats error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 router.get('/psychologists', async (req: AuthRequest, res: Response) => {
   try {
     const psychologists = await prisma.user.findMany({

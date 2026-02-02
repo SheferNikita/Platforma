@@ -247,7 +247,13 @@ router.get('/', async (req: AuthRequest, res: Response) => {
           isActive: true,
           createdAt: true,
           student: {
-            include: {
+            select: {
+              id: true,
+              phone: true,
+              sobrietyDate: true,
+              notes: true,
+              tariff: true,
+              assignedPsychologistId: true,
               progress: true,
               payments: {
                 orderBy: { createdAt: 'desc' },

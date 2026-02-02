@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, Upload, Save, RotateCcw, Mail, History, AlertCircle, Check, X, Play, Pause, Edit2, Loader2, Eye, EyeOff, ChevronDown } from 'lucide-react';
+import { Settings, Upload, Save, RotateCcw, Mail, History, AlertCircle, Check, X, Play, Pause, Edit2, Loader2, Eye, EyeOff, ChevronDown, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { toast } from 'sonner';
 import { EmailTemplateEditor } from '../../components/EmailTemplateEditor';
@@ -149,10 +149,11 @@ export function SettingsAdmin() {
     setLoading(false);
   }
 
-  async function saveSetting(key: string) {
+  async function saveSetting(key: string, overrideValue?: string) {
     setSaving(key);
     try {
-      await api.put(`/admin/settings/${key}`, { value: editedValues[key] || null });
+      const value = overrideValue !== undefined ? overrideValue : editedValues[key];
+      await api.put(`/admin/settings/${key}`, { value: value || null });
       toast.success('Настройка сохранена');
       loadData();
     } catch (error) {
@@ -652,7 +653,7 @@ interface SettingsSectionProps {
   editedValues: Record<string, string>;
   setEditedValues: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   saving: string | null;
-  onSave: (key: string) => void;
+  onSave: (key: string, overrideValue?: string) => void;
   onFileUpload: (key: string, file: File) => void;
 }
 
@@ -756,6 +757,19 @@ function SettingsSection({ title, settings, editedValues, setEditedValues, savin
                   >
                     {saving === setting.key ? '...' : <Save className="w-4 h-4" />}
                   </button>
+                  {editedValues[setting.key] && (
+                    <button
+                      onClick={() => {
+                        setEditedValues(prev => ({ ...prev, [setting.key]: '' }));
+                        onSave(setting.key, '');
+                      }}
+                      disabled={saving === setting.key}
+                      className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+                      title="Удалить изображение"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             )}

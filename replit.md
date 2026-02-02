@@ -66,6 +66,11 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
     -   Products have `defaultTariff` field for automatic tariff assignment on purchase
     -   Distribution page has two tabs: "Групповые" (group assignment) and "Индивидуальные" (psychologist assignment)
     -   Public pages (MyDiariesPage, MyNotesPage, MentorResponsesPage, LessonDetailPage) check tariff and hide/redirect for BASIC/FAMILY/RELATIVE
+-   **Prepayment Tracking System:** Marking products and students with prepayment status without schema changes:
+    -   Products: `[PREPAY]` prefix in product name marks prepayment products; badge shown in product list, prefix hidden in display
+    -   Students: `[PREPAYMENT]` tag in notes field marks students with prepayment; badge shown in student table/cards
+    -   Prepayment checkbox in product creation/edit modal and student edit modal
+    -   Filter by prepayment status in students list (All / With prepayment / Without prepayment)
 -   **Module Access Control:** System for managing student access to specific modules, including expiration dates.
 -   **Mini-Groups:** Enhanced management of mini-groups, including curator assignment, chat links, and dedicated scheduling within group settings.
 -   **Authentication:** Dual mechanism supporting both HttpOnly cookies (`sameSite: 'none'`, `secure: true`) and a fallback to `localStorage` with `Authorization` headers for iframe compatibility.

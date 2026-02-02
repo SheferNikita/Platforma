@@ -73,18 +73,31 @@ async function getMentorStudentIds(userId: string): Promise<string[]> {
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { status, type } = req.query;
+    const { status, type, studentId, lessonId } = req.query;
     const user = req.user!;
     
-    let studentFilter: { studentId?: { in: string[] } } = {};
+    let studentFilter: { studentId?: { in: string[] } | string } = {};
     
     if (user.role === 'MENTOR' || user.role === 'INTERN' || user.role === 'PSYCHOLOGIST') {
       const studentIds = await getMentorStudentIds(user.id);
       if (studentIds.length === 0) {
         return res.json([]);
       }
-      studentFilter = { studentId: { in: studentIds } };
+      if (studentId && typeof studentId === 'string') {
+        if (!studentIds.includes(studentId)) {
+          return res.json([]);
+        }
+        studentFilter = { studentId: studentId };
+      } else {
+        studentFilter = { studentId: { in: studentIds } };
+      }
+    } else if (studentId && typeof studentId === 'string') {
+      studentFilter = { studentId: studentId };
     }
+
+    const lessonFilter = lessonId && typeof lessonId === 'string' 
+      ? { lessonId: lessonId } 
+      : {};
 
     const replyFilter = status === 'answered' 
       ? { NOT: { reply: null } }
@@ -96,6 +109,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       await prisma.diary.findMany({
         where: {
           ...studentFilter,
+          ...lessonFilter,
           ...replyFilter
         },
         include: {
@@ -123,6 +137,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       await prisma.studentNote.findMany({
         where: {
           ...studentFilter,
+          ...lessonFilter,
           ...replyFilter,
           ...(type ? { noteType: type as string } : {})
         },

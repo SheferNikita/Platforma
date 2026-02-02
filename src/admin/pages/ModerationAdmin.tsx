@@ -76,16 +76,52 @@ const typeConfig = {
 
 export function ModerationAdmin() {
   const [items, setItems] = useState<ModerationItem[]>([]);
+  const [allItems, setAllItems] = useState<ModerationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'answered'>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [studentFilter, setStudentFilter] = useState<string>('all');
+  const [lessonFilter, setLessonFilter] = useState<string>('all');
   const [selectedItem, setSelectedItem] = useState<ModerationItem | null>(null);
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadItems();
-  }, [statusFilter, typeFilter]);
+  }, [statusFilter, typeFilter, studentFilter, lessonFilter]);
+
+  useEffect(() => {
+    if (statusFilter === 'all' && typeFilter === 'all' && studentFilter === 'all' && lessonFilter === 'all') {
+      setAllItems(items);
+    }
+  }, [items, statusFilter, typeFilter, studentFilter, lessonFilter]);
+
+  const uniqueStudents = React.useMemo(() => {
+    const studentMap = new Map<string, { id: string; name: string; email: string }>();
+    allItems.forEach(item => {
+      if (!studentMap.has(item.student.id)) {
+        studentMap.set(item.student.id, {
+          id: item.student.id,
+          name: item.student.user.name,
+          email: item.student.user.email
+        });
+      }
+    });
+    return Array.from(studentMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [allItems]);
+
+  const uniqueLessons = React.useMemo(() => {
+    const lessonMap = new Map<string, { id: string; title: string }>();
+    allItems.forEach(item => {
+      if (!lessonMap.has(item.lesson.id)) {
+        lessonMap.set(item.lesson.id, {
+          id: item.lesson.id,
+          title: item.lesson.title
+        });
+      }
+    });
+    return Array.from(lessonMap.values()).sort((a, b) => a.title.localeCompare(b.title));
+  }, [allItems]);
 
   async function loadItems() {
     try {
@@ -93,6 +129,8 @@ export function ModerationAdmin() {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (typeFilter !== 'all') params.append('type', typeFilter);
+      if (studentFilter !== 'all') params.append('studentId', studentFilter);
+      if (lessonFilter !== 'all') params.append('lessonId', lessonFilter);
       
       const data = await api.get<ModerationItem[]>(`/public/moderation?${params.toString()}`);
       setItems(data);
@@ -199,7 +237,7 @@ export function ModerationAdmin() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-2 md:gap-4">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4">
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as any)}
@@ -218,6 +256,30 @@ export function ModerationAdmin() {
           <option value="diary">Дневник</option>
           <option value="question">Вопрос</option>
           <option value="report">Отчет</option>
+        </select>
+        <select
+          value={studentFilter}
+          onChange={(e) => setStudentFilter(e.target.value)}
+          className="px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base max-w-[200px]"
+        >
+          <option value="all">Все ученики</option>
+          {uniqueStudents.map(student => (
+            <option key={student.id} value={student.id}>
+              {student.name || student.email}
+            </option>
+          ))}
+        </select>
+        <select
+          value={lessonFilter}
+          onChange={(e) => setLessonFilter(e.target.value)}
+          className="px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base max-w-[250px]"
+        >
+          <option value="all">Все уроки</option>
+          {uniqueLessons.map(lesson => (
+            <option key={lesson.id} value={lesson.id}>
+              {lesson.title}
+            </option>
+          ))}
         </select>
       </div>
 

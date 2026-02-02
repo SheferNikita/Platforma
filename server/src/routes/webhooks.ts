@@ -3,7 +3,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../db';
 import { sendEmail } from '../services/email';
-import { getWelcomeEmailTemplate } from '../templates/welcomeEmail';
+import { emailTemplateService } from '../services/emailTemplateService';
 
 const PLATFORM_URL = 'https://schkola-trezvosti.ru';
 
@@ -506,18 +506,18 @@ router.post('/tilda', async (req: Request, res: Response) => {
     }
 
     if (isNewUser && generatedPassword) {
-      const emailHtml = getWelcomeEmailTemplate({
-        name: customerName,
-        email: customerEmail,
-        password: generatedPassword,
-        loginUrl: PLATFORM_URL
-      });
-
       try {
+        const emailData = await emailTemplateService.getWelcomeEmail({
+          name: customerName,
+          email: customerEmail,
+          password: generatedPassword,
+          loginUrl: PLATFORM_URL
+        });
+
         await sendEmail(
           customerEmail,
-          'Добро пожаловать на платформу обучения трезвости',
-          emailHtml
+          emailData.subject,
+          emailData.body
         );
         console.log(`Tilda webhook: Sent welcome email`);
       } catch (emailError) {

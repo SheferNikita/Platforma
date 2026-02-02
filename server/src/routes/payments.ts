@@ -2,7 +2,8 @@ import { Router, Response } from 'express';
 import crypto from 'crypto';
 import { prisma } from '../db';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
-import { sendPaymentConfirmationEmail } from '../services/email';
+import { sendEmail } from '../services/email';
+import { emailTemplateService } from '../services/emailTemplateService';
 
 const router = Router();
 
@@ -151,17 +152,25 @@ router.post('/result', async (req, res) => {
       }
     });
 
-    if (payment.product.emailTemplate && payment.student.user.email) {
-      await sendPaymentConfirmationEmail(
-        payment.student.user.email,
-        payment.product.emailSubject || 'Подтверждение оплаты',
-        payment.product.emailTemplate,
-        {
-          name: payment.student.user.name,
-          productName: payment.product.name,
-          amount: payment.amount.toString()
-        }
-      );
+    if (payment.student.user.email) {
+      try {
+        const emailData = await emailTemplateService.getPaymentConfirmationEmail(
+          {
+            name: payment.student.user.name,
+            productName: payment.product.name,
+            amount: payment.amount.toString()
+          },
+          payment.product.emailTemplate || undefined
+        );
+
+        await sendEmail(
+          payment.student.user.email,
+          payment.product.emailSubject || emailData.subject,
+          emailData.body
+        );
+      } catch (emailError) {
+        console.error('Failed to send payment confirmation email:', emailError);
+      }
     }
 
     res.send(`OK${InvId}`);

@@ -4,7 +4,7 @@ import { prisma } from '../db';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
 import { sendEmail } from '../services/email';
-import { getWelcomeEmailTemplate } from '../templates/welcomeEmail';
+import { emailTemplateService } from '../services/emailTemplateService';
 import { notificationService } from '../services/notificationService';
 
 const router = Router();
@@ -323,7 +323,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         const appUrl = process.env.APP_URL || 'https://your-platform.com';
         const loginUrl = `${appUrl}/login`;
         
-        const emailHtml = getWelcomeEmailTemplate({
+        const emailData = await emailTemplateService.getWelcomeEmail({
           name: data.name,
           email: data.email,
           password: data.password,
@@ -332,8 +332,8 @@ router.post('/', async (req: AuthRequest, res: Response) => {
         
         await sendEmail(
           data.email,
-          'Добро пожаловать на платформу обучения трезвости',
-          emailHtml
+          emailData.subject,
+          emailData.body
         );
       } catch (emailError) {
         console.error('Failed to send welcome email:', emailError);

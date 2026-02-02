@@ -4,7 +4,7 @@ import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { sendEmail } from '../services/email';
-import { getWelcomeEmailTemplate } from '../templates/welcomeEmail';
+import { emailTemplateService } from '../services/emailTemplateService';
 import crypto from 'crypto';
 
 const router = Router();
@@ -614,7 +614,7 @@ async function processSuccessfulPayment(orderId: string) {
   if (isNewUser) {
     try {
       const appUrl = process.env.APP_URL || 'https://your-platform.com';
-      const emailHtml = getWelcomeEmailTemplate({
+      const emailData = await emailTemplateService.getWelcomeEmail({
         name: order.firstName,
         email: order.email,
         password,
@@ -623,8 +623,8 @@ async function processSuccessfulPayment(orderId: string) {
 
       await sendEmail(
         order.email,
-        'Добро пожаловать на платформу!',
-        emailHtml
+        emailData.subject,
+        emailData.body
       );
     } catch (emailError) {
       console.error('Failed to send welcome email:', emailError);

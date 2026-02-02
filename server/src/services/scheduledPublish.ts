@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { sendEmail } from './email';
-import { getNewLessonEmailTemplate } from '../templates/newLessonEmail';
+import { emailTemplateService } from './emailTemplateService';
 import { notificationService } from './notificationService';
 
 const prisma = new PrismaClient();
@@ -64,7 +64,7 @@ export async function publishScheduledLessons(): Promise<number> {
 
       for (const student of studentsWithAccess) {
         try {
-          const emailHtml = getNewLessonEmailTemplate({
+          const emailData = await emailTemplateService.getNewLessonEmail({
             studentName: student.user.name,
             lessonTitle: lesson.title,
             moduleName: lesson.module.title,
@@ -73,8 +73,8 @@ export async function publishScheduledLessons(): Promise<number> {
 
           await sendEmail(
             student.user.email,
-            `Открыт новый урок: ${lesson.title}`,
-            emailHtml
+            emailData.subject,
+            emailData.body
           );
 
           await notificationService.createForNewLesson(

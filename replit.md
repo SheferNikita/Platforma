@@ -29,6 +29,12 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
     -   **User Management:** Student and administrator management with role-based access control.
     -   **Financials:** Product creation with pricing and email templates, payment CRM with history and statuses.
     -   **Email System:** Individual and mass email sending with customizable templates.
+        - **EmailTemplateService** (`server/src/services/emailTemplateService.ts`): Centralized service for loading and rendering email templates
+        - Templates stored in `EmailTemplate` database table with `code` field for identification
+        - Default templates created automatically: `welcome_email`, `new_lesson`, `team_invite`, `payment_confirmation`
+        - Variable substitution using `{{variableName}}` syntax
+        - Fallback to hardcoded templates if DB template not found or disabled
+        - Admin can customize templates at `/admin/settings` (Email templates section)
     -   **Rich Text Editor:** Lessons support rich text content via TipTap, Kinescope video integration, and file attachments.
     -   **Diary and Notes Attachments:** Students can attach files (images, documents, audio) to diary entries, personal notes, and questions. Files are stored as base64 in the TimeWeb PostgreSQL database (DiaryAttachment, NoteAttachment models). Attachments are displayed in the moderation chat interface with image preview and file download support.
     -   **Scheduled Lesson Publishing:** Lessons can be scheduled for future publication with date/time picker. When the scheduled time arrives, the lesson is automatically published and email notifications are sent to students with module access.

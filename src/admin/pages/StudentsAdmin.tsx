@@ -78,12 +78,13 @@ export function StudentsAdmin() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [filterMiniGroup, setFilterMiniGroup] = useState<string>('');
   const [filterTariff, setFilterTariff] = useState<string>('all');
+  const [filterPrePayment, setFilterPrePayment] = useState<'all' | 'yes' | 'no'>('all');
   const [miniGroups, setMiniGroups] = useState<MiniGroup[]>([]);
 
   useEffect(() => {
     loadStudents();
     loadMiniGroups();
-  }, [search, filterStatus, filterMiniGroup, filterTariff]);
+  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrePayment]);
 
   useEffect(() => {
     loadStats();
@@ -122,6 +123,12 @@ export function StudentsAdmin() {
 
       if (filterTariff !== 'all') {
         filtered = filtered.filter(s => s.student?.tariff === filterTariff);
+      }
+
+      if (filterPrePayment === 'yes') {
+        filtered = filtered.filter(s => s.student?.notes?.includes('[PREPAYMENT]'));
+      } else if (filterPrePayment === 'no') {
+        filtered = filtered.filter(s => !s.student?.notes?.includes('[PREPAYMENT]'));
       }
       
       setStudents(filtered);
@@ -164,9 +171,10 @@ export function StudentsAdmin() {
     setFilterStatus('all');
     setFilterMiniGroup('');
     setFilterTariff('all');
+    setFilterPrePayment('all');
   }
 
-  const hasActiveFilters = filterStatus !== 'all' || filterMiniGroup !== '' || filterTariff !== 'all';
+  const hasActiveFilters = filterStatus !== 'all' || filterMiniGroup !== '' || filterTariff !== 'all' || filterPrePayment !== 'all';
 
   return (
     <div className="space-y-6">
@@ -361,6 +369,18 @@ export function StudentsAdmin() {
                 <option value="INDIVIDUAL_PSYCHOLOGIST">Индивид. психолог</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-[#3d3527] mb-1">Оплата</label>
+              <select
+                value={filterPrePayment}
+                onChange={(e) => setFilterPrePayment(e.target.value as 'all' | 'yes' | 'no')}
+                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              >
+                <option value="all">Все</option>
+                <option value="yes">Предоплата</option>
+                <option value="no">Полная оплата</option>
+              </select>
+            </div>
             <div className="flex items-end sm:col-span-2 lg:col-span-1">
               <button
                 onClick={clearFilters}
@@ -396,6 +416,11 @@ export function StudentsAdmin() {
                     <span className={`px-2 py-0.5 rounded-full text-xs ${student.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {student.isActive ? 'Активен' : 'Неактивен'}
                     </span>
+                    {student.student?.notes?.includes('[PREPAYMENT]') && (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-700">
+                        Предоплата
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-[#3d3527]/60 truncate">{student.email}</p>
                   <p className="text-xs text-[#3d3527]/50 mt-1">{student.student?.progress?.length || 0} уроков пройдено</p>
@@ -499,9 +524,16 @@ export function StudentsAdmin() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs ${student.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {student.isActive ? 'Активен' : 'Неактивен'}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      <span className={`px-2 py-1 rounded-full text-xs ${student.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {student.isActive ? 'Активен' : 'Неактивен'}
+                      </span>
+                      {student.student?.notes?.includes('[PREPAYMENT]') && (
+                        <span className="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
+                          Предоплата
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <p className="text-[#3d3527]">{student.student?.progress?.length || 0} уроков</p>

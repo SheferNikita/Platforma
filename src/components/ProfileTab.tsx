@@ -1,18 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, MapPin, Calendar, Award, BookOpen, Target, Settings, Camera, CheckCircle, Trophy, Star, FileText, Lock, LogOut, Loader2, MessageCircle } from 'lucide-react';
+import { User, Mail, BookOpen, Target, Settings, Camera, CheckCircle, Trophy, Star, FileText, Lock, LogOut, Loader2, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
-
-interface Achievement {
-  id: number;
-  title: string;
-  description: string;
-  icon: string;
-  earned: boolean;
-  earnedDate?: string;
-}
 
 interface ProfileData {
   id: string;
@@ -110,53 +101,6 @@ export function ProfileTab() {
     }
   }
 
-  const [achievements] = useState<Achievement[]>([
-    {
-      id: 1,
-      title: 'Первый шаг',
-      description: 'Начали свой путь к трезвости',
-      icon: '🌟',
-      earned: true,
-      earnedDate: '2025-11-20',
-    },
-    {
-      id: 2,
-      title: 'Неделя трезвости',
-      description: '7 дней без алкоголя',
-      icon: '⭐',
-      earned: true,
-      earnedDate: '2025-11-27',
-    },
-    {
-      id: 3,
-      title: 'Прилежный ученик',
-      description: 'Пройдено 3 урока',
-      icon: '📚',
-      earned: true,
-      earnedDate: '2025-12-05',
-    },
-    {
-      id: 4,
-      title: 'Месяц трезвости',
-      description: '30 дней без алкоголя',
-      icon: '🏆',
-      earned: false,
-    },
-    {
-      id: 5,
-      title: 'Активный участник',
-      description: 'Посещено 5 групповых встреч',
-      icon: '👥',
-      earned: false,
-    },
-    {
-      id: 6,
-      title: 'Знаток курса',
-      description: 'Пройдены все уроки',
-      icon: '🎓',
-      earned: false,
-    },
-  ]);
 
   const calculateSobrietyDays = () => {
     if (!userInfo.sobrietyStartDate) return 0;
@@ -392,12 +336,6 @@ export function ProfileTab() {
                   </div>
                   <div className="text-xs opacity-60">Уроков пройдено</div>
                 </div>
-                <div className="text-center p-3 bg-white/60 rounded-xl">
-                  <div className="text-2xl mb-1 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] bg-clip-text text-transparent">
-                    {achievements.filter(a => a.earned).length}
-                  </div>
-                  <div className="text-xs opacity-60">Достижений</div>
-                </div>
                 <div className="text-center p-3 bg-white/60 rounded-xl col-span-2 md:col-span-1">
                   <div className="text-2xl mb-1 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] bg-clip-text text-transparent">
                     {calculateSobrietyDays()}
@@ -478,51 +416,6 @@ export function ProfileTab() {
             </div>
           )}
 
-          {/* Achievements */}
-          <div className="border-2 border-[var(--sky-light)]/40 bg-gradient-to-br from-white/90 to-white/50 rounded-2xl p-6 md:p-8 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)]">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] rounded-xl flex items-center justify-center shadow-lg">
-                <Award className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h4 className="text-lg">Достижения</h4>
-                <p className="text-sm opacity-60">Ваши награды на пути к трезвости</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {achievements.map((achievement) => (
-                <div
-                  key={achievement.id}
-                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                    achievement.earned
-                      ? 'bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-[var(--button-lavender-dark)]/5 border-[var(--button-lavender-dark)]/30 shadow-sm'
-                      : 'bg-gray-50/50 border-gray-200/50 opacity-50'
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`text-3xl ${achievement.earned ? '' : 'grayscale opacity-40'}`}>
-                      {achievement.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h5 className="text-sm font-medium">{achievement.title}</h5>
-                        {achievement.earned && (
-                          <CheckCircle className="w-4 h-4 text-[var(--success-green)] flex-shrink-0" />
-                        )}
-                      </div>
-                      <p className="text-xs opacity-70 mb-1">{achievement.description}</p>
-                      {achievement.earned && achievement.earnedDate && (
-                        <p className="text-xs opacity-50 italic">
-                          Получено: {new Date(achievement.earnedDate).toLocaleDateString('ru-RU')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Right Column - Stats & Quick Info */}
@@ -574,10 +467,6 @@ export function ProfileTab() {
               <div className="flex items-center justify-between p-3 bg-[var(--sky-soft)]/20 rounded-lg">
                 <span className="text-sm opacity-70">Встреч посещено</span>
                 <span className="font-medium text-[var(--button-lavender-dark)]">2</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-[var(--sky-soft)]/20 rounded-lg">
-                <span className="text-sm opacity-70">Достижений</span>
-                <span className="font-medium text-[var(--button-lavender-dark)]">{achievements.filter(a => a.earned).length}/{achievements.length}</span>
               </div>
             </div>
           </div>

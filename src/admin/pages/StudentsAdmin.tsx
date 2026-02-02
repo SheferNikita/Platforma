@@ -56,12 +56,13 @@ export function StudentsAdmin() {
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [filterMiniGroup, setFilterMiniGroup] = useState<string>('');
+  const [filterTariff, setFilterTariff] = useState<string>('all');
   const [miniGroups, setMiniGroups] = useState<MiniGroup[]>([]);
 
   useEffect(() => {
     loadStudents();
     loadMiniGroups();
-  }, [search, filterStatus, filterMiniGroup]);
+  }, [search, filterStatus, filterMiniGroup, filterTariff]);
 
   async function loadMiniGroups() {
     try {
@@ -85,6 +86,10 @@ export function StudentsAdmin() {
         filtered = filtered.filter(s => 
           s.student?.miniGroups?.some(mg => mg.miniGroup.id === filterMiniGroup)
         );
+      }
+
+      if (filterTariff !== 'all') {
+        filtered = filtered.filter(s => s.student?.tariff === filterTariff);
       }
       
       setStudents(filtered);
@@ -126,9 +131,10 @@ export function StudentsAdmin() {
   function clearFilters() {
     setFilterStatus('all');
     setFilterMiniGroup('');
+    setFilterTariff('all');
   }
 
-  const hasActiveFilters = filterStatus !== 'all' || filterMiniGroup !== '';
+  const hasActiveFilters = filterStatus !== 'all' || filterMiniGroup !== '' || filterTariff !== 'all';
 
   return (
     <div className="space-y-6">
@@ -195,6 +201,22 @@ export function StudentsAdmin() {
                 {miniGroups.map(g => (
                   <option key={g.id} value={g.id}>{g.title}</option>
                 ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#3d3527] mb-1">Тариф</label>
+              <select
+                value={filterTariff}
+                onChange={(e) => setFilterTariff(e.target.value)}
+                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              >
+                <option value="all">Все тарифы</option>
+                <option value="BASIC">Базовый</option>
+                <option value="FAMILY">Для родственников</option>
+                <option value="RELATIVE">Родственник</option>
+                <option value="WITH_MENTOR">С наставником</option>
+                <option value="WITH_PSYCHOLOGIST">С психологом</option>
+                <option value="INDIVIDUAL_PSYCHOLOGIST">Индивид. психолог</option>
               </select>
             </div>
             <div className="flex items-end sm:col-span-2 lg:col-span-1">

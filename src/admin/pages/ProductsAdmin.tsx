@@ -124,13 +124,8 @@ export function ProductsAdmin() {
                   </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2 mb-2">
-                <h3 className="text-base md:text-lg font-bold text-[#3d3527] truncate">{product.name}</h3>
-                {/\[PREPAYMENT\]/i.test(product.description || '') && (
-                  <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-lg text-xs whitespace-nowrap">Предоплата</span>
-                )}
-              </div>
-              <p className="text-sm text-[#3d3527]/60 mb-4 line-clamp-2">{product.description?.replace(/\[PREPAYMENT\]\s*/gi, '').trim()}</p>
+              <h3 className="text-base md:text-lg font-bold text-[#3d3527] mb-2 truncate">{product.name}</h3>
+              <p className="text-sm text-[#3d3527]/60 mb-4 line-clamp-2">{product.description}</p>
               <div className="flex items-center justify-end">
                 <span className={`px-2 py-1 rounded-full text-xs ${product.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
                   {product.isActive ? 'Активен' : 'Неактивен'}
@@ -201,12 +196,8 @@ const TARIFF_OPTIONS = [
 ];
 
 function ProductModal({ product, onSave, onClose }: { product: Product | null; onSave: (data: any) => void; onClose: () => void }) {
-  const hasPrePaymentTag = /\[PREPAYMENT\]/i.test(product?.description || '');
-  const cleanDescription = product?.description?.replace(/\[PREPAYMENT\]\s*/gi, '').trim() || '';
-  
   const [name, setName] = useState(product?.name || '');
-  const [description, setDescription] = useState(cleanDescription);
-  const [isPrePayment, setIsPrePayment] = useState(hasPrePaymentTag);
+  const [description, setDescription] = useState(product?.description || '');
   const [startDate, setStartDate] = useState(product?.startDate?.split('T')[0] || '');
   const [accessExpiresAt, setAccessExpiresAt] = useState(product?.accessExpiresAt?.split('T')[0] || '');
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
@@ -231,14 +222,9 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
   };
 
   const handleSave = () => {
-    const cleanedDescription = description.replace(/\[PREPAYMENT\]\s*/gi, '').trim();
-    const finalDescription = isPrePayment 
-      ? `[PREPAYMENT] ${cleanedDescription}` 
-      : cleanedDescription;
-    
     onSave({
       name,
-      description: finalDescription,
+      description,
       price: 0,
       startDate: startDate || null,
       accessDurationType: accessExpiresAt ? 'date' : 'unlimited',
@@ -334,30 +320,15 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
             )}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="isActive"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="w-4 h-4 rounded border-[#d4c9b0]"
-              />
-              <label htmlFor="isActive" className="text-sm text-[#3d3527]">Продукт активен</label>
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="isPrePayment"
-                checked={isPrePayment}
-                onChange={(e) => setIsPrePayment(e.target.checked)}
-                className="w-4 h-4 rounded border-[#d4c9b0] accent-orange-500"
-              />
-              <label htmlFor="isPrePayment" className="text-sm text-[#3d3527]">
-                Предоплата
-                <span className="text-xs text-[#3d3527]/60 ml-1">(ученику будет добавлена метка)</span>
-              </label>
-            </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="isActive"
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+              className="w-4 h-4 rounded border-[#d4c9b0]"
+            />
+            <label htmlFor="isActive" className="text-sm text-[#3d3527]">Продукт активен</label>
           </div>
         </div>
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">

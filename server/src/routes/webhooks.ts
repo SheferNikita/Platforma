@@ -388,28 +388,6 @@ router.post('/tilda', async (req: Request, res: Response) => {
               });
               console.log(`Tilda webhook: Updated student tariff to ${dbProduct.defaultTariff}`);
             }
-            
-            const isPrePaymentProduct = /\[PREPAYMENT\]/i.test(dbProduct.description || '');
-            const currentNotes = existingUser.student.notes || '';
-            const cleanNotes = currentNotes.replace(/\[PREPAYMENT\]\s*/gi, '').trim();
-            
-            if (isPrePaymentProduct) {
-              if (!/\[PREPAYMENT\]/i.test(currentNotes)) {
-                await prisma.student.update({
-                  where: { id: existingUser.student.id },
-                  data: { notes: `[PREPAYMENT] ${cleanNotes}`.trim() }
-                });
-                console.log(`Tilda webhook: Added PREPAYMENT tag to student notes`);
-              }
-            } else {
-              if (/\[PREPAYMENT\]/i.test(currentNotes)) {
-                await prisma.student.update({
-                  where: { id: existingUser.student.id },
-                  data: { notes: cleanNotes }
-                });
-                console.log(`Tilda webhook: Removed PREPAYMENT tag from student notes (full payment received)`);
-              }
-            }
           } else {
             console.error(`Tilda webhook: Cannot grant access - no student record found for user`);
           }
@@ -489,28 +467,6 @@ router.post('/tilda', async (req: Request, res: Response) => {
             data: { tariff: fallbackProduct.defaultTariff }
           });
           console.log(`Tilda webhook: Updated student tariff to ${fallbackProduct.defaultTariff} (fallback)`);
-        }
-        
-        const isPrePaymentProduct = /\[PREPAYMENT\]/i.test(fallbackProduct.description || '');
-        const currentNotes = existingUser.student.notes || '';
-        const cleanNotes = currentNotes.replace(/\[PREPAYMENT\]\s*/gi, '').trim();
-        
-        if (isPrePaymentProduct) {
-          if (!/\[PREPAYMENT\]/i.test(currentNotes)) {
-            await prisma.student.update({
-              where: { id: existingUser.student.id },
-              data: { notes: `[PREPAYMENT] ${cleanNotes}`.trim() }
-            });
-            console.log(`Tilda webhook: Added PREPAYMENT tag to student notes (fallback)`);
-          }
-        } else {
-          if (/\[PREPAYMENT\]/i.test(currentNotes)) {
-            await prisma.student.update({
-              where: { id: existingUser.student.id },
-              data: { notes: cleanNotes }
-            });
-            console.log(`Tilda webhook: Removed PREPAYMENT tag from student notes (fallback - full payment received)`);
-          }
         }
       }
     }

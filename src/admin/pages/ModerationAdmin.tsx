@@ -179,7 +179,7 @@ export function ModerationAdmin() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Модерация</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Обратная связь</h1>
           <p className="text-[#3d3527]/60 mt-1 text-sm md:text-base">Ответы и вопросы учеников</p>
         </div>
       </div>

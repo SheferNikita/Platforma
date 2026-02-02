@@ -47,7 +47,7 @@ const navItems: {
   { path: '/admin/mini-groups', label: 'Мини-группы', icon: Users2, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN'] },
   { path: '/admin/students', label: 'Ученики', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'ADMIN_ASSISTANT'] },
   { path: '/admin/distribution', label: 'Распределение', icon: UserPlus, showDistributionBadge: true, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR'] },
-  { path: '/admin/moderation', label: 'Модерация', icon: MessageCircle, showBadge: true, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR'] },
+  { path: '/admin/moderation', label: 'Обратная связь', icon: MessageCircle, showBadge: true, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR'] },
   { path: '/admin/products', label: 'Продукты', icon: ShoppingBag, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { path: '/admin/crm', label: 'CRM', icon: ClipboardList, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { path: '/admin/payments', label: 'Платежи', icon: CreditCard, roles: ['SUPER_ADMIN', 'ADMIN'] },

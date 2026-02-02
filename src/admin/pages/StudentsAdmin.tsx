@@ -283,6 +283,7 @@ export function StudentsAdmin() {
           <thead className="bg-[#f5f3ed]">
             <tr>
               <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Ученик</th>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Тариф</th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Статус</th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Прогресс</th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Мини-группы</th>
@@ -292,13 +293,13 @@ export function StudentsAdmin() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="text-center py-12">
+                <td colSpan={6} className="text-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#a67c52] mx-auto"></div>
                 </td>
               </tr>
             ) : students.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-12 text-[#3d3527]/60">Ученики не найдены</td>
+                <td colSpan={6} className="text-center py-12 text-[#3d3527]/60">Ученики не найдены</td>
               </tr>
             ) : (
               students.map((student) => (
@@ -313,6 +314,25 @@ export function StudentsAdmin() {
                         <p className="text-sm text-[#3d3527]/60">{student.email}</p>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-lg text-xs ${
+                      student.student?.tariff === 'BASIC' ? 'bg-gray-100 text-gray-700' :
+                      student.student?.tariff === 'FAMILY' ? 'bg-purple-100 text-purple-700' :
+                      student.student?.tariff === 'RELATIVE' ? 'bg-orange-100 text-orange-700' :
+                      student.student?.tariff === 'WITH_MENTOR' ? 'bg-green-100 text-green-700' :
+                      student.student?.tariff === 'WITH_PSYCHOLOGIST' ? 'bg-pink-100 text-pink-700' :
+                      student.student?.tariff === 'INDIVIDUAL_PSYCHOLOGIST' ? 'bg-blue-100 text-blue-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {student.student?.tariff === 'BASIC' ? 'Базовый' :
+                       student.student?.tariff === 'FAMILY' ? 'Для родственников' :
+                       student.student?.tariff === 'RELATIVE' ? 'Родственник' :
+                       student.student?.tariff === 'WITH_MENTOR' ? 'С наставником' :
+                       student.student?.tariff === 'WITH_PSYCHOLOGIST' ? 'С психологом' :
+                       student.student?.tariff === 'INDIVIDUAL_PSYCHOLOGIST' ? 'Индивид. психолог' :
+                       'Не указан'}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-xs ${student.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>

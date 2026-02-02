@@ -693,4 +693,103 @@ router.delete('/:userId/access/:moduleId', async (req: AuthRequest, res: Respons
   }
 });
 
+router.post('/:id/password', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({ error: 'Пароль должен содержать минимум 6 символов' });
+    }
+
+    const student = await prisma.student.findUnique({
+      where: { id },
+      include: { user: true }
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: 'Ученик не найден' });
+    }
+
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
+      const allowedStudentIds = await getMentorStudentIds(req.user!.id);
+      if (!allowedStudentIds.includes(student.id)) {
+        return res.status(403).json({ error: 'Нет доступа к этому ученику' });
+      }
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await prisma.user.update({
+      where: { id: student.userId },
+      data: { password: hashedPassword }
+    });
+
+    res.json({ message: 'Пароль успешно изменен' });
+  } catch (error) {
+    console.error('Change student password error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+function generatePassword(length: number = 10): string {
+  const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
+
+router.post('/:id/send-credentials', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const student = await prisma.student.findUnique({
+      where: { id },
+      include: { user: true }
+    });
+
+    if (!student) {
+      return res.status(404).json({ error: 'Ученик не найден' });
+    }
+
+    if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN') {
+      const allowedStudentIds = await getMentorStudentIds(req.user!.id);
+      if (!allowedStudentIds.includes(student.id)) {
+        return res.status(403).json({ error: 'Нет доступа к этому ученику' });
+      }
+    }
+
+    const newPassword = generatePassword();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: student.userId },
+      data: { password: hashedPassword }
+    });
+
+    const appUrl = process.env.APP_URL || 'https://your-platform.com';
+    const loginUrl = `${appUrl}/login`;
+
+    const emailContent = await emailTemplateService.getWelcomeEmail({
+      name: student.user.name,
+      email: student.user.email,
+      password: newPassword,
+      loginUrl
+    });
+
+    await sendEmail(
+      student.user.email,
+      emailContent.subject,
+      emailContent.body
+    );
+
+    res.json({ message: 'Данные для входа отправлены на почту ученика' });
+  } catch (error) {
+    console.error('Send credentials error:', error);
+    res.status(500).json({ error: 'Ошибка при отправке данных' });
+  }
+});
+
 export default router;

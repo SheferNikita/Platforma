@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks, Shuffle, TrendingUp, BarChart3, UserCheck, UserX } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks, Shuffle, TrendingUp, BarChart3, UserCheck, UserX, Mail, Key, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface StudentsStats {
@@ -594,10 +594,51 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
   const [notes, setNotes] = useState(student?.student?.notes || '');
   const [sendCredentials, setSendCredentials] = useState(true);
   const [tariff, setTariff] = useState((student?.student as any)?.tariff || 'WITH_MENTOR');
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [sendingCredentials, setSendingCredentials] = useState(false);
+
+  const generatePassword = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let pwd = '';
+    for (let i = 0; i < 10; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    return pwd;
+  };
+
+  const handleChangePassword = async () => {
+    if (!student?.student?.id || newPassword.length < 6) {
+      toast.error('Пароль должен содержать минимум 6 символов');
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await api.post(`/students/${student.student.id}/password`, { password: newPassword });
+      toast.success('Пароль успешно изменен');
+      setNewPassword('');
+    } catch (error) {
+      toast.error('Ошибка при изменении пароля');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleSendCredentials = async () => {
+    if (!student?.student?.id) return;
+    setSendingCredentials(true);
+    try {
+      await api.post(`/students/${student.student.id}/send-credentials`);
+      toast.success('Данные для входа отправлены на почту ученика');
+    } catch (error) {
+      toast.error('Ошибка при отправке данных');
+    } finally {
+      setSendingCredentials(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold text-[#3d3527] mb-4">{student ? 'Редактировать ученика' : 'Новый ученик'}</h2>
         <div className="space-y-4">
           <div>
@@ -630,16 +671,71 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
                 />
                 <button
                   type="button"
-                  onClick={() => {
-                    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-                    let pwd = '';
-                    for (let i = 0; i < 10; i++) pwd += chars.charAt(Math.floor(Math.random() * chars.length));
-                    setPassword(pwd);
-                  }}
+                  onClick={() => setPassword(generatePassword())}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-[#f5f3ed] rounded-lg transition-colors"
                   title="Сгенерировать пароль"
                 >
                   <Shuffle className="w-4 h-4 text-[#a67c52]" />
+                </button>
+              </div>
+            </div>
+          )}
+          {student && (
+            <div className="p-4 bg-[#f5f3ed] rounded-xl space-y-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Key className="w-4 h-4 text-[#a67c52]" />
+                <span className="font-medium text-[#3d3527]">Безопасность</span>
+              </div>
+              <div>
+                <label className="block text-sm text-[#3d3527]/70 mb-1">Новый пароль</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Минимум 6 символов"
+                      className="w-full px-4 py-2 pr-20 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] bg-white"
+                    />
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="p-1.5 hover:bg-[#e8e3d9] rounded-lg transition-colors"
+                        title={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4 text-[#3d3527]/60" /> : <Eye className="w-4 h-4 text-[#3d3527]/60" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewPassword(generatePassword())}
+                        className="p-1.5 hover:bg-[#e8e3d9] rounded-lg transition-colors"
+                        title="Сгенерировать пароль"
+                      >
+                        <Shuffle className="w-4 h-4 text-[#a67c52]" />
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleChangePassword}
+                    disabled={changingPassword || newPassword.length < 6}
+                    className="px-4 py-2 bg-[#a67c52] text-white rounded-xl hover:bg-[#8b6642] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                  >
+                    {changingPassword ? '...' : 'Изменить'}
+                  </button>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-[#d4c9b0]/50">
+                <button
+                  type="button"
+                  onClick={handleSendCredentials}
+                  disabled={sendingCredentials}
+                  className="flex items-center gap-2 w-full px-4 py-2.5 bg-white border border-[#d4c9b0] text-[#3d3527] rounded-xl hover:bg-[#f5f3ed] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Mail className="w-4 h-4 text-[#a67c52]" />
+                  <span>{sendingCredentials ? 'Отправка...' : 'Напомнить пароль'}</span>
+                  <span className="text-xs text-[#3d3527]/60 ml-auto">Отправит новый пароль на почту</span>
                 </button>
               </div>
             </div>

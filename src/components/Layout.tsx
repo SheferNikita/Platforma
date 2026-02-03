@@ -96,7 +96,7 @@ export function Layout() {
           <footer className="mt-10 text-center opacity-50 text-sm tracking-wide">
             <div className="inline-block">
               <p className="relative">
-                © 2025 Платформа «Путь к Трезвости». Ваш путь к здоровой жизни.
+                Платформа Школы трезвости.
                 <span className="absolute -bottom-1 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#d4c9b0] to-transparent"></span>
               </p>
             </div>

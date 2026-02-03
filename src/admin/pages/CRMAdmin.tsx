@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { ClipboardList, Search, Eye, CheckCircle, XCircle, Clock, User, Phone, Mail, ShoppingBag, Filter, X, ChevronDown, ChevronUp, Download, Users, BookOpen, MessageSquare, TrendingUp, Send, History, UserCheck } from 'lucide-react';
+import { ClipboardList, Search, Eye, CheckCircle, XCircle, Clock, User, Phone, Mail, ShoppingBag, Filter, X, ChevronDown, ChevronUp, Download, Users, BookOpen, MessageSquare, TrendingUp, Send, History, UserCheck, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -138,6 +138,8 @@ export function CRMAdmin() {
   const [emailSubject, setEmailSubject] = useState('');
   const [emailMessage, setEmailMessage] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadProducts();
@@ -290,6 +292,23 @@ export function CRMAdmin() {
       toast.error('Ошибка отправки');
     } finally {
       setSendingEmail(false);
+    }
+  }
+
+  async function deleteOrder() {
+    if (!orderToDelete) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/public/orders/admin/${orderToDelete.id}`);
+      toast.success('Заявка удалена');
+      setOrderToDelete(null);
+      setSelectedOrder(null);
+      loadOrders();
+      loadStats();
+    } catch (error) {
+      toast.error('Ошибка удаления');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -986,16 +1005,53 @@ export function CRMAdmin() {
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
           onUpdateStatus={updateStatus}
+          onDelete={(order) => setOrderToDelete(order)}
         />
+      )}
+
+      {orderToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-[#3d3527] mb-4">Удаление заявки</h3>
+            <p className="text-[#3d3527]/70 mb-6">
+              Вы уверены, что хотите удалить заявку от{' '}
+              <span className="font-medium text-[#3d3527]">{orderToDelete.firstName} {orderToDelete.lastName}</span>?
+              <br />
+              <span className="text-red-600 text-sm">Это действие необратимо.</span>
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setOrderToDelete(null)}
+                disabled={deleting}
+                className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={deleteOrder}
+                disabled={deleting}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Удалить
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-function OrderModal({ order, onClose, onUpdateStatus }: {
+function OrderModal({ order, onClose, onUpdateStatus, onDelete }: {
   order: Order;
   onClose: () => void;
   onUpdateStatus: (orderId: string, status: string) => void;
+  onDelete: (order: Order) => void;
 }) {
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [emailSubject, setEmailSubject] = useState('');
@@ -1203,10 +1259,17 @@ function OrderModal({ order, onClose, onUpdateStatus }: {
           </div>
         </div>
 
-        <div className="flex justify-end mt-6">
+        <div className="flex justify-between mt-6 gap-3">
+          <button
+            onClick={() => onDelete(order)}
+            className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-xl"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Удалить</span>
+          </button>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl w-full sm:w-auto"
+            className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl"
           >
             Закрыть
           </button>

@@ -149,7 +149,7 @@ function SupportButton() {
       onClick={handleClick}
       className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_8px_20px_rgba(139,149,188,0.45)] transition-all duration-300 text-sm font-medium transform hover:scale-[1.03] active:scale-[0.98] relative overflow-hidden group"
     >
-      <span className="relative z-10">Связаться с поддержкой</span>
+      <span className="relative z-10">СЛУЖБА ЗАБОТЫ</span>
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
     </button>
   );
@@ -1227,7 +1227,7 @@ export function LessonDetailPage() {
           </div>
           <h4 className="mb-3 text-[var(--button-lavender-dark)] text-lg">Остались вопросы?</h4>
           <p className="text-sm opacity-70 mb-5 leading-relaxed text-center">
-            Наша техподдержка готова помочь вам в любое время
+            Если у Вас есть организационные или технические вопросы или сложности, напишите нам:
           </p>
           <SupportButton />
         </div>

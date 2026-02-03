@@ -92,13 +92,15 @@ export function Navigation() {
             </div>
             <div className="py-2 flex items-center gap-2 lg:gap-3 flex-shrink-0">
               <NotificationBell />
-              <NavLink
-                to="/sos"
-                className="px-3 lg:px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:shadow-[0_8px_20px_rgba(239,68,68,0.45)] transition-all duration-300 text-xs lg:text-sm font-medium transform hover:scale-105 active:scale-95 flex items-center gap-1.5 lg:gap-2"
-              >
-                <AlertCircle className="w-4 h-4" />
-                <span>SOS</span>
-              </NavLink>
+              {isSectionVisible('sos', userTariff) && (
+                <NavLink
+                  to="/sos"
+                  className="px-3 lg:px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:shadow-[0_8px_20px_rgba(239,68,68,0.45)] transition-all duration-300 text-xs lg:text-sm font-medium transform hover:scale-105 active:scale-95 flex items-center gap-1.5 lg:gap-2"
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  <span>SOS</span>
+                </NavLink>
+              )}
               <NavLink
                 to="/profile"
                 className={({ isActive }) =>

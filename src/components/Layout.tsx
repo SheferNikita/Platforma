@@ -5,9 +5,17 @@ import { User, Calendar, Users } from 'lucide-react';
 import { Navigation } from './Navigation';
 import { SobrietyCounter } from './SobrietyCounter';
 import { NotificationBell } from './NotificationBell';
+import { useSettings } from '../lib/settings';
+import { useAuth } from '../lib/auth';
 
 export function Layout() {
   const location = useLocation();
+  const { isSectionVisible } = useSettings();
+  const { user } = useAuth();
+  const userTariff = user?.tariff;
+  
+  const showSchedule = isSectionVisible('schedule', userTariff);
+  const showContacts = isSectionVisible('contacts', userTariff);
 
   // Scroll to top on route change
   React.useEffect(() => {
@@ -35,34 +43,40 @@ export function Layout() {
           }}></div>
           
           {/* First row: Quick links */}
-          <div className="relative z-10 flex items-center gap-2 mb-3">
-            <NavLink
-              to="/schedule"
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 active:scale-95 flex-1 justify-center ${
-                  isActive
-                    ? 'bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] border-[var(--button-lavender-dark)] text-white shadow-lg'
-                    : 'bg-white/60 border-[var(--sky-light)]/50 hover:border-[var(--button-lavender)]/60 hover:bg-[var(--button-lavender)]/10'
-                }`
-              }
-            >
-              <Calendar className="w-4 h-4" />
-              <span className="text-xs font-medium">Расписание</span>
-            </NavLink>
-            <NavLink
-              to="/contacts"
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 active:scale-95 flex-1 justify-center ${
-                  isActive
-                    ? 'bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] border-[var(--button-lavender-dark)] text-white shadow-lg'
-                    : 'bg-white/60 border-[var(--sky-light)]/50 hover:border-[var(--button-lavender)]/60 hover:bg-[var(--button-lavender)]/10'
-                }`
-              }
-            >
-              <Users className="w-4 h-4" />
-              <span className="text-xs font-medium">Контакты</span>
-            </NavLink>
-          </div>
+          {(showSchedule || showContacts) && (
+            <div className="relative z-10 flex items-center gap-2 mb-3">
+              {showSchedule && (
+                <NavLink
+                  to="/schedule"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 active:scale-95 flex-1 justify-center ${
+                      isActive
+                        ? 'bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] border-[var(--button-lavender-dark)] text-white shadow-lg'
+                        : 'bg-white/60 border-[var(--sky-light)]/50 hover:border-[var(--button-lavender)]/60 hover:bg-[var(--button-lavender)]/10'
+                    }`
+                  }
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-xs font-medium">Расписание</span>
+                </NavLink>
+              )}
+              {showContacts && (
+                <NavLink
+                  to="/contacts"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all duration-300 transform hover:scale-105 active:scale-95 flex-1 justify-center ${
+                      isActive
+                        ? 'bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] border-[var(--button-lavender-dark)] text-white shadow-lg'
+                        : 'bg-white/60 border-[var(--sky-light)]/50 hover:border-[var(--button-lavender)]/60 hover:bg-[var(--button-lavender)]/10'
+                    }`
+                  }
+                >
+                  <Users className="w-4 h-4" />
+                  <span className="text-xs font-medium">Контакты</span>
+                </NavLink>
+              )}
+            </div>
+          )}
           
           {/* Second row: Notifications, Counter, Profile */}
           <div className="relative z-10 grid grid-cols-3 gap-2 items-center">

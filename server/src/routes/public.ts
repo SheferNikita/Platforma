@@ -53,15 +53,7 @@ router.get('/modules', async (req: Request, res: Response) => {
       where: { isPublished: true },
       include: {
         lessons: {
-          where: {
-            OR: [
-              { isPublished: true },
-              { 
-                isPublished: false,
-                scheduledAt: { gt: now }
-              }
-            ]
-          },
+          where: { isPublished: true },
           orderBy: { order: 'asc' },
           select: {
             id: true,
@@ -69,8 +61,7 @@ router.get('/modules', async (req: Request, res: Response) => {
             description: true,
             duration: true,
             order: true,
-            isPublished: true,
-            scheduledAt: true
+            isPublished: true
           }
         }
       },

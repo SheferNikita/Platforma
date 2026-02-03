@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpen, Lock, CheckCircle, PlayCircle, Book, FileText, Loader2, Clock } from 'lucide-react';
+import { BookOpen, Lock, CheckCircle, PlayCircle, Book, FileText, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
 
 interface Lesson {
@@ -149,29 +149,13 @@ export function LessonsTab() {
             <div className="space-y-4">
               {module.lessons.map((lesson, lessonIndex) => {
                 const isCompleted = completedLessons.has(lesson.id);
-                const isScheduled = lesson.scheduledAt && !lesson.isPublished;
-                const isLocked = module.hasAccess === false || isScheduled;
-
-                const formatScheduledDate = (dateStr: string) => {
-                  const date = new Date(dateStr);
-                  const options: Intl.DateTimeFormatOptions = { 
-                    timeZone: 'Europe/Moscow',
-                    day: 'numeric',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  };
-                  const formatted = date.toLocaleString('ru-RU', options).replace(',', '');
-                  return `${formatted} МСК`;
-                };
+                const isLocked = module.hasAccess === false;
 
                 return (
                   <div
                     key={lesson.id}
                     className={`border-2 rounded-2xl p-5 md:p-8 transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden group ${
-                      isScheduled
-                        ? 'border-[#d4a84d]/40 bg-gradient-to-br from-[#fef9e7]/60 to-[#fdf5d9]/40'
-                        : isLocked
+                      isLocked
                         ? 'border-[var(--book-border)]/40 bg-gradient-to-br from-gray-50/60 to-gray-100/40 opacity-60'
                         : isCompleted
                         ? 'border-[var(--success-green)]/30 bg-gradient-to-br from-[var(--success-green)]/6 to-white/70 shadow-[0_8px_24px_rgba(74,124,89,0.12)] hover:shadow-[0_12px_32px_rgba(74,124,89,0.18)] hover:border-[var(--success-green)]/40'
@@ -186,9 +170,7 @@ export function LessonsTab() {
                     <div className="flex items-start gap-4 md:gap-5 relative z-10">
                       <div className="flex-shrink-0 mt-1">
                         <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl p-0.5 shadow-lg transition-all duration-300 ${
-                          isScheduled
-                            ? 'bg-gradient-to-br from-[#d4a84d] to-[#c4983d]'
-                            : isLocked 
+                          isLocked 
                             ? 'bg-gray-300' 
                             : isCompleted 
                             ? 'bg-gradient-to-br from-[#c5cde5] to-[#b4bdd8]' 
@@ -199,9 +181,7 @@ export function LessonsTab() {
                               ? 'bg-white' 
                               : 'bg-gradient-to-br from-white to-[#e8ebf5]/30'
                           }`}>
-                            {isScheduled ? (
-                              <Clock className="w-5 h-5 md:w-6 md:h-6 text-[#a67c00]" />
-                            ) : isLocked ? (
+                            {isLocked ? (
                               <Lock className="w-5 h-5 md:w-6 md:h-6 text-[var(--icon-lavender)]" />
                             ) : isCompleted ? (
                               <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-[var(--icon-lavender)] drop-shadow-sm" />
@@ -235,13 +215,7 @@ export function LessonsTab() {
                                   ✓ Пройден
                                 </span>
                               )}
-                              {isScheduled && lesson.scheduledAt && (
-                                <span className="flex items-center gap-1.5 px-3 py-1 bg-[#fef3cd] text-[#856404] rounded-lg text-xs font-medium whitespace-nowrap">
-                                  <Clock className="w-3.5 h-3.5" />
-                                  {formatScheduledDate(lesson.scheduledAt)}
-                                </span>
-                              )}
-                              {isLocked && !isScheduled && (
+                              {isLocked && (
                                 <span className="text-gray-500 whitespace-nowrap">
                                   Заблокирован
                                 </span>
@@ -274,13 +248,7 @@ export function LessonsTab() {
                               </button>
                             </>
                           )}
-                          {isScheduled && lesson.scheduledAt && (
-                            <span className="text-sm italic opacity-70 flex items-center gap-2 text-[#856404]">
-                              <Clock className="w-4 h-4" />
-                              Урок откроется {formatScheduledDate(lesson.scheduledAt)}
-                            </span>
-                          )}
-                          {isLocked && !isScheduled && (
+                          {isLocked && (
                             <span className="text-sm italic opacity-60 flex items-center gap-2">
                               <Lock className="w-4 h-4 text-[var(--icon-lavender)]" />
                               Пройдите предыдущие уроки, чтобы разблокировать

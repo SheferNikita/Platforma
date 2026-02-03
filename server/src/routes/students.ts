@@ -77,6 +77,9 @@ router.get('/stats', async (req: AuthRequest, res: Response) => {
     }
 
     const students = await prisma.student.findMany({
+      where: {
+        user: { role: 'STUDENT' }
+      },
       include: {
         user: { select: { isActive: true } },
         progress: true,

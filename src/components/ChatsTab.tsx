@@ -66,10 +66,6 @@ export function ChatsTab() {
         <div className="absolute -top-2 left-0 w-20 h-1 bg-gradient-to-r from-[var(--button-lavender-dark)] via-[var(--button-lavender-light)] to-transparent rounded-full"></div>
         
         <h2 className="text-[#3a3a3a] mb-4">Чаты и группы поддержки</h2>
-        <p className="opacity-70 leading-relaxed max-w-3xl">
-          Присоединяйтесь к сообществу единомышленников. Здесь вы найдете поддержку, 
-          понимание и дружескую помощь в трудные моменты.
-        </p>
       </div>
 
       {chats.length === 0 ? (
@@ -135,26 +131,6 @@ export function ChatsTab() {
         </div>
       )}
 
-      <div className="mt-12 p-6 md:p-8 bg-gradient-to-br from-[var(--success-green)]/8 to-[var(--success-green)]/4 border-2 border-[var(--success-green)]/20 rounded-2xl shadow-[0_8px_24px_rgba(74,124,89,0.08)] backdrop-blur-sm">
-        <h4 className="mb-4 text-[var(--success-green)] text-lg flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-[var(--success-green)]"></span>
-          Правила общения в чатах
-        </h4>
-        <ul className="space-y-3 text-sm opacity-80 leading-relaxed">
-          <li className="flex items-start gap-3">
-            <span className="text-[var(--success-green)] mt-1 text-lg leading-none">•</span>
-            <span>Будьте уважительны и поддерживайте друг друга</span>
-          </li>
-          <li className="flex items-start gap-3">
-            <span className="text-[var(--success-green)] mt-1 text-lg leading-none">•</span>
-            <span>Не давайте медицинских советов — рекомендуйте обратиться к специалистам</span>
-          </li>
-          <li className="flex items-start gap-3">
-            <span className="text-[var(--success-green)] mt-1 text-lg leading-none">•</span>
-            <span>Соблюдайте конфиденциальность — не делитесь личной информацией других</span>
-          </li>
-        </ul>
-      </div>
     </div>
   );
 }

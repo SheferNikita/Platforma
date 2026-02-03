@@ -101,7 +101,7 @@ export function CommunitiesTab() {
       <div className="mb-8 border-b-2 border-[var(--book-border)]/30 pb-6 relative">
         <div className="absolute -top-2 left-0 w-16 h-1 bg-gradient-to-r from-[var(--button-lavender-dark)] via-[var(--button-lavender-light)] to-transparent rounded-full"></div>
         
-        <h2 className="text-[#3a3a3a] mb-3">Общины трезвости</h2>
+        <h2 className="text-[#3a3a3a] mb-3">Важные каналы и чаты курса</h2>
         <p className="opacity-70 leading-relaxed">
           Найдите сообщество единомышленников в своем городе или присоединяйтесь к онлайн-группам. 
           Живое общение и взаимная поддержка — важная часть пути к трезвости.

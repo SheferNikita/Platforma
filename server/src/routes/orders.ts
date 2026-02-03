@@ -767,6 +767,28 @@ router.put('/admin/:id/comment', async (req: AuthRequest, res: Response) => {
   }
 });
 
+// Delete order
+router.delete('/admin/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const orderId = req.params.id as string;
+
+    // First delete related status history
+    await prisma.orderStatusHistory.deleteMany({
+      where: { orderId }
+    });
+
+    // Then delete the order
+    await prisma.order.delete({
+      where: { id: orderId }
+    });
+
+    res.json({ success: true, message: 'Заявка удалена' });
+  } catch (error) {
+    console.error('Delete order error:', error);
+    res.status(500).json({ error: 'Ошибка удаления заявки' });
+  }
+});
+
 // Helper function to calculate access expiry (matching webhook logic)
 function calculateAccessExpiry(product: any): Date | null {
   if (product.accessDurationType === 'unlimited') {

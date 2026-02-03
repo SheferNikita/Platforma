@@ -777,6 +777,50 @@ router.post('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
   }
 });
 
+// Get student profile stats (diaries, notes, lessons)
+router.get('/profile/stats', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    // Count diaries submitted by student
+    const diariesCount = await prisma.diary.count({
+      where: { studentId: student.studentId }
+    });
+
+    // Count notes submitted by student
+    const notesCount = await prisma.studentNote.count({
+      where: { studentId: student.studentId }
+    });
+
+    // Count completed lessons
+    const lessonsCompleted = await prisma.lessonProgress.count({
+      where: { 
+        studentId: student.studentId,
+        isCompleted: true
+      }
+    });
+
+    // Count total published lessons
+    const totalLessons = await prisma.lesson.count({
+      where: { isPublished: true }
+    });
+
+    res.json({
+      diariesCount,
+      notesCount,
+      lessonsCompleted,
+      totalLessons
+    });
+  } catch (error) {
+    console.error('Get profile stats error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // Get student profile
 router.get('/profile', async (req: Request, res: Response) => {
   try {

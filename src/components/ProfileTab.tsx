@@ -465,8 +465,12 @@ export function ProfileTab() {
                 <span className="font-medium text-[var(--button-lavender-dark)]">{lessonsCompleted}/{totalLessons}</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-[var(--sky-soft)]/20 rounded-lg">
-                <span className="text-sm opacity-70">Встреч посещено</span>
-                <span className="font-medium text-[var(--button-lavender-dark)]">2</span>
+                <span className="text-sm opacity-70">Дневников сдано</span>
+                <span className="font-medium text-[var(--button-lavender-dark)]">{diariesCount}</span>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-[var(--sky-soft)]/20 rounded-lg">
+                <span className="text-sm opacity-70">Конспектов сдано</span>
+                <span className="font-medium text-[var(--button-lavender-dark)]">{notesCount}</span>
               </div>
             </div>
           </div>

@@ -11,6 +11,7 @@ router.get('/unassigned', async (req: AuthRequest, res: Response) => {
   try {
     const students = await prisma.student.findMany({
       where: {
+        user: { role: 'STUDENT' },
         miniGroups: { none: {} },
         tariff: { not: 'INDIVIDUAL_PSYCHOLOGIST' }
       },
@@ -46,6 +47,7 @@ router.get('/unassigned/count', async (req: AuthRequest, res: Response) => {
   try {
     const count = await prisma.student.count({
       where: {
+        user: { role: 'STUDENT' },
         miniGroups: { none: {} },
         tariff: { not: 'INDIVIDUAL_PSYCHOLOGIST' }
       }
@@ -150,6 +152,7 @@ router.get('/individual', async (req: AuthRequest, res: Response) => {
   try {
     const students = await prisma.student.findMany({
       where: {
+        user: { role: 'STUDENT' },
         tariff: 'INDIVIDUAL_PSYCHOLOGIST'
       },
       select: {

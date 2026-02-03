@@ -167,7 +167,7 @@ export function SobrietyCounter() {
           className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-[#6b8e6f] to-[#7a9d7e] text-white text-xs rounded-lg hover:shadow-[0_8px_20px_rgba(107,142,111,0.35)] transition-all duration-300 transform hover:scale-[1.03] active:scale-[0.98] relative overflow-hidden group"
         >
           <Calendar className="w-4 h-4 relative z-10 flex-shrink-0 drop-shadow-sm" />
-          <span className="relative z-10 whitespace-nowrap font-medium">Начать трезвую жизнь</span>
+          <span className="relative z-10 whitespace-nowrap font-medium">Счетчик трезвости</span>
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
         </button>
       </div>

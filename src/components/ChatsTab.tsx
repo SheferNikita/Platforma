@@ -53,7 +53,7 @@ export function ChatsTab() {
     return (
       <div className="animate-fade-in">
         <div className="mb-12 border-b border-[var(--sky-blue)]/20 pb-8">
-          <h2 className="text-[#3a3a3a] mb-4">Чаты и группы поддержки</h2>
+          <h2 className="text-[#3a3a3a] mb-4">Важные каналы и чаты курса</h2>
           <p className="opacity-70 leading-relaxed max-w-3xl">Загрузка...</p>
         </div>
       </div>
@@ -65,7 +65,7 @@ export function ChatsTab() {
       <div className="mb-12 border-b border-[var(--sky-blue)]/20 pb-8 relative">
         <div className="absolute -top-2 left-0 w-20 h-1 bg-gradient-to-r from-[var(--button-lavender-dark)] via-[var(--button-lavender-light)] to-transparent rounded-full"></div>
         
-        <h2 className="text-[#3a3a3a] mb-4">Чаты и группы поддержки</h2>
+        <h2 className="text-[#3a3a3a] mb-4">Важные каналы и чаты курса</h2>
       </div>
 
       {chats.length === 0 ? (

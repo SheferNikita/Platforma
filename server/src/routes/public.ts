@@ -90,7 +90,6 @@ router.get('/modules', async (req: Request, res: Response) => {
       where: { studentId: student.studentId }
     });
     const accessMap = new Map(accessList.map(a => [a.moduleId, a]));
-    const now = new Date();
 
     const result = modules.map(m => {
       const access = accessMap.get(m.id);

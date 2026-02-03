@@ -4,7 +4,7 @@ import { ClipboardList, Search, Eye, CheckCircle, XCircle, Clock, User, Phone, M
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell } from 'recharts';
 
 interface StudentData {
   id: string;
@@ -387,45 +387,147 @@ export function CRMAdmin() {
         </div>
       </div>
 
-      {chartData.length > 0 && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {chartData.length > 0 && (
+          <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
+            <h3 className="text-lg font-semibold text-[#3d3527] mb-4 flex items-center gap-2">
+              <Users className="w-5 h-5 text-[#a67c52]" />
+              Распределение по тарифам
+            </h3>
+            <div className="space-y-3">
+              {chartData.map((item, index) => {
+                const total = chartData.reduce((sum, i) => sum + i.value, 0);
+                const percent = total > 0 ? ((item.value / total) * 100).toFixed(0) : 0;
+                return (
+                  <div key={item.name} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-[#3d3527] font-medium">{item.name}</span>
+                      <span className="text-[#3d3527]/70">{item.value} ({percent}%)</span>
+                    </div>
+                    <div className="w-full bg-[#f5f3ed] rounded-full h-3">
+                      <div 
+                        className="h-3 rounded-full transition-all duration-500"
+                        style={{ 
+                          width: `${total > 0 ? (item.value / total) * 100 : 0}%`,
+                          backgroundColor: CHART_COLORS[index % CHART_COLORS.length]
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
+          <h3 className="text-lg font-semibold text-[#3d3527] mb-4 flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 text-[#a67c52]" />
+            Статусы заказов
+          </h3>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+              <Clock className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-blue-700">{localStats.new}</p>
+              <p className="text-xs text-blue-600 mt-1">Новые</p>
+            </div>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+              <CheckCircle className="w-6 h-6 text-green-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-green-700">{localStats.paid}</p>
+              <p className="text-xs text-green-600 mt-1">Оплачено</p>
+            </div>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+              <XCircle className="w-6 h-6 text-red-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-red-700">{localStats.cancelled}</p>
+              <p className="text-xs text-red-600 mt-1">Отменено</p>
+            </div>
+          </div>
+          {localStats.total > 0 && (
+            <div className="mt-4 pt-4 border-t border-[#d4c9b0]/30">
+              <div className="flex justify-between text-sm">
+                <span className="text-[#3d3527]/70">Конверсия оплат</span>
+                <span className="font-bold text-green-600">
+                  {((localStats.paid / localStats.total) * 100).toFixed(1)}%
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
           <h3 className="text-lg font-semibold text-[#3d3527] mb-4 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-[#a67c52]" />
-            Распределение по тарифам
+            Источники заказов
           </h3>
-          <div className="flex flex-col md:flex-row items-center gap-4">
-            <div className="w-48 h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={40}
-                    outerRadius={70}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
-                  >
-                    {chartData.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {chartData.map((item, index) => (
-                <div key={item.name} className="flex items-center gap-2 text-sm">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} />
-                  <span className="text-[#3d3527]">{item.name}: {item.value}</span>
+          <div className="space-y-3">
+            {(() => {
+              const sources = orders.reduce((acc, order) => {
+                let source = 'Вручную';
+                if (order.tildaOrderId) source = 'Tilda';
+                else if (order.robokassaInvId) source = 'Robokassa';
+                acc[source] = (acc[source] || 0) + 1;
+                return acc;
+              }, {} as Record<string, number>);
+              const sourceColors: Record<string, string> = {
+                'Tilda': '#6366f1',
+                'Robokassa': '#f59e0b',
+                'Вручную': '#8b7355'
+              };
+              const total = Object.values(sources).reduce((a, b) => a + b, 0);
+              return Object.entries(sources).map(([name, value]) => (
+                <div key={name} className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#3d3527] font-medium">{name}</span>
+                    <span className="text-[#3d3527]/70">{value} ({total > 0 ? ((value / total) * 100).toFixed(0) : 0}%)</span>
+                  </div>
+                  <div className="w-full bg-[#f5f3ed] rounded-full h-3">
+                    <div 
+                      className="h-3 rounded-full transition-all duration-500"
+                      style={{ 
+                        width: `${total > 0 ? (value / total) * 100 : 0}%`,
+                        backgroundColor: sourceColors[name] || '#a67c52'
+                      }}
+                    />
+                  </div>
                 </div>
-              ))}
-            </div>
+              ));
+            })()}
           </div>
         </div>
-      )}
+
+        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-4">
+          <h3 className="text-lg font-semibold text-[#3d3527] mb-4 flex items-center gap-2">
+            <ShoppingBag className="w-5 h-5 text-[#a67c52]" />
+            Топ продуктов
+          </h3>
+          <div className="space-y-2">
+            {(() => {
+              const productSales = orders.reduce((acc, order) => {
+                const name = order.product?.name || 'Без продукта';
+                acc[name] = (acc[name] || 0) + 1;
+                return acc;
+              }, {} as Record<string, number>);
+              return Object.entries(productSales)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([name, count], index) => (
+                  <div key={name} className="flex items-center justify-between p-2 rounded-lg bg-[#f5f3ed]/50 hover:bg-[#f5f3ed] transition-colors">
+                    <div className="flex items-center gap-3">
+                      <span className="w-6 h-6 rounded-full bg-[#a67c52] text-white text-xs flex items-center justify-center font-medium">
+                        {index + 1}
+                      </span>
+                      <span className="text-sm text-[#3d3527] truncate max-w-[180px]" title={name}>{name}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-[#a67c52]">{count}</span>
+                  </div>
+                ));
+            })()}
+            {orders.length === 0 && (
+              <p className="text-sm text-[#3d3527]/60 text-center py-4">Нет данных</p>
+            )}
+          </div>
+        </div>
+      </div>
 
       {showBulkActions && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">

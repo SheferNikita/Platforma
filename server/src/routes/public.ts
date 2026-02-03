@@ -48,18 +48,29 @@ router.get('/modules', async (req: Request, res: Response) => {
   try {
     const student = await getStudentFromToken(req);
     
+    const now = new Date();
     const modules = await prisma.module.findMany({
       where: { isPublished: true },
       include: {
         lessons: {
-          where: { isPublished: true },
+          where: {
+            OR: [
+              { isPublished: true },
+              { 
+                isPublished: false,
+                scheduledAt: { gt: now }
+              }
+            ]
+          },
           orderBy: { order: 'asc' },
           select: {
             id: true,
             title: true,
             description: true,
             duration: true,
-            order: true
+            order: true,
+            isPublished: true,
+            scheduledAt: true
           }
         }
       },

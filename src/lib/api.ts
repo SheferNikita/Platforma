@@ -46,11 +46,12 @@ export const api = {
     return handleResponse<T>(response);
   },
 
-  delete: async <T>(url: string): Promise<T> => {
+  delete: async <T>(url: string, data?: any): Promise<T> => {
     const response = await fetch(`${API_BASE}${url}`, {
       method: 'DELETE',
       credentials: 'include',
-      headers: getAuthHeaders(),
+      headers: data ? { 'Content-Type': 'application/json', ...getAuthHeaders() } : getAuthHeaders(),
+      body: data ? JSON.stringify(data) : undefined,
     });
     return handleResponse<T>(response);
   },

@@ -767,7 +767,31 @@ router.put('/admin/:id/comment', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Delete order
+// Bulk delete orders (must be before :id route to avoid matching "bulk" as id)
+router.delete('/admin/bulk', async (req: AuthRequest, res: Response) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'Необходимо указать ID заявок для удаления' });
+    }
+
+    await prisma.orderStatusHistory.deleteMany({
+      where: { orderId: { in: ids } }
+    });
+
+    const result = await prisma.order.deleteMany({
+      where: { id: { in: ids } }
+    });
+
+    res.json({ success: true, message: `Удалено заявок: ${result.count}`, count: result.count });
+  } catch (error) {
+    console.error('Bulk delete orders error:', error);
+    res.status(500).json({ error: 'Ошибка массового удаления заявок' });
+  }
+});
+
+// Delete single order
 router.delete('/admin/:id', async (req: AuthRequest, res: Response) => {
   try {
     const orderId = req.params.id as string;

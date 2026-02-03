@@ -140,6 +140,7 @@ export function CRMAdmin() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   useEffect(() => {
     loadProducts();
@@ -303,6 +304,24 @@ export function CRMAdmin() {
       toast.success('Заявка удалена');
       setOrderToDelete(null);
       setSelectedOrder(null);
+      loadOrders();
+      loadStats();
+    } catch (error) {
+      toast.error('Ошибка удаления');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function bulkDeleteOrders() {
+    if (!selectedOrders.length) return;
+    setDeleting(true);
+    try {
+      const result = await api.delete<{ count: number }>('/public/orders/admin/bulk', { ids: selectedOrders });
+      toast.success(`Удалено заявок: ${result.count}`);
+      setSelectedOrders([]);
+      setShowBulkDeleteConfirm(false);
+      setShowBulkActions(false);
       loadOrders();
       loadStats();
     } catch (error) {
@@ -616,6 +635,48 @@ export function CRMAdmin() {
                   Написать письмо
                 </button>
               </div>
+
+              <div className="pt-3 border-t border-[#d4c9b0]/30">
+                <label className="block text-sm font-medium text-red-600 mb-1">Удалить заявки</label>
+                <button
+                  onClick={() => setShowBulkDeleteConfirm(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Удалить выбранные ({selectedOrders.length})
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-red-600">Подтверждение удаления</h3>
+              <button onClick={() => setShowBulkDeleteConfirm(false)} className="text-[#3d3527]/60 hover:text-[#3d3527]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-[#3d3527]">
+              Вы уверены, что хотите удалить <strong>{selectedOrders.length}</strong> заявок? Это действие нельзя отменить.
+            </p>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                className="flex-1 px-4 py-2 border border-[#d4c9b0] text-[#3d3527] rounded-xl hover:bg-[#f5f3ed]"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={bulkDeleteOrders}
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? 'Удаление...' : 'Удалить'}
+              </button>
             </div>
           </div>
         </div>

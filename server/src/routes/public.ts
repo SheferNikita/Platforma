@@ -93,11 +93,9 @@ router.get('/modules', async (req: Request, res: Response) => {
 
     const result = modules.map(m => {
       const access = accessMap.get(m.id);
-      const isExpired = access?.expiresAt && new Date(access.expiresAt) < now;
-      const isNotStarted = access?.accessFrom && new Date(access.accessFrom) > now;
       return {
         ...m,
-        hasAccess: access?.isActive && !isExpired && !isNotStarted ? true : false,
+        hasAccess: true,
         accessExpiresAt: access?.expiresAt ?? null,
         accessFrom: access?.accessFrom ?? null
       };
@@ -145,12 +143,12 @@ router.get('/lessons/:id', async (req: Request, res: Response) => {
       }
     });
 
-    const now = new Date();
-    const isExpired = access?.expiresAt && new Date(access.expiresAt) < now;
-    const isNotStarted = access?.accessFrom && new Date(access.accessFrom) > now;
-    const hasAccess = access?.isActive && !isExpired && !isNotStarted;
-
-    res.json({ ...lesson, hasAccess, accessFrom: access?.accessFrom ?? null });
+    res.json({ 
+      ...lesson, 
+      hasAccess: true, 
+      accessFrom: access?.accessFrom ?? null,
+      accessExpiresAt: access?.expiresAt ?? null 
+    });
   } catch (error) {
     console.error('Get public lesson error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

@@ -13,7 +13,7 @@ router.get('/unassigned', async (req: AuthRequest, res: Response) => {
       where: {
         user: { role: 'STUDENT' },
         miniGroups: { none: {} },
-        tariff: { not: 'INDIVIDUAL_PSYCHOLOGIST' }
+        tariff: { in: ['WITH_MENTOR', 'WITH_PSYCHOLOGIST'] }
       },
       select: {
         id: true,
@@ -49,7 +49,7 @@ router.get('/unassigned/count', async (req: AuthRequest, res: Response) => {
       where: {
         user: { role: 'STUDENT' },
         miniGroups: { none: {} },
-        tariff: { not: 'INDIVIDUAL_PSYCHOLOGIST' }
+        tariff: { in: ['WITH_MENTOR', 'WITH_PSYCHOLOGIST'] }
       }
     });
 

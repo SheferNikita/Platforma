@@ -242,6 +242,24 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Вы можете удалять только наставников, психологов и помощников' });
     }
 
+    // Clear related records before deleting admin
+    // 1. Delete admin logs created by this user
+    await prisma.adminLog.deleteMany({
+      where: { userId: id }
+    });
+
+    // 2. Set repliedById to null in diaries where this admin replied
+    await prisma.diary.updateMany({
+      where: { repliedById: id },
+      data: { repliedById: null }
+    });
+
+    // 3. Set repliedById to null in student notes where this admin replied
+    await prisma.studentNote.updateMany({
+      where: { repliedById: id },
+      data: { repliedById: null }
+    });
+
     await prisma.user.delete({
       where: { id }
     });

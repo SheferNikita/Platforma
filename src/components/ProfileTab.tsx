@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, BookOpen, Target, Settings, Camera, CheckCircle, Trophy, Star, FileText, Lock, LogOut, Loader2, MessageCircle } from 'lucide-react';
+import { User, Mail, BookOpen, Target, Settings, Camera, CheckCircle, Trophy, Star, FileText, Lock, LogOut, Loader2, MessageCircle, GraduationCap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
+
+const TARIFF_LABELS: Record<string, string> = {
+  BASIC: 'Базовый',
+  FAMILY: 'Для родственников',
+  RELATIVE: 'Родственник участника',
+  WITH_MENTOR: 'С наставником',
+  WITH_PSYCHOLOGIST: 'С психологом',
+  INDIVIDUAL_PSYCHOLOGIST: 'Индивидуально с психологом'
+};
 
 interface ProfileData {
   id: string;
@@ -206,7 +215,15 @@ export function ProfileTab() {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     {!isEditing ? (
-                      <h3 className="text-xl md:text-2xl mb-2">{userInfo.name}</h3>
+                      <div className="mb-2">
+                        <h3 className="text-xl md:text-2xl">{userInfo.name}</h3>
+                        {profile?.tariff && (
+                          <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-slate-100 text-slate-600 text-sm rounded-lg">
+                            <GraduationCap className="w-4 h-4" />
+                            <span>{TARIFF_LABELS[profile.tariff] || profile.tariff}</span>
+                          </div>
+                        )}
+                      </div>
                     ) : (
                       <input
                         type="text"

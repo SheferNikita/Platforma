@@ -874,7 +874,7 @@ export function LessonDetailPage() {
               <div className="flex-1">
                 <h3 className="mb-2 text-lg">Расширенные возможности</h3>
                 <p className="text-sm opacity-70 leading-relaxed">
-                  Задавать вопросы и вести дневник доступно на тарифах с наставником или психологом
+                  Задавать вопросы и вести дневник доступно на форматах участия с наставником или психологом
                 </p>
               </div>
             </div>

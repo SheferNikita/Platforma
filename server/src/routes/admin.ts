@@ -5,6 +5,7 @@ import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
 import { sendEmail } from '../services/email';
 import { emailTemplateService } from '../services/emailTemplateService';
+import { runTeamInviteTemplateMigration } from '../migrations/updateTeamInviteTemplate';
 
 const PLATFORM_URL = 'https://schkola-trezvosti.ru';
 
@@ -716,6 +717,7 @@ async function ensureDefaultEmailTemplates() {
 router.get('/email-templates', settingsRoles, async (req: AuthRequest, res: Response) => {
   try {
     await ensureDefaultEmailTemplates();
+    await runTeamInviteTemplateMigration();
     const templates = await prisma.emailTemplate.findMany({
       orderBy: { name: 'asc' }
     });

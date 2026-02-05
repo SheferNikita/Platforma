@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../db';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import ordersRouter from './orders';
 import moderationRouter from './moderation';
 import auditRouter from './audit';
@@ -888,7 +889,7 @@ router.put('/profile', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Требуется авторизация' });
     }
 
-    const { name, phone, city, sobrietyDate } = req.body;
+    const { name, phone, city, sobrietyDate, password } = req.body;
 
     // Update student data
     const updatedStudent = await prisma.student.update({
@@ -903,11 +904,24 @@ router.put('/profile', async (req: Request, res: Response) => {
       }
     });
 
-    // Update user name if provided
+    // Build user update data
+    const userUpdateData: { name?: string; password?: string } = {};
+    
     if (name) {
+      userUpdateData.name = name;
+    }
+    
+    // Update password if provided (hash it first)
+    if (password && password.length >= 6) {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      userUpdateData.password = hashedPassword;
+    }
+    
+    // Update user if there's data to update
+    if (Object.keys(userUpdateData).length > 0) {
       await prisma.user.update({
         where: { id: updatedStudent.userId },
-        data: { name }
+        data: userUpdateData
       });
     }
 

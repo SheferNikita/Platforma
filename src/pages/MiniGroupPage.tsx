@@ -113,7 +113,7 @@ export function MiniGroupPage() {
               <AlertCircle className="w-8 h-8 text-white" />
             </div>
             <h3 className="text-xl mb-2">Вы пока не состоите в мини-группе</h3>
-            <p className="opacity-60 max-w-md mx-auto">
+            <p className="opacity-60 max-w-md mx-auto text-center">
               Обратитесь к администратору для добавления в группу поддержки. Участие в мини-группе поможет вам получать поддержку и мотивацию на пути к трезвости.
             </p>
           </div>

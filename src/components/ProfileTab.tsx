@@ -287,16 +287,23 @@ export function ProfileTab() {
                             autoFocus
                           />
                           <button
-                            onClick={() => {
-                              // Здесь логика сохранения пароля
-                              console.log('Новый пароль:', newPassword);
-                              setIsEditingPassword(false);
-                              setNewPassword('');
-                              setPasswordUpdateSuccess(true);
-                              // Автоматически скрыть уведомление через 3 секунды
-                              setTimeout(() => {
-                                setPasswordUpdateSuccess(false);
-                              }, 3000);
+                            onClick={async () => {
+                              if (newPassword.length < 6) {
+                                alert('Пароль должен быть не менее 6 символов');
+                                return;
+                              }
+                              try {
+                                await api.put('/public/profile', { password: newPassword });
+                                setIsEditingPassword(false);
+                                setNewPassword('');
+                                setPasswordUpdateSuccess(true);
+                                setTimeout(() => {
+                                  setPasswordUpdateSuccess(false);
+                                }, 3000);
+                              } catch (error) {
+                                console.error('Ошибка смены пароля:', error);
+                                alert('Не удалось сменить пароль');
+                              }
                             }}
                             className="w-8 h-8 bg-[var(--success-green)] hover:bg-[var(--success-green)]/80 rounded-lg flex items-center justify-center transition-all duration-200 transform hover:scale-105 shadow-md"
                           >

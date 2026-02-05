@@ -348,10 +348,9 @@ router.get('/prepayment-students', async (req: AuthRequest, res: Response) => {
       notes: { contains: '[PREPAYMENT]' }
     };
     
+    // Filter by specific tariff if selected (RELATIVE doesn't exist in DB schema)
     if (tariff && tariff !== 'ALL') {
       where.tariff = tariff as string;
-    } else {
-      where.tariff = { not: 'RELATIVE' };
     }
 
     if (search) {
@@ -420,8 +419,8 @@ router.post('/send-prepayment-reminders', async (req: AuthRequest, res: Response
 
     const students = await prisma.student.findMany({
       where: { 
-        id: { in: studentIds },
-        tariff: { notIn: ['RELATIVE'] }
+        id: { in: studentIds }
+        // Note: RELATIVE tariff doesn't exist in DB schema, no need to filter
       },
       include: {
         user: {

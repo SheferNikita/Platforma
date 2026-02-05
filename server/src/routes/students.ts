@@ -837,6 +837,8 @@ router.post('/:id/send-credentials', async (req: AuthRequest, res: Response) => 
 
 router.get('/prepayment-students', async (req: AuthRequest, res: Response) => {
   try {
+    console.log('[prepayment-students] Request received, user:', req.user?.email);
+    
     const { 
       tariff, 
       minReminders, 
@@ -847,12 +849,13 @@ router.get('/prepayment-students', async (req: AuthRequest, res: Response) => {
     } = req.query;
 
     const where: any = {
-      notes: { contains: '[PREPAYMENT]' },
-      tariff: { notIn: ['RELATIVE'] }
+      notes: { contains: '[PREPAYMENT]' }
     };
-
+    
     if (tariff && tariff !== 'ALL') {
       where.tariff = tariff as string;
+    } else {
+      where.NOT = { tariff: 'RELATIVE' };
     }
 
     if (search) {

@@ -364,6 +364,79 @@ const EMAIL_TEMPLATES_HTML = {
   </table>
 </body>
 </html>`
+  },
+  prepayment_reminder: {
+    subject: 'Напоминание о доплате за курс',
+    body: `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Напоминание о доплате</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f3ed;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f3ed; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="background: linear-gradient(135deg, #d69e2e 0%, #ecc94b 100%); padding: 40px 40px 30px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 10px;">💳</div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Напоминание о доплате</h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Платформа обучения трезвости</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px;">
+              <p style="margin: 0 0 20px; color: #3d3527; font-size: 18px; line-height: 1.6;">Добрый день, дорогой участник курса!</p>
+              <p style="margin: 0 0 20px; color: #3d3527; font-size: 16px; line-height: 1.6;">Мы рады Вам и с нетерпением ждем начала курса, 9 февраля.</p>
+              <p style="margin: 0 0 30px; color: #3d3527; font-size: 16px; line-height: 1.6;">Мы получили Вашу предоплату 3000 руб. за формат участия <strong>{{tariffName}}</strong>.</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f3ed; border-radius: 12px; margin-bottom: 30px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #d4c9b0;"><span style="color: #3d3527; opacity: 0.7; font-size: 14px;">Формат участия:</span></td>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #d4c9b0; text-align: right;"><span style="color: #3d3527; font-size: 16px; font-weight: 600;">{{tariffName}}</span></td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 12px 0;"><span style="color: #3d3527; opacity: 0.7; font-size: 14px;">Остаток к оплате:</span></td>
+                        <td style="padding: 12px 0; text-align: right;"><span style="color: #d69e2e; font-size: 18px; font-weight: 600;">{{remainingAmount}} ₽</span></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 20px; color: #3d3527; font-size: 16px; line-height: 1.6;">Остаток за своё участие можно внести по этой кнопке:</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 30px;">
+                <tr>
+                  <td align="center">
+                    <a href="{{paymentLink}}" style="display: inline-block; background: linear-gradient(135deg, #d69e2e 0%, #ecc94b 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 12px; font-size: 18px; font-weight: 600; box-shadow: 0 4px 12px rgba(214, 158, 46, 0.3);">ВНЕСТИ ОСТАТОК</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0 0 20px; color: #3d3527; font-size: 16px; line-height: 1.6;">Просим Вас сделать это до 8 февраля включительно.</p>
+              <p style="margin: 0 0 30px; color: #3d3527; font-size: 14px; line-height: 1.6; font-style: italic;">*Если у вас есть обстоятельства, требующие переноса даты (если вы еще не обращались по этому поводу) просто напишите нам по кнопке ниже. Мы с пониманием отнесемся к вашей ситуации и постараемся найти удобное для вас решение.</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <a href="{{supportLink}}" style="display: inline-block; background: linear-gradient(135deg, #a67c52 0%, #c4a57b 100%); color: #ffffff; text-decoration: none; padding: 14px 30px; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(166, 124, 82, 0.3);">СЛУЖБА ЗАБОТЫ</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f5f3ed; padding: 24px 40px; text-align: center;">
+              <p style="margin: 0; color: #3d3527; opacity: 0.6; font-size: 14px;">Это письмо отправлено автоматически.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
   }
 };
 
@@ -400,6 +473,11 @@ export async function runEmailTemplatesMigration(): Promise<{ updated: string[],
       name: 'Сброс пароля',
       description: 'Отправляется при сбросе пароля пользователя',
       variables: ['name', 'email', 'newPassword', 'loginUrl']
+    },
+    prepayment_reminder: {
+      name: 'Напоминание о доплате',
+      description: 'Отправляется ученикам с предоплатой для напоминания о доплате',
+      variables: ['tariffName', 'remainingAmount', 'paymentLink', 'supportLink']
     }
   };
 

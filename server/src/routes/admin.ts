@@ -5,7 +5,7 @@ import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
 import { sendEmail } from '../services/email';
 import { emailTemplateService } from '../services/emailTemplateService';
-import { runTeamInviteTemplateMigration } from '../migrations/updateTeamInviteTemplate';
+import { runEmailTemplatesMigration } from '../migrations/updateEmailTemplates';
 
 const PLATFORM_URL = 'https://schkola-trezvosti.ru';
 
@@ -702,6 +702,201 @@ const DEFAULT_EMAIL_TEMPLATES = [
 </body>
 </html>`,
     isEnabled: true
+  },
+  {
+    code: 'module_access',
+    name: 'Доступ к модулю',
+    subject: 'Вам открыт доступ к модулю: {{moduleName}}',
+    description: 'Отправляется при выдаче доступа к модулю',
+    variables: ['name', 'moduleName', 'expiresAt', 'loginUrl'],
+    body: `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Доступ к модулю открыт</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f3ed;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f3ed; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 40px 30px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 10px;">🔓</div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Доступ к модулю открыт!</h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Платформа обучения трезвости</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px;">
+              <p style="margin: 0 0 20px; color: #3d3527; font-size: 18px; line-height: 1.6;">Здравствуйте, <strong>{{name}}</strong>!</p>
+              <p style="margin: 0 0 30px; color: #3d3527; font-size: 16px; line-height: 1.6;">Вам открыт доступ к новому учебному модулю. Можете приступать к обучению!</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f3ed; border-radius: 12px; margin-bottom: 30px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #d4c9b0;"><span style="color: #3d3527; opacity: 0.7; font-size: 14px;">Модуль:</span></td>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #d4c9b0; text-align: right;"><span style="color: #667eea; font-size: 16px; font-weight: 600;">{{moduleName}}</span></td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 12px 0;"><span style="color: #3d3527; opacity: 0.7; font-size: 14px;">Доступ до:</span></td>
+                        <td style="padding: 12px 0; text-align: right;"><span style="color: #3d3527; font-size: 16px; font-weight: 600;">{{expiresAt}}</span></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <a href="{{loginUrl}}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">Перейти к обучению</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f5f3ed; padding: 24px 40px; text-align: center;">
+              <p style="margin: 0; color: #3d3527; opacity: 0.6; font-size: 14px;">Это письмо отправлено автоматически.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+    isEnabled: true
+  },
+  {
+    code: 'mentor_reply',
+    name: 'Ответ наставника',
+    subject: 'Наставник ответил на вашу запись',
+    description: 'Отправляется когда наставник отвечает на дневник или заметку',
+    variables: ['name', 'mentorName', 'entryType', 'replyPreview', 'viewUrl'],
+    body: `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ответ наставника</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f3ed;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f3ed; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="background: linear-gradient(135deg, #ed8936 0%, #f6ad55 100%); padding: 40px 40px 30px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 10px;">💬</div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Наставник ответил!</h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Платформа обучения трезвости</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px;">
+              <p style="margin: 0 0 20px; color: #3d3527; font-size: 18px; line-height: 1.6;">Здравствуйте, <strong>{{name}}</strong>!</p>
+              <p style="margin: 0 0 30px; color: #3d3527; font-size: 16px; line-height: 1.6;"><strong>{{mentorName}}</strong> ответил на вашу запись в разделе «{{entryType}}».</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f3ed; border-radius: 12px; margin-bottom: 30px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <p style="margin: 0 0 12px; color: #3d3527; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Превью ответа</p>
+                    <p style="margin: 0; color: #3d3527; font-size: 16px; line-height: 1.6; font-style: italic;">«{{replyPreview}}»</p>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <a href="{{viewUrl}}" style="display: inline-block; background: linear-gradient(135deg, #ed8936 0%, #f6ad55 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(237, 137, 54, 0.3);">Прочитать ответ</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f5f3ed; padding: 24px 40px; text-align: center;">
+              <p style="margin: 0; color: #3d3527; opacity: 0.6; font-size: 14px;">Это письмо отправлено автоматически.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+    isEnabled: true
+  },
+  {
+    code: 'password_reset',
+    name: 'Сброс пароля',
+    subject: 'Ваш новый пароль',
+    description: 'Отправляется при сбросе пароля пользователя',
+    variables: ['name', 'email', 'newPassword', 'loginUrl'],
+    body: `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Сброс пароля</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f3ed;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f3ed; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+          <tr>
+            <td style="background: linear-gradient(135deg, #e53e3e 0%, #fc8181 100%); padding: 40px 40px 30px; text-align: center;">
+              <div style="font-size: 48px; margin-bottom: 10px;">🔑</div>
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Пароль сброшен</h1>
+              <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Платформа обучения трезвости</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px;">
+              <p style="margin: 0 0 20px; color: #3d3527; font-size: 18px; line-height: 1.6;">Здравствуйте, <strong>{{name}}</strong>!</p>
+              <p style="margin: 0 0 30px; color: #3d3527; font-size: 16px; line-height: 1.6;">Ваш пароль был сброшен. Ниже вы найдёте новые данные для входа.</p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f5f3ed; border-radius: 12px; margin-bottom: 30px;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <p style="margin: 0 0 16px; color: #3d3527; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Новые данные для входа</p>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #d4c9b0;"><span style="color: #3d3527; opacity: 0.7; font-size: 14px;">Логин (email):</span></td>
+                        <td style="padding: 12px 0; border-bottom: 1px solid #d4c9b0; text-align: right;"><span style="color: #3d3527; font-size: 16px; font-weight: 600;">{{email}}</span></td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 12px 0;"><span style="color: #3d3527; opacity: 0.7; font-size: 14px;">Новый пароль:</span></td>
+                        <td style="padding: 12px 0; text-align: right;"><span style="color: #e53e3e; font-size: 16px; font-weight: 600; font-family: monospace; background-color: #fff; padding: 4px 8px; border-radius: 4px;">{{newPassword}}</span></td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <a href="{{loginUrl}}" style="display: inline-block; background: linear-gradient(135deg, #a67c52 0%, #c4a57b 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(166, 124, 82, 0.3);">Войти в личный кабинет</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 30px 0 0; color: #3d3527; opacity: 0.7; font-size: 14px; line-height: 1.6; text-align: center;">Рекомендуем сменить пароль после входа в настройках профиля.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f5f3ed; padding: 24px 40px; text-align: center; border-top: 1px solid #d4c9b0;">
+              <p style="margin: 0; color: #3d3527; opacity: 0.6; font-size: 13px;">Если вы не запрашивали сброс пароля, свяжитесь с нами.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+    isEnabled: true
   }
 ];
 
@@ -717,7 +912,7 @@ async function ensureDefaultEmailTemplates() {
 router.get('/email-templates', settingsRoles, async (req: AuthRequest, res: Response) => {
   try {
     await ensureDefaultEmailTemplates();
-    await runTeamInviteTemplateMigration();
+    await runEmailTemplatesMigration();
     const templates = await prisma.emailTemplate.findMany({
       orderBy: { name: 'asc' }
     });

@@ -848,7 +848,7 @@ router.get('/prepayment-students', async (req: AuthRequest, res: Response) => {
 
     const where: any = {
       notes: { contains: '[PREPAYMENT]' },
-      tariff: { not: 'RELATIVE' }
+      tariff: { notIn: ['RELATIVE'] }
     };
 
     if (tariff && tariff !== 'ALL') {
@@ -872,7 +872,7 @@ router.get('/prepayment-students', async (req: AuthRequest, res: Response) => {
         }
       },
       orderBy: { user: { createdAt: 'desc' } }
-    });
+    }) as any[];
 
     let filtered = students;
 
@@ -922,14 +922,14 @@ router.post('/send-prepayment-reminders', async (req: AuthRequest, res: Response
     const students = await prisma.student.findMany({
       where: { 
         id: { in: studentIds },
-        tariff: { not: 'RELATIVE' }
+        tariff: { notIn: ['RELATIVE'] }
       },
       include: {
         user: {
           select: { id: true, email: true, name: true }
         }
       }
-    });
+    }) as any[];
 
     const supportSetting = await prisma.platformSetting.findFirst({
       where: { key: 'supportLink' }

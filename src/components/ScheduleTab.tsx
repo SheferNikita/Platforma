@@ -196,16 +196,6 @@ export function ScheduleTab() {
         ))}
       </div>
 
-      <div className="mt-10 p-8 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-[var(--button-lavender-dark)]/5 border-2 border-[var(--button-lavender-dark)]/30 rounded-2xl shadow-[0_4px_16px_rgba(122,132,171,0.08)]">
-        <h4 className="mb-3 text-[var(--button-lavender-dark)]">Хотите предложить мероприятие?</h4>
-        <p className="text-sm opacity-80 mb-5 leading-relaxed">
-          Если у вас есть идея для встречи, вебинара или мастер-класса — свяжитесь с нами!
-        </p>
-        <button className="px-5 py-2.5 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_6px_16px_rgba(139,149,188,0.4)] transition-all duration-300 text-sm transform hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group">
-          <span className="relative z-10">Отправить предложение</span>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-        </button>
-      </div>
     </div>
   );
 }

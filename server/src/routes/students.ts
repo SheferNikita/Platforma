@@ -48,6 +48,26 @@ function hasPrepaymentTag(notes: string | null | undefined): boolean {
   return notes?.includes('[PREPAYMENT]') || false;
 }
 
+const DEFAULT_REMAINING_AMOUNTS: Record<string, number> = {
+  BASIC: 5000,
+  WITH_MENTOR: 11000,
+  WITH_PSYCHOLOGIST: 13000,
+  INDIVIDUAL_PSYCHOLOGIST: 19000,
+  FAMILY: 2000
+};
+
+function getPrepaymentAmount(notes: string | null | undefined, tariff: string): number {
+  if (!notes) return DEFAULT_REMAINING_AMOUNTS[tariff] || 0;
+  const match = notes.match(/\[AMOUNT:(\d+)\]/);
+  if (match) return parseInt(match[1], 10);
+  return DEFAULT_REMAINING_AMOUNTS[tariff] || 0;
+}
+
+function updatePrepaymentAmount(notes: string | null | undefined, amount: number): string {
+  const cleanNotes = notes ? notes.replace(/\[AMOUNT:\d+\]/, '').trim() : '';
+  return cleanNotes ? `[AMOUNT:${amount}] ${cleanNotes}` : `[AMOUNT:${amount}]`;
+}
+
 const createStudentSchema = z.object({
   email: z.string().email('Некорректный email'),
   password: z.string().min(6, 'Пароль должен содержать минимум 6 символов'),
@@ -399,13 +419,41 @@ router.get('/prepayment-students', async (req: AuthRequest, res: Response) => {
       tariffName: TARIFF_NAMES[s.tariff || 'BASIC'] || s.tariff,
       reminderCount: getReminderCount(s.notes),
       createdAt: s.user.createdAt,
-      paymentLink: TARIFF_PAYMENT_LINKS[s.tariff || 'BASIC'] || ''
+      paymentLink: TARIFF_PAYMENT_LINKS[s.tariff || 'BASIC'] || '',
+      savedAmount: getPrepaymentAmount(s.notes, s.tariff || 'BASIC')
     }));
 
     res.json(result);
   } catch (error) {
     console.error('Get prepayment students error:', error);
     res.status(500).json({ error: 'Ошибка при получении списка учеников' });
+  }
+});
+
+router.patch('/prepayment-amount/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { amount } = req.body;
+
+    if (typeof amount !== 'number' || amount < 0) {
+      return res.status(400).json({ error: 'Некорректная сумма' });
+    }
+
+    const student = await prisma.student.findUnique({ where: { id } });
+    if (!student) {
+      return res.status(404).json({ error: 'Ученик не найден' });
+    }
+
+    const newNotes = updatePrepaymentAmount(student.notes, amount);
+    await prisma.student.update({
+      where: { id },
+      data: { notes: newNotes }
+    });
+
+    res.json({ success: true, savedAmount: amount });
+  } catch (error) {
+    console.error('Update prepayment amount error:', error);
+    res.status(500).json({ error: 'Ошибка при сохранении суммы' });
   }
 });
 

@@ -21,14 +21,15 @@ interface PrepaymentStudent {
   reminderCount: number;
   createdAt: string;
   paymentLink: string;
+  savedAmount: number;
 }
 
 const TARIFF_REMAINING_AMOUNTS: Record<string, string> = {
-  BASIC: '4000',
-  WITH_MENTOR: '14000',
-  WITH_PSYCHOLOGIST: '23000',
-  INDIVIDUAL_PSYCHOLOGIST: '42000',
-  FAMILY: '4000'
+  BASIC: '5000',
+  WITH_MENTOR: '11000',
+  WITH_PSYCHOLOGIST: '13000',
+  INDIVIDUAL_PSYCHOLOGIST: '19000',
+  FAMILY: '2000'
 };
 
 export function EmailAdmin() {
@@ -156,7 +157,7 @@ export function EmailAdmin() {
       
       const amounts: Record<string, string> = {};
       data.forEach(s => {
-        amounts[s.id] = TARIFF_REMAINING_AMOUNTS[s.tariff] || '0';
+        amounts[s.id] = s.savedAmount?.toString() || TARIFF_REMAINING_AMOUNTS[s.tariff] || '0';
       });
       setCustomAmounts(amounts);
     } catch (error: any) {
@@ -165,6 +166,19 @@ export function EmailAdmin() {
     } finally {
       setLoadingPrepayment(false);
     }
+  }
+
+  async function saveAmount(studentId: string, amount: string) {
+    const numAmount = parseInt(amount, 10) || 0;
+    try {
+      await api.patch(`/students/prepayment-amount/${studentId}`, { amount: numAmount });
+    } catch (error) {
+      console.error('Failed to save amount:', error);
+    }
+  }
+
+  function handleAmountChange(studentId: string, value: string) {
+    setCustomAmounts(prev => ({ ...prev, [studentId]: value }));
   }
 
   function toggleStudentSelection(id: string) {
@@ -451,7 +465,8 @@ export function EmailAdmin() {
                             <input
                               type="text"
                               value={customAmounts[student.id] || ''}
-                              onChange={(e) => setCustomAmounts(prev => ({ ...prev, [student.id]: e.target.value }))}
+                              onChange={(e) => handleAmountChange(student.id, e.target.value)}
+                              onBlur={(e) => saveAmount(student.id, e.target.value)}
                               className="w-24 px-2 py-1 border border-[#d4c9b0] rounded-lg text-sm focus:outline-none focus:border-[#a67c52]"
                             />
                             <span className="text-[#3d3527]/60 text-sm ml-1">₽</span>
@@ -507,7 +522,8 @@ export function EmailAdmin() {
                             <input
                               type="text"
                               value={customAmounts[student.id] || ''}
-                              onChange={(e) => setCustomAmounts(prev => ({ ...prev, [student.id]: e.target.value }))}
+                              onChange={(e) => handleAmountChange(student.id, e.target.value)}
+                              onBlur={(e) => saveAmount(student.id, e.target.value)}
                               className="w-24 px-2 py-1 border border-[#d4c9b0] rounded-lg text-sm focus:outline-none focus:border-[#a67c52]"
                             />
                             <span className="text-[#3d3527]/60 text-sm">₽</span>

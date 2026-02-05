@@ -87,7 +87,7 @@ export function CommunitiesTab() {
     return (
       <div className="text-center py-20">
         <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-        <p className="text-gray-500">Общины пока не добавлены</p>
+        <p className="text-gray-500">Информация будет появляться здесь по мере прохождения курса</p>
       </div>
     );
   }
@@ -128,7 +128,7 @@ export function CommunitiesTab() {
       {filteredCommunities.length === 0 ? (
         <div className="text-center py-12">
           <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-          <p className="text-gray-500">{activeTab === 'offline' ? 'Очных общин пока нет' : 'Онлайн общин пока нет'}</p>
+          <p className="text-gray-500">Информация будет появляться здесь по мере прохождения курса</p>
         </div>
       ) : (
       <div className="grid gap-6 md:grid-cols-2">

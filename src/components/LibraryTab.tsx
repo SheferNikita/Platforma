@@ -109,7 +109,7 @@ export function LibraryTab() {
     return (
       <div className="text-center py-20">
         <Book className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-        <p className="text-gray-500">Библиотека пока пуста</p>
+        <p className="text-gray-500">Информация будет появляться здесь по мере прохождения курса</p>
       </div>
     );
   }

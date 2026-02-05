@@ -96,8 +96,8 @@ export function ScheduleTab() {
   if (events.length === 0) {
     return (
       <div className="text-center py-20">
-        <Calendar className="w-16 h-16 mx-auto mb-4 text-[var(--button-lavender-dark)]/30" />
-        <p className="text-[#3d3527]/70 text-lg">Расписание появится чуть позже</p>
+        <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+        <p className="text-gray-500">Информация будет появляться здесь по мере прохождения курса</p>
       </div>
     );
   }

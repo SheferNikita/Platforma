@@ -26,7 +26,7 @@ interface PlatformSettings {
   logo: string | null;
   favicon: string | null;
   sosChatLink: string | null;
-  sosAudioFile: string | null;
+  sosText: string | null;
   visibility: VisibilitySettings;
 }
 
@@ -46,7 +46,7 @@ const defaultSettings: PlatformSettings = {
   logo: null,
   favicon: null,
   sosChatLink: null,
-  sosAudioFile: null,
+  sosText: null,
   visibility: {
     lessons: defaultVisibility,
     mentor_responses: defaultVisibility,
@@ -86,7 +86,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         logo: data.logo || null,
         favicon: data.favicon || null,
         sosChatLink: data.sosChatLink || null,
-        sosAudioFile: data.sosAudioFile || null,
+        sosText: data.sosText || null,
         visibility: {
           lessons: parseVisibility(data.visibility_lessons),
           mentor_responses: parseVisibility(data.visibility_mentor_responses),

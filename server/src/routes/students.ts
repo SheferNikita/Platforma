@@ -351,7 +351,7 @@ router.get('/prepayment-students', async (req: AuthRequest, res: Response) => {
     if (tariff && tariff !== 'ALL') {
       where.tariff = tariff as string;
     } else {
-      where.NOT = { tariff: 'RELATIVE' };
+      where.tariff = { not: 'RELATIVE' };
     }
 
     if (search) {

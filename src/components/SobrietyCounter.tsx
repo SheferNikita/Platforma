@@ -70,25 +70,28 @@ export function SobrietyCounter() {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       // Проверяем, что клик был вне контейнера счетчика И вне портала меню
-      if (
-        containerRef.current && 
-        !containerRef.current.contains(target) &&
-        menuRef.current &&
-        !menuRef.current.contains(target)
-      ) {
+      const isOutsideContainer = containerRef.current && !containerRef.current.contains(target);
+      const isOutsideMenu = !menuRef.current || !menuRef.current.contains(target);
+      
+      if (isOutsideContainer && isOutsideMenu) {
         setIsMenuOpen(false);
+        setIsEditingDate(false);
       }
     };
 
     if (isMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('touchstart', handleClickOutside as any);
+      // Добавляем слушатель с небольшой задержкой, чтобы избежать закрытия при открытии
+      const timeoutId = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside as any);
+      }, 10);
+      
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener('mousedown', handleClickOutside);
+        document.removeEventListener('touchstart', handleClickOutside as any);
+      };
     }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside as any);
-    };
   }, [isMenuOpen]);
 
   const calculateDays = (start: string) => {
@@ -200,8 +203,6 @@ export function SobrietyCounter() {
   return (
     <div 
       className="relative z-[100]"
-      onMouseEnter={() => setIsMenuOpen(true)}
-      onMouseLeave={() => setIsMenuOpen(false)}
       ref={containerRef}
     >
       <div 

@@ -14,6 +14,40 @@ router.use(requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIS
 
 const studentTariffs = ['BASIC', 'FAMILY', 'RELATIVE', 'WITH_MENTOR', 'WITH_PSYCHOLOGIST', 'INDIVIDUAL_PSYCHOLOGIST'];
 
+const TARIFF_NAMES: Record<string, string> = {
+  BASIC: 'Базовый',
+  FAMILY: 'Семейный',
+  RELATIVE: 'Родственник участника',
+  WITH_MENTOR: 'Идем с наставником',
+  WITH_PSYCHOLOGIST: 'Идем с психологом',
+  INDIVIDUAL_PSYCHOLOGIST: 'Индивидуально с психологом'
+};
+
+const TARIFF_PAYMENT_LINKS: Record<string, string> = {
+  BASIC: 'https://ioannklimenko.ru/bazoviy',
+  WITH_MENTOR: 'https://ioannklimenko.ru/idem_s_nastavnikom',
+  WITH_PSYCHOLOGIST: 'https://ioannklimenko.ru/idem_s_psihologom',
+  INDIVIDUAL_PSYCHOLOGIST: 'https://ioannklimenko.ru/individualno_s_psihologom',
+  FAMILY: 'https://ioannklimenko.ru/dlya_rodstvennikov'
+};
+
+function getReminderCount(notes: string | null | undefined): number {
+  if (!notes) return 0;
+  const match = notes.match(/\[REMINDER:(\d+)\]/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+function incrementReminderCount(notes: string | null | undefined): string {
+  const currentCount = getReminderCount(notes);
+  const newCount = currentCount + 1;
+  const cleanNotes = notes ? notes.replace(/\[REMINDER:\d+\]/, '').trim() : '';
+  return cleanNotes ? `[REMINDER:${newCount}] ${cleanNotes}` : `[REMINDER:${newCount}]`;
+}
+
+function hasPrepaymentTag(notes: string | null | undefined): boolean {
+  return notes?.includes('[PREPAYMENT]') || false;
+}
+
 const createStudentSchema = z.object({
   email: z.string().email('Некорректный email'),
   password: z.string().min(6, 'Пароль должен содержать минимум 6 символов'),
@@ -798,6 +832,165 @@ router.post('/:id/send-credentials', async (req: AuthRequest, res: Response) => 
   } catch (error) {
     console.error('Send credentials error:', error);
     res.status(500).json({ error: 'Ошибка при отправке данных' });
+  }
+});
+
+router.get('/prepayment-students', async (req: AuthRequest, res: Response) => {
+  try {
+    const { 
+      tariff, 
+      minReminders, 
+      maxReminders, 
+      dateFrom, 
+      dateTo,
+      search 
+    } = req.query;
+
+    const where: any = {
+      notes: { contains: '[PREPAYMENT]' },
+      tariff: { not: 'RELATIVE' }
+    };
+
+    if (tariff && tariff !== 'ALL') {
+      where.tariff = tariff as string;
+    }
+
+    if (search) {
+      where.user = {
+        OR: [
+          { name: { contains: search as string, mode: 'insensitive' } },
+          { email: { contains: search as string, mode: 'insensitive' } }
+        ]
+      };
+    }
+
+    const students = await prisma.student.findMany({
+      where,
+      include: {
+        user: {
+          select: { id: true, email: true, name: true, createdAt: true }
+        }
+      },
+      orderBy: { user: { createdAt: 'desc' } }
+    });
+
+    let filtered = students;
+
+    if (minReminders !== undefined) {
+      filtered = filtered.filter(s => getReminderCount(s.notes) >= parseInt(minReminders as string, 10));
+    }
+    if (maxReminders !== undefined) {
+      filtered = filtered.filter(s => getReminderCount(s.notes) <= parseInt(maxReminders as string, 10));
+    }
+    if (dateFrom) {
+      const from = new Date(dateFrom as string);
+      filtered = filtered.filter(s => s.user.createdAt >= from);
+    }
+    if (dateTo) {
+      const to = new Date(dateTo as string);
+      to.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(s => s.user.createdAt <= to);
+    }
+
+    const result = filtered.map(s => ({
+      id: s.id,
+      userId: s.user.id,
+      email: s.user.email,
+      name: s.user.name,
+      tariff: s.tariff,
+      tariffName: TARIFF_NAMES[s.tariff || 'BASIC'] || s.tariff,
+      reminderCount: getReminderCount(s.notes),
+      createdAt: s.user.createdAt,
+      paymentLink: TARIFF_PAYMENT_LINKS[s.tariff || 'BASIC'] || ''
+    }));
+
+    res.json(result);
+  } catch (error) {
+    console.error('Get prepayment students error:', error);
+    res.status(500).json({ error: 'Ошибка при получении списка учеников' });
+  }
+});
+
+router.post('/send-prepayment-reminders', async (req: AuthRequest, res: Response) => {
+  try {
+    const { studentIds, remainingAmounts } = req.body;
+
+    if (!studentIds?.length) {
+      return res.status(400).json({ error: 'Выберите учеников для отправки напоминаний' });
+    }
+
+    const students = await prisma.student.findMany({
+      where: { 
+        id: { in: studentIds },
+        tariff: { not: 'RELATIVE' }
+      },
+      include: {
+        user: {
+          select: { id: true, email: true, name: true }
+        }
+      }
+    });
+
+    const supportSetting = await prisma.platformSetting.findFirst({
+      where: { key: 'supportLink' }
+    });
+    const supportLink = supportSetting?.value || 'https://t.me/schkola_trezvosti';
+
+    let sent = 0;
+    const errors: string[] = [];
+
+    for (const student of students) {
+      try {
+        const tariff = student.tariff || 'BASIC';
+        const tariffName = TARIFF_NAMES[tariff] || tariff;
+        const paymentLink = TARIFF_PAYMENT_LINKS[tariff] || '';
+        const remainingAmount = remainingAmounts?.[student.id] || '0';
+
+        if (!paymentLink) {
+          errors.push(`${student.user.email}: нет ссылки для оплаты`);
+          continue;
+        }
+
+        const emailContent = await emailTemplateService.getRenderedTemplate('prepayment_reminder', {
+          tariffName,
+          remainingAmount,
+          paymentLink,
+          supportLink
+        });
+
+        if (!emailContent) {
+          errors.push(`${student.user.email}: шаблон не найден`);
+          continue;
+        }
+
+        await sendEmail(
+          student.user.email,
+          emailContent.subject,
+          emailContent.body
+        );
+
+        const newNotes = incrementReminderCount(student.notes);
+        await prisma.student.update({
+          where: { id: student.id },
+          data: { notes: newNotes }
+        });
+
+        sent++;
+      } catch (e) {
+        console.error(`Failed to send reminder to ${student.user.email}:`, e);
+        errors.push(`${student.user.email}: ошибка отправки`);
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      sent, 
+      total: students.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error('Send prepayment reminders error:', error);
+    res.status(500).json({ error: 'Ошибка при отправке напоминаний' });
   }
 });
 

@@ -16,6 +16,8 @@ export function SobrietyCounter() {
   const [showSetup, setShowSetup] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
+  const [isEditingDate, setIsEditingDate] = useState(false);
+  const [customDate, setCustomDate] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -145,6 +147,27 @@ export function SobrietyCounter() {
     }
   };
 
+  const handleSetCustomDate = async () => {
+    if (!userId || !customDate) return;
+    const today = new Date().toISOString().split('T')[0];
+    if (customDate > today) {
+      alert('Дата не может быть в будущем');
+      return;
+    }
+    setStartDate(customDate);
+    calculateDays(customDate);
+    // Preserve existing lastCheckIn or keep null if not set
+    const currentCheckIn = lastCheckIn;
+    localStorage.setItem(getStorageKey(userId), JSON.stringify({
+      startDate: customDate,
+      lastCheckIn: currentCheckIn
+    }));
+    setIsEditingDate(false);
+    setIsMenuOpen(false);
+    setShowSetup(false);
+    await saveToServer(customDate);
+  };
+
   const toggleMenu = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsMenuOpen(!isMenuOpen);
@@ -222,18 +245,56 @@ export function SobrietyCounter() {
       {isMenuOpen && createPortal(
         <div 
           ref={menuRef}
-          className="fixed bg-gradient-to-br from-[#fdfbf7]/98 via-[#e3ebf1]/50 to-white/85 backdrop-blur-lg rounded-xl border-2 border-[#b5cad9]/40 p-4 shadow-[0_12px_32px_var(--ethereal-shadow),0_4px_16px_var(--book-shadow)] min-w-[220px] z-[9999] animate-fade-in" 
+          className="fixed bg-gradient-to-br from-[#fdfbf7]/98 via-[#e3ebf1]/50 to-white/85 backdrop-blur-lg rounded-xl border-2 border-[#b5cad9]/40 p-4 shadow-[0_12px_32px_var(--ethereal-shadow),0_4px_16px_var(--book-shadow)] min-w-[250px] z-[9999] animate-fade-in" 
           style={{ top: `${menuPosition.top + 8}px`, right: `${menuPosition.right}px` }}
         >
           <div className="text-[10px] opacity-60 mb-3 tracking-wide">
             Начало: {startDate && new Date(startDate).toLocaleDateString('ru-RU')}
           </div>
-          <button
-            onClick={handleReset}
-            className="w-full px-4 py-2 text-xs opacity-70 hover:opacity-100 hover:bg-[var(--button-lavender-dark)]/10 rounded-lg transition-all duration-200 hover:text-[var(--button-lavender-dark)] border border-transparent hover:border-[var(--button-lavender-dark)]/20"
-          >
-            Сбросить счетчик
-          </button>
+          
+          {isEditingDate ? (
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] opacity-60 block mb-1">Дата начала трезвости:</label>
+                <input
+                  type="date"
+                  value={customDate}
+                  onChange={(e) => setCustomDate(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 text-xs border-2 border-[var(--button-lavender)]/40 rounded-lg focus:outline-none focus:border-[var(--button-lavender-dark)] bg-white/80"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSetCustomDate}
+                  className="flex-1 px-3 py-2 text-xs bg-gradient-to-r from-[#6b8e6f] to-[#7a9d7e] text-white rounded-lg hover:shadow-md transition-all duration-200"
+                >
+                  Сохранить
+                </button>
+                <button
+                  onClick={() => { setIsEditingDate(false); setCustomDate(''); }}
+                  className="px-3 py-2 text-xs opacity-70 hover:opacity-100 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <button
+                onClick={() => { setIsEditingDate(true); setCustomDate(startDate || ''); }}
+                className="w-full px-4 py-2 text-xs opacity-70 hover:opacity-100 hover:bg-[var(--button-lavender-dark)]/10 rounded-lg transition-all duration-200 hover:text-[var(--button-lavender-dark)] border border-transparent hover:border-[var(--button-lavender-dark)]/20 text-left"
+              >
+                Изменить дату начала
+              </button>
+              <button
+                onClick={handleReset}
+                className="w-full px-4 py-2 text-xs opacity-70 hover:opacity-100 hover:bg-[var(--button-lavender-dark)]/10 rounded-lg transition-all duration-200 hover:text-[var(--button-lavender-dark)] border border-transparent hover:border-[var(--button-lavender-dark)]/20 text-left"
+              >
+                Сбросить счетчик
+              </button>
+            </div>
+          )}
         </div>,
         document.body
       )}

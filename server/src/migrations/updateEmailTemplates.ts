@@ -380,7 +380,7 @@ const EMAIL_TEMPLATES_HTML = {
       <td align="center">
         <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
           <tr>
-            <td style="background: linear-gradient(135deg, #d69e2e 0%, #ecc94b 100%); padding: 40px 40px 30px; text-align: center;">
+            <td style="background: linear-gradient(135deg, #a67c52 0%, #c4a57b 100%); padding: 40px 40px 30px; text-align: center;">
               <div style="font-size: 48px; margin-bottom: 10px;">💳</div>
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">Напоминание о доплате</h1>
               <p style="margin: 10px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Платформа обучения трезвости</p>
@@ -401,7 +401,7 @@ const EMAIL_TEMPLATES_HTML = {
                       </tr>
                       <tr>
                         <td style="padding: 12px 0;"><span style="color: #3d3527; opacity: 0.7; font-size: 14px;">Остаток к оплате:</span></td>
-                        <td style="padding: 12px 0; text-align: right;"><span style="color: #d69e2e; font-size: 18px; font-weight: 600;">{{remainingAmount}} ₽</span></td>
+                        <td style="padding: 12px 0; text-align: right;"><span style="color: #a67c52; font-size: 18px; font-weight: 600;">{{remainingAmount}} ₽</span></td>
                       </tr>
                     </table>
                   </td>
@@ -411,7 +411,7 @@ const EMAIL_TEMPLATES_HTML = {
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 30px;">
                 <tr>
                   <td align="center">
-                    <a href="{{paymentLink}}" style="display: inline-block; background: linear-gradient(135deg, #d69e2e 0%, #ecc94b 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 12px; font-size: 18px; font-weight: 600; box-shadow: 0 4px 12px rgba(214, 158, 46, 0.3);">ВНЕСТИ ОСТАТОК</a>
+                    <a href="{{paymentLink}}" style="display: inline-block; background: linear-gradient(135deg, #a67c52 0%, #c4a57b 100%); color: #ffffff; text-decoration: none; padding: 18px 50px; border-radius: 12px; font-size: 18px; font-weight: 600; box-shadow: 0 4px 12px rgba(166, 124, 82, 0.3);">ВНЕСТИ ОСТАТОК</a>
                   </td>
                 </tr>
               </table>

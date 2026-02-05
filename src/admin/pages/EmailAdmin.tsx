@@ -159,9 +159,9 @@ export function EmailAdmin() {
         amounts[s.id] = TARIFF_REMAINING_AMOUNTS[s.tariff] || '0';
       });
       setCustomAmounts(amounts);
-    } catch (error) {
-      console.error('Failed to load prepayment students:', error);
-      toast.error('Ошибка загрузки списка');
+    } catch (error: any) {
+      console.error('Failed to load prepayment students:', error?.message || error);
+      toast.error(error?.message || 'Ошибка загрузки списка');
     } finally {
       setLoadingPrepayment(false);
     }

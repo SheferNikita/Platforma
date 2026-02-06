@@ -3,7 +3,6 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { api } from '../../lib/api';
 import {
-  LayoutDashboard,
   BookOpen,
   Users,
   CreditCard,
@@ -37,7 +36,6 @@ const navItems: {
   showDistributionBadge?: boolean;
   roles?: UserRole[];
 }[] = [
-  { path: '/admin', label: 'Дашборд', icon: LayoutDashboard, end: true, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { path: '/admin/lessons', label: 'Уроки', icon: BookOpen, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR'] },
   { path: '/admin/library', label: 'Библиотека', icon: Library, roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] },
   { path: '/admin/schedule', label: 'Расписание', icon: Calendar, roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] },

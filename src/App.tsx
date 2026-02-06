@@ -20,7 +20,6 @@ import { AuthProvider, useAuth } from './lib/auth';
 import { SettingsProvider, useSettings } from './lib/settings';
 import { AdminLayout } from './admin/components/AdminLayout';
 import { AdminLogin } from './admin/pages/AdminLogin';
-import { Dashboard } from './admin/pages/Dashboard';
 import { LessonsAdmin } from './admin/pages/LessonsAdmin';
 import { LibraryAdmin } from './admin/pages/LibraryAdmin';
 import { ScheduleAdmin } from './admin/pages/ScheduleAdmin';
@@ -133,7 +132,7 @@ export default function App() {
               </ProtectedAdminRoute>
             }
           >
-            <Route index element={<Dashboard />} />
+            <Route index element={<Navigate to="/admin/lessons" replace />} />
             <Route path="lessons" element={<LessonsAdmin />} />
             <Route path="library" element={<LibraryAdmin />} />
             <Route path="schedule" element={<ScheduleAdmin />} />

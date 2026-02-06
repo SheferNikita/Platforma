@@ -4,6 +4,9 @@ import { Plus, Edit, Trash2, BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, Arro
 import { toast } from 'sonner';
 import { RichTextEditor } from '../../components/RichTextEditor';
 import { KinescopePlayer } from '../../components/KinescopePlayer';
+import { useAuth } from '../../lib/auth';
+
+const LESSON_EDIT_ROLES = ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'];
 
 interface LessonVideo {
   id?: string;
@@ -51,6 +54,8 @@ interface Module {
 }
 
 export function LessonsAdmin() {
+  const { user } = useAuth();
+  const canEdit = user ? LESSON_EDIT_ROLES.includes(user.role) : false;
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedModule, setExpandedModule] = useState<string | null>(null);
@@ -241,6 +246,7 @@ export function LessonsAdmin() {
           <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Уроки и модули</h1>
           <p className="text-[#3d3527]/60 mt-1 text-sm md:text-base">Управление содержанием курса</p>
         </div>
+        {canEdit && (
         <div className="flex flex-col sm:flex-row gap-2">
           {reorderingModules ? (
             <>
@@ -275,6 +281,7 @@ export function LessonsAdmin() {
             </>
           )}
         </div>
+        )}
       </div>
 
       <div className="space-y-3 md:space-y-4">
@@ -315,30 +322,38 @@ export function LessonsAdmin() {
                 )}
               </div>
               <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-                <button
-                  onClick={(e) => { e.stopPropagation(); togglePublish('module', module.id, module.isPublished); }}
-                  className="p-1.5 md:p-2 hover:bg-[#f5f3ed] rounded-lg"
-                >
-                  {module.isPublished ? <Eye className="w-4 h-4 md:w-5 md:h-5 text-green-600" /> : <EyeOff className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />}
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setEditingModule(module); setShowModuleModal(true); }}
-                  className="p-1.5 md:p-2 hover:bg-[#f5f3ed] rounded-lg"
-                >
-                  <Edit className="w-4 h-4 md:w-5 md:h-5 text-[#3d3527]" />
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); deleteModule(module.id); }}
-                  className="p-1.5 md:p-2 hover:bg-red-50 rounded-lg"
-                >
-                  <Trash2 className="w-4 h-4 md:w-5 md:h-5 text-red-500" />
-                </button>
+                {canEdit && (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); togglePublish('module', module.id, module.isPublished); }}
+                      className="p-1.5 md:p-2 hover:bg-[#f5f3ed] rounded-lg"
+                    >
+                      {module.isPublished ? <Eye className="w-4 h-4 md:w-5 md:h-5 text-green-600" /> : <EyeOff className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />}
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditingModule(module); setShowModuleModal(true); }}
+                      className="p-1.5 md:p-2 hover:bg-[#f5f3ed] rounded-lg"
+                    >
+                      <Edit className="w-4 h-4 md:w-5 md:h-5 text-[#3d3527]" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteModule(module.id); }}
+                      className="p-1.5 md:p-2 hover:bg-red-50 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4 md:w-5 md:h-5 text-red-500" />
+                    </button>
+                  </>
+                )}
+                {!canEdit && (
+                  module.isPublished ? <Eye className="w-4 h-4 md:w-5 md:h-5 text-green-600" /> : <EyeOff className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+                )}
                 {!reorderingModules && (expandedModule === module.id ? <ChevronUp className="w-4 h-4 md:w-5 md:h-5" /> : <ChevronDown className="w-4 h-4 md:w-5 md:h-5" />)}
               </div>
             </div>
 
             {expandedModule === module.id && (
               <div className="border-t border-[#d4c9b0]/30 p-3 md:p-4 space-y-2 md:space-y-3">
+                {canEdit && (
                 <div className="flex flex-col sm:flex-row justify-end mb-2 gap-2">
                   {reorderingLessons === module.id ? (
                     <>
@@ -365,6 +380,7 @@ export function LessonsAdmin() {
                     </button>
                   )}
                 </div>
+                )}
                 {module.lessons.map((lesson, lessonIndex) => (
                   <div key={lesson.id} className="flex items-center justify-between p-2 md:p-3 bg-[#f5f3ed]/50 rounded-lg md:rounded-xl">
                     <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
@@ -400,19 +416,29 @@ export function LessonsAdmin() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => togglePublish('lesson', lesson.id, lesson.isPublished)}
-                        className="p-1.5 md:p-2 hover:bg-white rounded-lg"
-                        title={lesson.publishAt && new Date(lesson.publishAt) > new Date() ? 'Запланирована публикация' : (lesson.isPublished ? 'Опубликован' : 'Скрыт')}
-                      >
-                        {lesson.publishAt && new Date(lesson.publishAt) > new Date() ? (
-                          <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-500" />
-                        ) : lesson.isPublished ? (
-                          <Eye className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-600" />
-                        ) : (
-                          <EyeOff className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />
-                        )}
-                      </button>
+                      {canEdit ? (
+                        <button
+                          onClick={() => togglePublish('lesson', lesson.id, lesson.isPublished)}
+                          className="p-1.5 md:p-2 hover:bg-white rounded-lg"
+                          title={lesson.publishAt && new Date(lesson.publishAt) > new Date() ? 'Запланирована публикация' : (lesson.isPublished ? 'Опубликован' : 'Скрыт')}
+                        >
+                          {lesson.publishAt && new Date(lesson.publishAt) > new Date() ? (
+                            <Clock className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-500" />
+                          ) : lesson.isPublished ? (
+                            <Eye className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-600" />
+                          ) : (
+                            <EyeOff className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />
+                          )}
+                        </button>
+                      ) : (
+                        <span className="p-1.5 md:p-2">
+                          {lesson.isPublished ? (
+                            <Eye className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-600" />
+                          ) : (
+                            <EyeOff className="w-3.5 h-3.5 md:w-4 md:h-4 text-gray-400" />
+                          )}
+                        </span>
+                      )}
                       <button
                         onClick={() => {
                           const lessonUrl = `${window.location.origin}/lesson/${lesson.id}`;
@@ -424,27 +450,33 @@ export function LessonsAdmin() {
                       >
                         <Link2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#3d3527]" />
                       </button>
-                      <button
-                        onClick={() => { setEditingLesson({ lesson, moduleId: module.id }); setShowLessonModal(true); }}
-                        className="p-1.5 md:p-2 hover:bg-white rounded-lg"
-                      >
-                        <Edit className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#3d3527]" />
-                      </button>
-                      <button
-                        onClick={() => deleteLesson(lesson.id)}
-                        className="p-1.5 md:p-2 hover:bg-red-50 rounded-lg"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-red-500" />
-                      </button>
+                      {canEdit && (
+                        <>
+                          <button
+                            onClick={() => { setEditingLesson({ lesson, moduleId: module.id }); setShowLessonModal(true); }}
+                            className="p-1.5 md:p-2 hover:bg-white rounded-lg"
+                          >
+                            <Edit className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#3d3527]" />
+                          </button>
+                          <button
+                            onClick={() => deleteLesson(lesson.id)}
+                            className="p-1.5 md:p-2 hover:bg-red-50 rounded-lg"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-red-500" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
+                {canEdit && (
                 <button
                   onClick={() => { setEditingLesson({ lesson: null, moduleId: module.id }); setShowLessonModal(true); }}
                   className="flex items-center gap-2 px-3 md:px-4 py-2 text-[#a67c52] hover:bg-[#a67c52]/10 rounded-lg md:rounded-xl w-full justify-center text-sm md:text-base"
                 >
                   <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /> Добавить урок
                 </button>
+                )}
               </div>
             )}
           </div>

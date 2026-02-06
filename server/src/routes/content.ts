@@ -98,7 +98,7 @@ router.get('/modules', contentRoles, async (req: AuthRequest, res: Response) => 
   }
 });
 
-router.post('/modules', contentRoles, async (req: AuthRequest, res: Response) => {
+router.post('/modules', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const data = moduleSchema.parse(req.body);
     const module = await prisma.module.create({ data });
@@ -119,7 +119,7 @@ router.post('/modules', contentRoles, async (req: AuthRequest, res: Response) =>
   }
 });
 
-router.put('/modules/:id', contentRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.put('/modules/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     const data = moduleSchema.partial().parse(req.body);
@@ -141,7 +141,7 @@ router.put('/modules/:id', contentRoles, async (req: AuthRequest & Request<IdPar
   }
 });
 
-router.delete('/modules/:id', contentRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.delete('/modules/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     const oldModule = await prisma.module.findUnique({ where: { id } });
@@ -197,7 +197,7 @@ router.get('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdPar
   }
 });
 
-router.post('/lessons', contentRoles, async (req: AuthRequest, res: Response) => {
+router.post('/lessons', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const data = lessonSchema.parse(req.body);
     const { videos, publishAt, ...lessonData } = data;
@@ -236,7 +236,7 @@ router.post('/lessons', contentRoles, async (req: AuthRequest, res: Response) =>
   }
 });
 
-router.put('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.put('/lessons/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     const data = lessonSchema.partial().parse(req.body);
@@ -286,7 +286,7 @@ router.put('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdPar
   }
 });
 
-router.delete('/lessons/:id', contentRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.delete('/lessons/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     
@@ -1054,7 +1054,7 @@ router.get('/students/search', groupRoles, async (req: AuthRequest, res: Respons
   }
 });
 
-router.post('/modules/reorder', adminOnly, async (req: AuthRequest, res: Response) => {
+router.post('/modules/reorder', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const { id, direction } = req.body;
     const currentModule = await prisma.module.findUnique({ where: { id } });
@@ -1081,7 +1081,7 @@ router.post('/modules/reorder', adminOnly, async (req: AuthRequest, res: Respons
   }
 });
 
-router.post('/lessons/reorder', adminOnly, async (req: AuthRequest, res: Response) => {
+router.post('/lessons/reorder', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const { id, direction, moduleId } = req.body;
     const currentLesson = await prisma.lesson.findUnique({ where: { id } });
@@ -1165,7 +1165,7 @@ router.post('/contacts/reorder', adminOnly, async (req: AuthRequest, res: Respon
   }
 });
 
-router.post('/modules/reorder-batch', adminOnly, async (req: AuthRequest, res: Response) => {
+router.post('/modules/reorder-batch', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const { items } = req.body;
     await prisma.$transaction(
@@ -1180,7 +1180,7 @@ router.post('/modules/reorder-batch', adminOnly, async (req: AuthRequest, res: R
   }
 });
 
-router.post('/lessons/reorder-batch', adminOnly, async (req: AuthRequest, res: Response) => {
+router.post('/lessons/reorder-batch', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const { items } = req.body;
     await prisma.$transaction(

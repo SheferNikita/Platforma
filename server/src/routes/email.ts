@@ -9,6 +9,22 @@ const router = Router();
 router.use(authenticate);
 router.use(requireRole('SUPER_ADMIN', 'ADMIN'));
 
+async function replaceEmailVariables(body: string, recipientEmail: string): Promise<string> {
+  if (!body.includes('{{')) return body;
+
+  const user = await prisma.user.findUnique({
+    where: { email: recipientEmail },
+    select: { name: true, email: true, student: { select: { city: true, tariff: true } } }
+  });
+
+  let result = body;
+  result = result.replace(/\{\{name\}\}/g, user?.name || '');
+  result = result.replace(/\{\{email\}\}/g, recipientEmail);
+  result = result.replace(/\{\{city\}\}/g, user?.student?.city || '');
+  result = result.replace(/\{\{tariff\}\}/g, user?.student?.tariff || '');
+  return result;
+}
+
 const templateSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
   subject: z.string().min(1, 'Тема обязательна'),
@@ -205,27 +221,34 @@ router.post('/send', async (req: AuthRequest, res: Response) => {
 
     const recipients = Array.isArray(to) ? to : [to];
 
+    let sentCount = 0;
+    let failedCount = 0;
+
     for (const recipient of recipients) {
+      const personalizedBody = await replaceEmailVariables(body, recipient);
+
       await prisma.emailJob.create({
         data: {
           to: recipient,
           subject,
-          body,
+          body: personalizedBody,
           status: 'pending'
         }
       });
 
       try {
-        await sendEmail(recipient, subject, body);
+        await sendEmail(recipient, subject, personalizedBody);
         await prisma.emailJob.updateMany({
           where: { to: recipient, subject, status: 'pending' },
           data: { status: 'sent', sentAt: new Date() }
         });
+        sentCount++;
       } catch (emailError) {
         await prisma.emailJob.updateMany({
           where: { to: recipient, subject, status: 'pending' },
           data: { status: 'failed', error: String(emailError) }
         });
+        failedCount++;
       }
     }
 
@@ -234,11 +257,18 @@ router.post('/send', async (req: AuthRequest, res: Response) => {
         userId: req.user!.id,
         action: 'SEND_EMAIL',
         entity: 'EMAIL',
-        details: { recipients: recipients.length, subject }
+        details: {
+          recipients: recipients.length,
+          sent: sentCount,
+          failed: failedCount,
+          subject,
+          filters: { 'Тип': 'Ручная отправка', 'Получатели': recipients.join(', ') },
+          rawFilters: {}
+        }
       }
     });
 
-    res.json({ message: `Email отправлен ${recipients.length} получателям` });
+    res.json({ message: `Email отправлен ${sentCount} из ${recipients.length} получателям` });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.issues[0]?.message || 'Ошибка валидации' });
@@ -258,17 +288,19 @@ router.post('/send-to-all', async (req: AuthRequest, res: Response) => {
     let failedCount = 0;
 
     for (const email of emails) {
+      const personalizedBody = await replaceEmailVariables(body, email);
+
       await prisma.emailJob.create({
         data: {
           to: email,
           subject,
-          body,
+          body: personalizedBody,
           status: 'pending'
         }
       });
 
       try {
-        await sendEmail(email, subject, body);
+        await sendEmail(email, subject, personalizedBody);
         await prisma.emailJob.updateMany({
           where: { to: email, subject, status: 'pending' },
           data: { status: 'sent', sentAt: new Date() }
@@ -334,9 +366,10 @@ router.post('/send-test', async (req: AuthRequest, res: Response) => {
     }
 
     const adminEmail = req.user!.email;
+    const personalizedBody = await replaceEmailVariables(body, adminEmail);
 
     try {
-      await sendEmail(adminEmail, `[ТЕСТ] ${subject}`, body);
+      await sendEmail(adminEmail, `[ТЕСТ] ${subject}`, personalizedBody);
       res.json({ message: `Тестовое письмо отправлено на ${adminEmail}` });
     } catch (emailError) {
       res.status(500).json({ error: `Ошибка отправки: ${String(emailError)}` });
@@ -352,20 +385,22 @@ router.get('/mailing-history', async (req: AuthRequest, res: Response) => {
     const { page = '1', limit = '20' } = req.query;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
+    const historyWhere = { action: { in: ['SEND_BULK_EMAIL', 'SEND_EMAIL'] }, entity: 'EMAIL' };
     const [logs, total] = await Promise.all([
       prisma.adminLog.findMany({
-        where: { action: 'SEND_BULK_EMAIL', entity: 'EMAIL' },
+        where: historyWhere,
         orderBy: { createdAt: 'desc' },
         include: { user: { select: { name: true, email: true } } },
         skip,
         take: parseInt(limit as string)
       }),
-      prisma.adminLog.count({ where: { action: 'SEND_BULK_EMAIL', entity: 'EMAIL' } })
+      prisma.adminLog.count({ where: historyWhere })
     ]);
 
     res.json({
       history: logs.map(log => ({
         id: log.id,
+        type: log.action === 'SEND_EMAIL' ? 'manual' : 'bulk',
         subject: (log.details as any)?.subject || '',
         recipients: (log.details as any)?.recipients || 0,
         sent: (log.details as any)?.sent || (log.details as any)?.recipients || 0,

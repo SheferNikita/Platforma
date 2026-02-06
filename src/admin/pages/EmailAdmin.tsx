@@ -26,6 +26,7 @@ interface PrepaymentStudent {
 
 interface MailingHistoryItem {
   id: string;
+  type?: 'manual' | 'bulk';
   subject: string;
   recipients: number;
   sent: number;
@@ -743,7 +744,12 @@ export function EmailAdmin() {
                 <div key={item.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-4 md:p-5">
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-[#3d3527] truncate">{item.subject}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-[#3d3527] truncate">{item.subject}</h3>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-medium flex-shrink-0 ${item.type === 'manual' ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {item.type === 'manual' ? 'Ручная' : 'Рассылка'}
+                        </span>
+                      </div>
                       <div className="flex flex-wrap items-center gap-2 mt-2">
                         <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs">
                           <Send className="w-3 h-3" />

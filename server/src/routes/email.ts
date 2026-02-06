@@ -159,7 +159,7 @@ router.post('/templates', async (req: AuthRequest, res: Response) => {
     res.status(201).json(template);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0]?.message || 'Ошибка валидации' });
     }
     console.error('Create template error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -177,7 +177,7 @@ router.put('/templates/:id', async (req: AuthRequest, res: Response) => {
     res.json(template);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0]?.message || 'Ошибка валидации' });
     }
     console.error('Update template error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -197,7 +197,11 @@ router.delete('/templates/:id', async (req: AuthRequest, res: Response) => {
 
 router.post('/send', async (req: AuthRequest, res: Response) => {
   try {
-    const { to, subject, body } = sendEmailSchema.parse(req.body);
+    let rawTo = req.body.to;
+    if (typeof rawTo === 'string' && rawTo.includes(',')) {
+      rawTo = rawTo.split(',').map((e: string) => e.trim()).filter((e: string) => e);
+    }
+    const { to, subject, body } = sendEmailSchema.parse({ ...req.body, to: rawTo });
 
     const recipients = Array.isArray(to) ? to : [to];
 
@@ -237,7 +241,7 @@ router.post('/send', async (req: AuthRequest, res: Response) => {
     res.json({ message: `Email отправлен ${recipients.length} получателям` });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors[0].message });
+      return res.status(400).json({ error: error.issues[0]?.message || 'Ошибка валидации' });
     }
     console.error('Send email error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

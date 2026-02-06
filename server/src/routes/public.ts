@@ -45,6 +45,22 @@ async function getStudentFromToken(req: Request): Promise<{ studentId: string } 
   }
 }
 
+async function getUserRoleFromToken(req: Request): Promise<string | null> {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '') || req.cookies?.token;
+    if (!token) return null;
+    const decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
+    return decoded.role || null;
+  } catch {
+    return null;
+  }
+}
+
+function isAdminRole(role: string | null): boolean {
+  return !!role && role !== 'STUDENT';
+}
+
 router.get('/modules', async (req: Request, res: Response) => {
   try {
     const student = await getStudentFromToken(req);
@@ -78,7 +94,18 @@ router.get('/modules', async (req: Request, res: Response) => {
       orderBy: { order: 'asc' }
     });
 
+    const userRole = await getUserRoleFromToken(req);
+
     if (!student) {
+      if (isAdminRole(userRole)) {
+        const result = modules.map(m => ({
+          ...m,
+          hasAccess: true,
+          accessExpiresAt: null,
+          accessFrom: null
+        }));
+        return res.json(result);
+      }
       const result = modules.map(m => ({
         ...m,
         hasAccess: false,
@@ -132,6 +159,15 @@ router.get('/lessons/:id', async (req: Request, res: Response) => {
     const student = await getStudentFromToken(req);
     
     if (!student) {
+      const userRole = await getUserRoleFromToken(req);
+      if (isAdminRole(userRole)) {
+        return res.json({ 
+          ...lesson, 
+          hasAccess: true, 
+          accessFrom: null,
+          accessExpiresAt: null 
+        });
+      }
       return res.json({ ...lesson, hasAccess: false });
     }
 

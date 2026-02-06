@@ -8,7 +8,7 @@ const router = Router();
 router.use(authenticate);
 router.use(requireRole('SUPER_ADMIN', 'ADMIN'));
 
-const studentTariffs = ['BASIC', 'FAMILY', 'WITH_MENTOR', 'WITH_PSYCHOLOGIST', 'INDIVIDUAL_PSYCHOLOGIST'] as const;
+const studentTariffs = ['BASIC', 'FAMILY', 'RELATIVE', 'WITH_MENTOR', 'WITH_PSYCHOLOGIST', 'INDIVIDUAL_PSYCHOLOGIST'] as const;
 
 const productSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),

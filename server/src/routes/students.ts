@@ -350,6 +350,118 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.get('/export', async (req: AuthRequest, res: Response) => {
+  try {
+    const allowedRoles = ['SUPER_ADMIN', 'ADMIN', 'CURATOR'];
+    if (!allowedRoles.includes(req.user!.role)) {
+      return res.status(403).json({ error: 'Нет доступа к экспорту' });
+    }
+
+    const students = await prisma.user.findMany({
+      where: { role: 'STUDENT' },
+      select: {
+        email: true,
+        name: true,
+        isActive: true,
+        createdAt: true,
+        student: {
+          select: {
+            phone: true,
+            tariff: true,
+            city: true,
+            gender: true,
+            age: true,
+            addictionType: true,
+            sobrietyDate: true,
+            surveyCompleted: true,
+            isClergy: true,
+            notes: true,
+            miniGroups: {
+              include: { miniGroup: { select: { title: true } } }
+            },
+            assignedPsychologist: {
+              select: { name: true }
+            },
+            enrollments: {
+              include: { product: { select: { name: true } } }
+            }
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const tariffLabels: Record<string, string> = {
+      BASIC: 'Базовый',
+      FAMILY: 'Семейный',
+      RELATIVE: 'Родственник участника',
+      WITH_MENTOR: 'Идем с наставником',
+      WITH_PSYCHOLOGIST: 'Идем с психологом',
+      INDIVIDUAL_PSYCHOLOGIST: 'Индивидуально с психологом'
+    };
+
+    const genderLabels: Record<string, string> = {
+      male: 'Мужской',
+      female: 'Женский'
+    };
+
+    const escCsv = (val: string) => {
+      if (!val) return '';
+      if (val.includes('"') || val.includes(';') || val.includes('\n')) {
+        return '"' + val.replace(/"/g, '""') + '"';
+      }
+      return val;
+    };
+
+    const headers = [
+      'Имя', 'Email', 'Телефон', 'Тариф', 'Город', 'Пол', 'Возраст',
+      'Тип зависимости', 'Дата трезвости', 'Анкета заполнена', 'Духовенство',
+      'Активен', 'Дата регистрации', 'Мини-группы', 'Психолог', 'Продукты',
+      'Предоплата', 'Заметки'
+    ];
+
+    const BOM = '\uFEFF';
+    let csv = BOM + headers.join(';') + '\n';
+
+    for (const s of students) {
+      const st = s.student;
+      const hasPrepayment = st?.notes?.includes('[PREPAYMENT]') ? 'Да' : 'Нет';
+      const cleanNotes = (st?.notes || '').replace('[PREPAYMENT]', '').trim();
+      const miniGroupNames = st?.miniGroups?.map(mg => mg.miniGroup.title).join(', ') || '';
+      const productNames = st?.enrollments?.map(e => e.product.name).join(', ') || '';
+
+      const row = [
+        escCsv(s.name || ''),
+        escCsv(s.email),
+        escCsv(st?.phone || ''),
+        escCsv(tariffLabels[st?.tariff || ''] || st?.tariff || ''),
+        escCsv(st?.city || ''),
+        escCsv(genderLabels[st?.gender || ''] || st?.gender || ''),
+        st?.age != null ? String(st.age) : '',
+        escCsv(st?.addictionType || ''),
+        st?.sobrietyDate ? new Date(st.sobrietyDate).toLocaleDateString('ru-RU') : '',
+        st?.surveyCompleted ? 'Да' : 'Нет',
+        st?.isClergy ? 'Да' : 'Нет',
+        s.isActive ? 'Да' : 'Нет',
+        new Date(s.createdAt).toLocaleDateString('ru-RU'),
+        escCsv(miniGroupNames),
+        escCsv(st?.assignedPsychologist?.name || ''),
+        escCsv(productNames),
+        hasPrepayment,
+        escCsv(cleanNotes)
+      ];
+      csv += row.join(';') + '\n';
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="students_${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.send(csv);
+  } catch (error) {
+    console.error('Export students error:', error);
+    res.status(500).json({ error: 'Ошибка экспорта' });
+  }
+});
+
 // Prepayment endpoints - MUST be before /:id route to avoid matching as ID
 router.get('/prepayment-students', async (req: AuthRequest, res: Response) => {
   try {

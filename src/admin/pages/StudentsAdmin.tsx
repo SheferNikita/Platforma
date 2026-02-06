@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks, Shuffle, TrendingUp, BarChart3, UserCheck, UserX, Mail, Key, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks, Shuffle, TrendingUp, BarChart3, UserCheck, UserX, Mail, Key, Eye, EyeOff, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface StudentsStats {
@@ -190,6 +190,33 @@ export function StudentsAdmin() {
             title={showDashboard ? 'Скрыть статистику' : 'Показать статистику'}
           >
             <BarChart3 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                const token = localStorage.getItem('auth_token');
+                const res = await fetch('/api/students/export', {
+                  credentials: 'include',
+                  headers: token ? { Authorization: `Bearer ${token}` } : {}
+                });
+                if (!res.ok) throw new Error('Ошибка экспорта');
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `students_${new Date().toISOString().slice(0, 10)}.csv`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+                toast.success('Файл скачан');
+              } catch (e) {
+                toast.error('Ошибка при экспорте');
+              }
+            }}
+            className="flex items-center gap-2 px-3 py-2 bg-white/60 text-[#3d3527]/70 hover:bg-white border border-[#d4c9b0]/30 rounded-xl transition-colors"
+            title="Экспорт в CSV"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Экспорт</span>
           </button>
           <button
             onClick={() => { setEditingStudent(null); setShowModal(true); }}

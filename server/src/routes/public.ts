@@ -385,11 +385,19 @@ router.get('/my-mini-group', async (req: Request, res: Response) => {
 
     const group = membership.miniGroup;
     
+    let chatLink = null;
+    try {
+      const chatData = JSON.parse(group.chatLink || '{}');
+      chatLink = chatData.link || null;
+    } catch {
+      chatLink = group.chatLink;
+    }
+
     res.json({
       id: group.id,
       title: group.title,
       description: group.description,
-      chatLink: group.chatLink,
+      chatLink,
       curator: group.curator,
       events: group.events,
       memberCount: group.members.length,

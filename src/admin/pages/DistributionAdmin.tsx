@@ -90,6 +90,7 @@ interface Filters {
   surveyStatus: string;
   isClergy: string;
   city: string;
+  tariff: string;
 }
 
 type TabType = 'group' | 'individual';
@@ -111,7 +112,8 @@ export function DistributionAdmin() {
     addictionType: '',
     surveyStatus: '',
     isClergy: '',
-    city: ''
+    city: '',
+    tariff: ''
   });
 
   const [showPsychologistModal, setShowPsychologistModal] = useState(false);
@@ -254,7 +256,8 @@ export function DistributionAdmin() {
       addictionType: '',
       surveyStatus: '',
       isClergy: '',
-      city: ''
+      city: '',
+      tariff: ''
     });
   };
 
@@ -279,7 +282,9 @@ export function DistributionAdmin() {
       
       const matchesCity = filters.city === '' || s.city === filters.city;
 
-      return matchesSearch && matchesGender && matchesAddiction && matchesSurvey && matchesClergy && matchesCity;
+      const matchesTariff = filters.tariff === '' || s.tariff === filters.tariff;
+
+      return matchesSearch && matchesGender && matchesAddiction && matchesSurvey && matchesClergy && matchesCity && matchesTariff;
     });
   }, [students, searchTerm, filters]);
 
@@ -437,7 +442,20 @@ export function DistributionAdmin() {
                         </button>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                      <div>
+                        <label className="block text-xs text-[#3d3527]/60 mb-1">Тариф</label>
+                        <select
+                          value={filters.tariff}
+                          onChange={(e) => setFilters({ ...filters, tariff: e.target.value })}
+                          className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                        >
+                          <option value="">Все</option>
+                          {Object.entries(TARIFF_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>{label}</option>
+                          ))}
+                        </select>
+                      </div>
                       <div>
                         <label className="block text-xs text-[#3d3527]/60 mb-1">Пол</label>
                         <select
@@ -721,46 +739,90 @@ export function DistributionAdmin() {
                 </thead>
                 <tbody>
                   {filteredIndividualStudents.map((student) => (
-                    <tr key={student.id} className="border-b border-[#d4c9b0]/20 hover:bg-white/40 transition-all">
-                      <td className="py-3 px-4">
-                        <p className="font-medium text-[#3d3527]">{student.user.name}</p>
-                      </td>
-                      <td className="py-3 px-4">
-                        <p className="text-sm text-[#3d3527]/70">{student.user.email}</p>
-                      </td>
-                      <td className="py-3 px-4">
-                        {student.tariff && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium">
-                            <CreditCard className="w-3 h-3" />
-                            {TARIFF_LABELS[student.tariff] || student.tariff}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        {student.assignedPsychologist ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-[#a67c52]/10 rounded-full flex items-center justify-center">
-                              <Brain className="w-4 h-4 text-[#a67c52]" />
+                    <React.Fragment key={student.id}>
+                      <tr className="border-b border-[#d4c9b0]/20 hover:bg-white/40 transition-all">
+                        <td className="py-3 px-4">
+                          <p className="font-medium text-[#3d3527]">{student.user.name}</p>
+                        </td>
+                        <td className="py-3 px-4">
+                          <p className="text-sm text-[#3d3527]/70">{student.user.email}</p>
+                        </td>
+                        <td className="py-3 px-4">
+                          {student.tariff && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium">
+                              <CreditCard className="w-3 h-3" />
+                              {TARIFF_LABELS[student.tariff] || student.tariff}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {student.assignedPsychologist ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-[#a67c52]/10 rounded-full flex items-center justify-center">
+                                <Brain className="w-4 h-4 text-[#a67c52]" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-[#3d3527]">{student.assignedPsychologist.name}</p>
+                                <p className="text-xs text-[#3d3527]/50">{student.assignedPsychologist.email}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-sm font-medium text-[#3d3527]">{student.assignedPsychologist.name}</p>
-                              <p className="text-xs text-[#3d3527]/50">{student.assignedPsychologist.email}</p>
+                          ) : (
+                            <span className="text-sm text-[#3d3527]/40 italic">Не назначен</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          <button
+                            onClick={() => openPsychologistModal(student)}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#a67c52]/10 hover:bg-[#a67c52]/20 text-[#a67c52] rounded-lg text-sm transition-all"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                            {student.assignedPsychologist ? 'Изменить' : 'Назначить'}
+                          </button>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-[#d4c9b0]/10">
+                        <td colSpan={5} className="px-4 pb-3 pt-0">
+                          {student.surveyCompleted ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {student.city && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs">
+                                  <MapPin className="w-3 h-3" />
+                                  {student.city}
+                                </span>
+                              )}
+                              {student.gender && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs">
+                                  <User className="w-3 h-3" />
+                                  {GENDER_LABELS[student.gender] || student.gender}
+                                </span>
+                              )}
+                              {student.age && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs">
+                                  <Calendar className="w-3 h-3" />
+                                  {student.age} лет
+                                </span>
+                              )}
+                              {student.isClergy && (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs">
+                                  <Church className="w-3 h-3" />
+                                  Духовенство
+                                </span>
+                              )}
+                              {formatAddictionTypes(student.addictionType).map((type, idx) => (
+                                <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded-lg text-xs">
+                                  {ADDICTION_LABELS[type] || type}
+                                </span>
+                              ))}
                             </div>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-[#3d3527]/40 italic">Не назначен</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => openPsychologistModal(student)}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#a67c52]/10 hover:bg-[#a67c52]/20 text-[#a67c52] rounded-lg text-sm transition-all"
-                        >
-                          <UserPlus className="w-4 h-4" />
-                          {student.assignedPsychologist ? 'Изменить' : 'Назначить'}
-                        </button>
-                      </td>
-                    </tr>
+                          ) : (
+                            <div className="flex items-center gap-2 text-amber-600 text-xs">
+                              <AlertCircle className="w-3 h-3" />
+                              Опрос не пройден
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../../lib/api';
-import { Send, Users, FileText, Plus, Edit, Trash2, CreditCard, Search, Filter, Check } from 'lucide-react';
+import { Send, Users, FileText, Plus, Edit, Trash2, CreditCard, Search, Filter, Check, Eye, TestTube, History, X, ChevronDown, ChevronUp, Calendar, MapPin, UserCheck, UsersRound } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface EmailTemplate {
@@ -24,6 +24,53 @@ interface PrepaymentStudent {
   savedAmount: number;
 }
 
+interface MailingHistoryItem {
+  id: string;
+  subject: string;
+  recipients: number;
+  sent: number;
+  failed: number;
+  filters: Record<string, string>;
+  adminName: string;
+  adminEmail: string;
+  createdAt: string;
+}
+
+interface BulkFilters {
+  tariff: string;
+  gender: string;
+  city: string;
+  addictionType: string;
+  surveyStatus: string;
+  isClergy: string;
+  hasPrepayment: string;
+  miniGroupStatus: string;
+  dateFrom: string;
+  dateTo: string;
+}
+
+const TARIFF_LABELS: Record<string, string> = {
+  BASIC: 'Базовый',
+  FAMILY: 'Семейный',
+  RELATIVE: 'Родственник участника',
+  WITH_MENTOR: 'Идем с наставником',
+  WITH_PSYCHOLOGIST: 'Идем с психологом',
+  INDIVIDUAL_PSYCHOLOGIST: 'Индивидуально с психологом'
+};
+
+const GENDER_LABELS: Record<string, string> = {
+  MALE: 'Мужской',
+  FEMALE: 'Женский'
+};
+
+const ADDICTION_LABELS: Record<string, string> = {
+  ALCOHOL: 'Алкоголь',
+  DRUGS: 'Наркотики',
+  GAMBLING: 'Азартные игры',
+  GAMING: 'Игромания',
+  OTHER: 'Другое'
+};
+
 const TARIFF_REMAINING_AMOUNTS: Record<string, string> = {
   BASIC: '5000',
   WITH_MENTOR: '11000',
@@ -32,10 +79,23 @@ const TARIFF_REMAINING_AMOUNTS: Record<string, string> = {
   FAMILY: '2000'
 };
 
+const emptyFilters: BulkFilters = {
+  tariff: '',
+  gender: '',
+  city: '',
+  addictionType: '',
+  surveyStatus: '',
+  isClergy: '',
+  hasPrepayment: '',
+  miniGroupStatus: '',
+  dateFrom: '',
+  dateTo: ''
+};
+
 export function EmailAdmin() {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'send' | 'templates' | 'prepayment'>('send');
+  const [activeTab, setActiveTab] = useState<'send' | 'templates' | 'prepayment' | 'history'>('send');
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
 
@@ -43,6 +103,21 @@ export function EmailAdmin() {
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
+
+  const [sendMode, setSendMode] = useState<'manual' | 'filtered'>('manual');
+  const [bulkFilters, setBulkFilters] = useState<BulkFilters>({ ...emptyFilters });
+  const [recipientCount, setRecipientCount] = useState<number | null>(null);
+  const [countingRecipients, setCountingRecipients] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
+  const [cities, setCities] = useState<string[]>([]);
+
+  const [showPreview, setShowPreview] = useState(false);
+  const [testSending, setTestSending] = useState(false);
+
+  const [mailingHistory, setMailingHistory] = useState<MailingHistoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
 
   const [prepaymentStudents, setPrepaymentStudents] = useState<PrepaymentStudent[]>([]);
   const [loadingPrepayment, setLoadingPrepayment] = useState(false);
@@ -59,13 +134,52 @@ export function EmailAdmin() {
 
   useEffect(() => {
     loadTemplates();
+    loadFilterOptions();
   }, []);
 
   useEffect(() => {
     if (activeTab === 'prepayment') {
       loadPrepaymentStudents();
     }
-  }, [activeTab]);
+    if (activeTab === 'history') {
+      loadMailingHistory();
+    }
+  }, [activeTab, historyPage]);
+
+  useEffect(() => {
+    if (sendMode === 'filtered') {
+      const timer = setTimeout(() => {
+        countRecipients();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [bulkFilters, sendMode]);
+
+  async function loadFilterOptions() {
+    try {
+      const data = await api.get<{ cities: string[] }>('/email/filter-options');
+      setCities(data.cities);
+    } catch (error) {
+      console.error('Failed to load filter options:', error);
+    }
+  }
+
+  async function countRecipients() {
+    setCountingRecipients(true);
+    try {
+      const activeFilters: any = {};
+      for (const [key, value] of Object.entries(bulkFilters)) {
+        if (value) activeFilters[key] = value;
+      }
+      const data = await api.post<{ count: number }>('/email/count-recipients', { filters: activeFilters });
+      setRecipientCount(data.count);
+    } catch (error) {
+      console.error('Failed to count recipients:', error);
+      setRecipientCount(null);
+    } finally {
+      setCountingRecipients(false);
+    }
+  }
 
   async function loadTemplates() {
     try {
@@ -78,15 +192,42 @@ export function EmailAdmin() {
     }
   }
 
-  async function sendEmail(e: React.FormEvent) {
+  async function handleSendEmail(e: React.FormEvent) {
     e.preventDefault();
+    if (sendMode === 'manual') {
+      setSending(true);
+      try {
+        await api.post('/email/send', { to, subject, body });
+        toast.success('Email отправлен');
+        setTo('');
+        setSubject('');
+        setBody('');
+      } catch (error: any) {
+        toast.error(error.message || 'Ошибка отправки');
+      } finally {
+        setSending(false);
+      }
+    }
+  }
+
+  async function sendFiltered() {
+    if (recipientCount === null || recipientCount === 0) {
+      toast.error('Нет получателей по выбранным фильтрам');
+      return;
+    }
+    if (!confirm(`Отправить email ${recipientCount} ученикам?`)) return;
     setSending(true);
     try {
-      await api.post('/email/send', { to, subject, body });
-      toast.success('Email отправлен');
-      setTo('');
+      const activeFilters: any = {};
+      for (const [key, value] of Object.entries(bulkFilters)) {
+        if (value) activeFilters[key] = value;
+      }
+      const result = await api.post<{ message: string; sent: number; total: number; failed: number }>('/email/send-to-all', { subject, body, filters: activeFilters });
+      toast.success(result.message);
       setSubject('');
       setBody('');
+      setBulkFilters({ ...emptyFilters });
+      setRecipientCount(null);
     } catch (error: any) {
       toast.error(error.message || 'Ошибка отправки');
     } finally {
@@ -94,16 +235,32 @@ export function EmailAdmin() {
     }
   }
 
-  async function sendToAll() {
-    if (!confirm('Отправить email всем активным ученикам?')) return;
-    setSending(true);
+  async function sendTestEmail() {
+    if (!subject || !body) {
+      toast.error('Заполните тему и текст письма');
+      return;
+    }
+    setTestSending(true);
     try {
-      await api.post('/email/send-to-all', { subject, body });
-      toast.success('Email отправлен всем ученикам');
+      const result = await api.post<{ message: string }>('/email/send-test', { subject, body });
+      toast.success(result.message);
     } catch (error: any) {
       toast.error(error.message || 'Ошибка отправки');
     } finally {
-      setSending(false);
+      setTestSending(false);
+    }
+  }
+
+  async function loadMailingHistory() {
+    setHistoryLoading(true);
+    try {
+      const data = await api.get<{ history: MailingHistoryItem[]; pagination: { total: number } }>(`/email/mailing-history?page=${historyPage}&limit=20`);
+      setMailingHistory(data.history);
+      setHistoryTotal(data.pagination.total);
+    } catch (error) {
+      console.error('Failed to load mailing history:', error);
+    } finally {
+      setHistoryLoading(false);
     }
   }
 
@@ -233,6 +390,10 @@ export function EmailAdmin() {
     }
   }
 
+  const activeFiltersCount = useMemo(() => {
+    return Object.values(bulkFilters).filter(v => v !== '').length;
+  }, [bulkFilters]);
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div>
@@ -258,6 +419,14 @@ export function EmailAdmin() {
           <span className="sm:hidden">Доплата</span>
         </button>
         <button
+          onClick={() => setActiveTab('history')}
+          className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-xl transition-colors ${activeTab === 'history' ? 'bg-[#a67c52] text-white' : 'bg-white text-[#3d3527] hover:bg-[#f5f3ed]'}`}
+        >
+          <History className="w-4 h-4 inline-block mr-1 md:mr-2" />
+          <span className="hidden sm:inline">История рассылок</span>
+          <span className="sm:hidden">История</span>
+        </button>
+        <button
           onClick={() => setActiveTab('templates')}
           className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-xl transition-colors ${activeTab === 'templates' ? 'bg-[#a67c52] text-white' : 'bg-white text-[#3d3527] hover:bg-[#f5f3ed]'}`}
         >
@@ -267,57 +436,375 @@ export function EmailAdmin() {
       </div>
 
       {activeTab === 'send' && (
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-4 md:p-6">
-          <form onSubmit={sendEmail} className="space-y-3 md:space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">
-                <span className="hidden sm:inline">Получатель (email или несколько через запятую)</span>
-                <span className="sm:hidden">Получатель (email)</span>
-              </label>
-              <input
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="w-full px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base"
-                placeholder="email@example.com"
-              />
+        <div className="space-y-4">
+          <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-4 md:p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="text-sm font-medium text-[#3d3527]">Режим отправки:</span>
+              <div className="flex bg-[#f5f3ed] rounded-xl p-1">
+                <button
+                  onClick={() => setSendMode('manual')}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-all ${sendMode === 'manual' ? 'bg-white shadow-sm text-[#3d3527] font-medium' : 'text-[#3d3527]/60 hover:text-[#3d3527]'}`}
+                >
+                  Ручной ввод
+                </button>
+                <button
+                  onClick={() => setSendMode('filtered')}
+                  className={`px-3 py-1.5 rounded-lg text-sm transition-all ${sendMode === 'filtered' ? 'bg-white shadow-sm text-[#3d3527] font-medium' : 'text-[#3d3527]/60 hover:text-[#3d3527]'}`}
+                >
+                  <Filter className="w-3.5 h-3.5 inline-block mr-1" />
+                  По фильтрам
+                </button>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Тема письма</label>
-              <input
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                className="w-full px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base"
-              />
+
+            {sendMode === 'manual' ? (
+              <form onSubmit={handleSendEmail} className="space-y-3 md:space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#3d3527] mb-1">
+                    <span className="hidden sm:inline">Получатель (email или несколько через запятую)</span>
+                    <span className="sm:hidden">Получатель (email)</span>
+                  </label>
+                  <input
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                    className="w-full px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base"
+                    placeholder="email@example.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#3d3527] mb-1">Тема письма</label>
+                  <input
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    className="w-full px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#3d3527] mb-1">Текст письма (HTML)</label>
+                  <textarea
+                    value={body}
+                    onChange={(e) => setBody(e.target.value)}
+                    className="w-full px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] font-mono text-xs md:text-sm"
+                    rows={8}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2 md:gap-3">
+                  <button
+                    type="submit"
+                    disabled={sending || !to || !subject || !body}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 text-sm md:text-base"
+                  >
+                    <Send className="w-4 h-4" />
+                    {sending ? 'Отправка...' : 'Отправить'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(true)}
+                    disabled={!body}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-[#d4c9b0] text-[#3d3527] rounded-xl hover:bg-[#f5f3ed] transition-colors disabled:opacity-50 text-sm md:text-base"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Предпросмотр
+                  </button>
+                  <button
+                    type="button"
+                    onClick={sendTestEmail}
+                    disabled={testSending || !subject || !body}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-blue-300 text-blue-600 rounded-xl hover:bg-blue-50 transition-colors disabled:opacity-50 text-sm md:text-base"
+                  >
+                    <TestTube className="w-4 h-4" />
+                    {testSending ? 'Отправка...' : 'Протестировать'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2 text-sm font-medium text-[#3d3527]"
+                  >
+                    <Filter className="w-4 h-4" />
+                    Фильтры
+                    {activeFiltersCount > 0 && (
+                      <span className="px-2 py-0.5 bg-[#a67c52] text-white rounded-full text-xs">{activeFiltersCount}</span>
+                    )}
+                    {showFilters ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                  {activeFiltersCount > 0 && (
+                    <button
+                      onClick={() => setBulkFilters({ ...emptyFilters })}
+                      className="text-xs text-[#a67c52] hover:underline"
+                    >
+                      Сбросить фильтры
+                    </button>
+                  )}
+                </div>
+
+                {showFilters && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 p-4 bg-[#f5f3ed]/50 rounded-xl border border-[#d4c9b0]/20">
+                    <div>
+                      <label className="block text-xs text-[#3d3527]/60 mb-1">Тариф</label>
+                      <select
+                        value={bulkFilters.tariff}
+                        onChange={(e) => setBulkFilters({ ...bulkFilters, tariff: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                      >
+                        <option value="">Все</option>
+                        {Object.entries(TARIFF_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#3d3527]/60 mb-1">Пол</label>
+                      <select
+                        value={bulkFilters.gender}
+                        onChange={(e) => setBulkFilters({ ...bulkFilters, gender: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                      >
+                        <option value="">Все</option>
+                        {Object.entries(GENDER_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#3d3527]/60 mb-1">Город</label>
+                      <select
+                        value={bulkFilters.city}
+                        onChange={(e) => setBulkFilters({ ...bulkFilters, city: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                      >
+                        <option value="">Все</option>
+                        {cities.map(city => (
+                          <option key={city} value={city}>{city}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#3d3527]/60 mb-1">Зависимость</label>
+                      <select
+                        value={bulkFilters.addictionType}
+                        onChange={(e) => setBulkFilters({ ...bulkFilters, addictionType: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                      >
+                        <option value="">Все</option>
+                        {Object.entries(ADDICTION_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#3d3527]/60 mb-1">Опрос</label>
+                      <select
+                        value={bulkFilters.surveyStatus}
+                        onChange={(e) => setBulkFilters({ ...bulkFilters, surveyStatus: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                      >
+                        <option value="">Все</option>
+                        <option value="completed">Пройден</option>
+                        <option value="not_completed">Не пройден</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#3d3527]/60 mb-1">Духовенство</label>
+                      <select
+                        value={bulkFilters.isClergy}
+                        onChange={(e) => setBulkFilters({ ...bulkFilters, isClergy: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                      >
+                        <option value="">Все</option>
+                        <option value="yes">Да</option>
+                        <option value="no">Нет</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#3d3527]/60 mb-1">Предоплата</label>
+                      <select
+                        value={bulkFilters.hasPrepayment}
+                        onChange={(e) => setBulkFilters({ ...bulkFilters, hasPrepayment: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                      >
+                        <option value="">Все</option>
+                        <option value="yes">С предоплатой</option>
+                        <option value="no">Без предоплаты</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#3d3527]/60 mb-1">Мини-группа</label>
+                      <select
+                        value={bulkFilters.miniGroupStatus}
+                        onChange={(e) => setBulkFilters({ ...bulkFilters, miniGroupStatus: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                      >
+                        <option value="">Все</option>
+                        <option value="assigned">Распределены</option>
+                        <option value="not_assigned">Не распределены</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#3d3527]/60 mb-1">Дата регистрации от</label>
+                      <input
+                        type="date"
+                        value={bulkFilters.dateFrom}
+                        onChange={(e) => setBulkFilters({ ...bulkFilters, dateFrom: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-[#3d3527]/60 mb-1">Дата регистрации до</label>
+                      <input
+                        type="date"
+                        value={bulkFilters.dateTo}
+                        onChange={(e) => setBulkFilters({ ...bulkFilters, dateTo: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-[#d4c9b0]/30 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#a67c52]/50"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                  <Users className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                  <div className="text-sm text-blue-800">
+                    {countingRecipients ? (
+                      <span>Подсчёт получателей...</span>
+                    ) : recipientCount !== null ? (
+                      <span>Получателей: <strong>{recipientCount}</strong> {recipientCount === 1 ? 'ученик' : recipientCount < 5 ? 'ученика' : 'учеников'}</span>
+                    ) : (
+                      <span>Настройте фильтры для подсчёта получателей</span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#3d3527] mb-1">Тема письма</label>
+                  <input
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    className="w-full px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#3d3527] mb-1">Текст письма (HTML)</label>
+                  <textarea
+                    value={body}
+                    onChange={(e) => setBody(e.target.value)}
+                    className="w-full px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] font-mono text-xs md:text-sm"
+                    rows={8}
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-2 md:gap-3">
+                  <button
+                    onClick={sendFiltered}
+                    disabled={sending || !subject || !body || recipientCount === null || recipientCount === 0}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 text-sm md:text-base"
+                  >
+                    <Send className="w-4 h-4" />
+                    {sending ? 'Отправка...' : `Отправить (${recipientCount ?? 0})`}
+                  </button>
+                  <button
+                    onClick={() => setShowPreview(true)}
+                    disabled={!body}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-[#d4c9b0] text-[#3d3527] rounded-xl hover:bg-[#f5f3ed] transition-colors disabled:opacity-50 text-sm md:text-base"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Предпросмотр
+                  </button>
+                  <button
+                    onClick={sendTestEmail}
+                    disabled={testSending || !subject || !body}
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-white border border-blue-300 text-blue-600 rounded-xl hover:bg-blue-50 transition-colors disabled:opacity-50 text-sm md:text-base"
+                  >
+                    <TestTube className="w-4 h-4" />
+                    {testSending ? 'Отправка...' : 'Протестировать'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'history' && (
+        <div className="space-y-4">
+          {historyLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#a67c52]"></div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-[#3d3527] mb-1">Текст письма (HTML)</label>
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                className="w-full px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] font-mono text-xs md:text-sm"
-                rows={8}
-              />
+          ) : mailingHistory.length === 0 ? (
+            <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-12 text-center text-[#3d3527]/60">
+              История рассылок пуста
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 md:gap-4">
-              <button
-                type="submit"
-                disabled={sending || !to || !subject || !body}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 text-sm md:text-base"
-              >
-                <Send className="w-4 h-4" />
-                {sending ? 'Отправка...' : 'Отправить'}
-              </button>
-              <button
-                type="button"
-                onClick={sendToAll}
-                disabled={sending || !subject || !body}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 text-sm md:text-base"
-              >
-                <Users className="w-4 h-4" />
-                Всем ученикам
-              </button>
+          ) : (
+            <div className="space-y-3">
+              {mailingHistory.map((item) => (
+                <div key={item.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-4 md:p-5">
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-[#3d3527] truncate">{item.subject}</h3>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs">
+                          <Send className="w-3 h-3" />
+                          Отправлено: {item.sent}
+                        </span>
+                        {item.failed > 0 && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs">
+                            Ошибки: {item.failed}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-lg text-xs">
+                          <Users className="w-3 h-3" />
+                          Всего: {item.recipients}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs text-[#3d3527]/50">
+                        {new Date(item.createdAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                      <p className="text-xs text-[#3d3527]/40 mt-1">{item.adminName}</p>
+                    </div>
+                  </div>
+                  {Object.keys(item.filters).length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-[#d4c9b0]/20">
+                      <p className="text-xs text-[#3d3527]/50 mb-1.5">Применённые фильтры:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(item.filters).map(([key, value]) => (
+                          <span key={key} className="inline-flex items-center gap-1 px-2 py-1 bg-[#f5f3ed] text-[#3d3527] rounded-lg text-xs">
+                            <span className="font-medium">{key}:</span> {value}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {historyTotal > 20 && (
+                <div className="flex justify-center gap-2 pt-2">
+                  <button
+                    onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                    disabled={historyPage <= 1}
+                    className="px-3 py-1.5 bg-white border border-[#d4c9b0] rounded-lg text-sm disabled:opacity-50 hover:bg-[#f5f3ed]"
+                  >
+                    Назад
+                  </button>
+                  <span className="px-3 py-1.5 text-sm text-[#3d3527]/60">
+                    Страница {historyPage} из {Math.ceil(historyTotal / 20)}
+                  </span>
+                  <button
+                    onClick={() => setHistoryPage(p => p + 1)}
+                    disabled={historyPage >= Math.ceil(historyTotal / 20)}
+                    className="px-3 py-1.5 bg-white border border-[#d4c9b0] rounded-lg text-sm disabled:opacity-50 hover:bg-[#f5f3ed]"
+                  >
+                    Вперед
+                  </button>
+                </div>
+              )}
             </div>
-          </form>
+          )}
         </div>
       )}
 
@@ -598,6 +1085,31 @@ export function EmailAdmin() {
           onSave={saveTemplate}
           onClose={() => { setShowTemplateModal(false); setEditingTemplate(null); }}
         />
+      )}
+
+      {showPreview && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-3xl my-8 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-[#d4c9b0]/30">
+              <h2 className="text-lg font-bold text-[#3d3527]">Предпросмотр письма</h2>
+              <button onClick={() => setShowPreview(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5 text-[#3d3527]" />
+              </button>
+            </div>
+            {subject && (
+              <div className="px-4 py-2 bg-[#f5f3ed] border-b border-[#d4c9b0]/20">
+                <span className="text-xs text-[#3d3527]/50">Тема:</span>
+                <span className="text-sm text-[#3d3527] ml-2 font-medium">{subject}</span>
+              </div>
+            )}
+            <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+              <div
+                className="bg-white rounded-lg shadow-sm mx-auto max-w-[600px]"
+                dangerouslySetInnerHTML={{ __html: body }}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -22,6 +22,119 @@ const sendEmailSchema = z.object({
   body: z.string().min(1)
 });
 
+async function buildStudentFilterQuery(filters: any) {
+  const userWhere: any = { role: 'STUDENT', isActive: true };
+  const studentWhere: any = {};
+  let needsStudentJoin = false;
+  let miniGroupFilter: string | null = null;
+  let hasPrepaymentFilter: string | null = null;
+
+  if (filters.tariff) {
+    studentWhere.tariff = filters.tariff;
+    needsStudentJoin = true;
+  }
+  if (filters.gender) {
+    studentWhere.gender = filters.gender;
+    needsStudentJoin = true;
+  }
+  if (filters.city) {
+    studentWhere.city = filters.city;
+    needsStudentJoin = true;
+  }
+  if (filters.addictionType) {
+    studentWhere.addictionType = { contains: filters.addictionType };
+    needsStudentJoin = true;
+  }
+  if (filters.surveyStatus === 'completed') {
+    studentWhere.surveyCompleted = true;
+    needsStudentJoin = true;
+  } else if (filters.surveyStatus === 'not_completed') {
+    studentWhere.surveyCompleted = false;
+    needsStudentJoin = true;
+  }
+  if (filters.isClergy === 'yes') {
+    studentWhere.isClergy = true;
+    needsStudentJoin = true;
+  } else if (filters.isClergy === 'no') {
+    studentWhere.isClergy = { not: true };
+    needsStudentJoin = true;
+  }
+  if (filters.hasPrepayment) {
+    hasPrepaymentFilter = filters.hasPrepayment;
+    needsStudentJoin = true;
+  }
+  if (filters.miniGroupStatus) {
+    miniGroupFilter = filters.miniGroupStatus;
+    needsStudentJoin = true;
+  }
+  if (filters.dateFrom) {
+    userWhere.createdAt = { ...(userWhere.createdAt || {}), gte: new Date(filters.dateFrom) };
+  }
+  if (filters.dateTo) {
+    const dateTo = new Date(filters.dateTo);
+    dateTo.setHours(23, 59, 59, 999);
+    userWhere.createdAt = { ...(userWhere.createdAt || {}), lte: dateTo };
+  }
+
+  if (needsStudentJoin) {
+    userWhere.student = studentWhere;
+  }
+
+  let users = await prisma.user.findMany({
+    where: userWhere,
+    select: {
+      id: true,
+      email: true,
+      student: {
+        select: {
+          id: true,
+          notes: true,
+          miniGroups: { select: { id: true } }
+        }
+      }
+    }
+  });
+
+  if (hasPrepaymentFilter === 'yes') {
+    users = users.filter(u => u.student?.notes?.includes('[PREPAYMENT]'));
+  } else if (hasPrepaymentFilter === 'no') {
+    users = users.filter(u => !u.student?.notes?.includes('[PREPAYMENT]'));
+  }
+
+  if (miniGroupFilter === 'assigned') {
+    users = users.filter(u => u.student?.miniGroups && u.student.miniGroups.length > 0);
+  } else if (miniGroupFilter === 'not_assigned') {
+    users = users.filter(u => !u.student?.miniGroups || u.student.miniGroups.length === 0);
+  }
+
+  return users.map(u => u.email);
+}
+
+router.post('/count-recipients', async (req: AuthRequest, res: Response) => {
+  try {
+    const { filters } = req.body;
+    const emails = await buildStudentFilterQuery(filters || {});
+    res.json({ count: emails.length });
+  } catch (error) {
+    console.error('Count recipients error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/filter-options', async (req: AuthRequest, res: Response) => {
+  try {
+    const students = await prisma.student.findMany({
+      where: { user: { isActive: true } },
+      select: { city: true }
+    });
+    const cities = [...new Set(students.map(s => s.city).filter(Boolean))].sort();
+    res.json({ cities });
+  } catch (error) {
+    console.error('Get filter options error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 router.get('/templates', async (req: AuthRequest, res: Response) => {
   try {
     const templates = await prisma.emailTemplate.findMany({
@@ -133,16 +246,12 @@ router.post('/send', async (req: AuthRequest, res: Response) => {
 
 router.post('/send-to-all', async (req: AuthRequest, res: Response) => {
   try {
-    const { subject, body, filter } = req.body;
+    const { subject, body, filters } = req.body;
 
-    let where: any = { role: 'STUDENT', isActive: true };
+    const emails = await buildStudentFilterQuery(filters || {});
 
-    const students = await prisma.user.findMany({
-      where,
-      select: { email: true }
-    });
-
-    const emails = students.map(s => s.email);
+    let sentCount = 0;
+    let failedCount = 0;
 
     for (const email of emails) {
       await prisma.emailJob.create({
@@ -160,8 +269,32 @@ router.post('/send-to-all', async (req: AuthRequest, res: Response) => {
           where: { to: email, subject, status: 'pending' },
           data: { status: 'sent', sentAt: new Date() }
         });
+        sentCount++;
       } catch (emailError) {
         console.error(`Failed to send email to ${email}:`, emailError);
+        failedCount++;
+      }
+    }
+
+    const filterLabels: Record<string, string> = {
+      tariff: 'Тариф',
+      gender: 'Пол',
+      city: 'Город',
+      addictionType: 'Зависимость',
+      surveyStatus: 'Опрос',
+      isClergy: 'Духовенство',
+      hasPrepayment: 'Предоплата',
+      miniGroupStatus: 'Мини-группа',
+      dateFrom: 'Дата от',
+      dateTo: 'Дата до'
+    };
+
+    const appliedFilters: Record<string, string> = {};
+    if (filters) {
+      for (const [key, value] of Object.entries(filters)) {
+        if (value && filterLabels[key]) {
+          appliedFilters[filterLabels[key]] = String(value);
+        }
       }
     }
 
@@ -170,13 +303,83 @@ router.post('/send-to-all', async (req: AuthRequest, res: Response) => {
         userId: req.user!.id,
         action: 'SEND_BULK_EMAIL',
         entity: 'EMAIL',
-        details: { recipients: emails.length, subject }
+        details: {
+          recipients: emails.length,
+          sent: sentCount,
+          failed: failedCount,
+          subject,
+          filters: appliedFilters,
+          rawFilters: filters || {}
+        }
       }
     });
 
-    res.json({ message: `Email отправлен ${emails.length} ученикам` });
+    res.json({ message: `Email отправлен ${sentCount} из ${emails.length} ученикам`, sent: sentCount, total: emails.length, failed: failedCount });
   } catch (error) {
     console.error('Send bulk email error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.post('/send-test', async (req: AuthRequest, res: Response) => {
+  try {
+    const { subject, body } = req.body;
+
+    if (!subject || !body) {
+      return res.status(400).json({ error: 'Тема и текст письма обязательны' });
+    }
+
+    const adminEmail = req.user!.email;
+
+    try {
+      await sendEmail(adminEmail, `[ТЕСТ] ${subject}`, body);
+      res.json({ message: `Тестовое письмо отправлено на ${adminEmail}` });
+    } catch (emailError) {
+      res.status(500).json({ error: `Ошибка отправки: ${String(emailError)}` });
+    }
+  } catch (error) {
+    console.error('Send test email error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/mailing-history', async (req: AuthRequest, res: Response) => {
+  try {
+    const { page = '1', limit = '20' } = req.query;
+    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+
+    const [logs, total] = await Promise.all([
+      prisma.adminLog.findMany({
+        where: { action: 'SEND_BULK_EMAIL', entity: 'EMAIL' },
+        orderBy: { createdAt: 'desc' },
+        include: { user: { select: { name: true, email: true } } },
+        skip,
+        take: parseInt(limit as string)
+      }),
+      prisma.adminLog.count({ where: { action: 'SEND_BULK_EMAIL', entity: 'EMAIL' } })
+    ]);
+
+    res.json({
+      history: logs.map(log => ({
+        id: log.id,
+        subject: (log.details as any)?.subject || '',
+        recipients: (log.details as any)?.recipients || 0,
+        sent: (log.details as any)?.sent || (log.details as any)?.recipients || 0,
+        failed: (log.details as any)?.failed || 0,
+        filters: (log.details as any)?.filters || {},
+        adminName: log.user.name,
+        adminEmail: log.user.email,
+        createdAt: log.createdAt
+      })),
+      pagination: {
+        page: parseInt(page as string),
+        limit: parseInt(limit as string),
+        total,
+        pages: Math.ceil(total / parseInt(limit as string))
+      }
+    });
+  } catch (error) {
+    console.error('Get mailing history error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

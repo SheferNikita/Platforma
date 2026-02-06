@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../../lib/api';
-import { Send, Users, FileText, Plus, Edit, Trash2, CreditCard, Search, Filter, Check, Eye, TestTube, History, X, ChevronDown, ChevronUp, Calendar, MapPin, UserCheck, UsersRound } from 'lucide-react';
+import { Send, Users, FileText, Plus, Edit, Trash2, CreditCard, Search, Filter, Check, Eye, TestTube, History, X, ChevronDown, ChevronUp, Calendar, MapPin, UserCheck, UsersRound, Clock, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface EmailTemplate {
@@ -35,6 +35,57 @@ interface MailingHistoryItem {
   adminName: string;
   adminEmail: string;
   createdAt: string;
+}
+
+interface ScheduledEmail {
+  id: string;
+  subject: string;
+  body: string;
+  scheduledAt: string;
+  status: 'pending' | 'sent' | 'cancelled' | 'error';
+  sendMode: 'manual' | 'filtered';
+  recipientCount: number;
+  actualRecipients?: number;
+  sent?: number;
+  failed?: number;
+  sentAt?: string;
+  error?: string;
+  filters: Record<string, string>;
+  adminName: string;
+  adminEmail: string;
+  createdAt: string;
+}
+
+function toMskString(_date: Date): string {
+  const nowUtc = Date.now();
+  const mskMs = nowUtc + 3 * 60 * 60 * 1000;
+  const msk = new Date(mskMs);
+  const y = msk.getUTCFullYear();
+  const m = String(msk.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(msk.getUTCDate()).padStart(2, '0');
+  const h = String(msk.getUTCHours()).padStart(2, '0');
+  const min = String(msk.getUTCMinutes()).padStart(2, '0');
+  return `${y}-${m}-${d}T${h}:${min}`;
+}
+
+function mskInputToUtc(mskDateTimeStr: string): string {
+  const [datePart, timePart] = mskDateTimeStr.split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hours, minutes] = timePart.split(':').map(Number);
+  const utcMs = Date.UTC(year, month - 1, day, hours - 3, minutes);
+  return new Date(utcMs).toISOString();
+}
+
+function formatMskDateTime(isoString: string): string {
+  const date = new Date(isoString);
+  const mskMs = date.getTime() + 3 * 60 * 60 * 1000;
+  const msk = new Date(mskMs);
+  const day = String(msk.getUTCDate()).padStart(2, '0');
+  const month = String(msk.getUTCMonth() + 1).padStart(2, '0');
+  const year = msk.getUTCFullYear();
+  const hours = String(msk.getUTCHours()).padStart(2, '0');
+  const minutes = String(msk.getUTCMinutes()).padStart(2, '0');
+  return `${day}.${month}.${year} ${hours}:${minutes} МСК`;
 }
 
 interface BulkFilters {
@@ -96,7 +147,7 @@ const emptyFilters: BulkFilters = {
 export function EmailAdmin() {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'send' | 'templates' | 'prepayment' | 'history'>('send');
+  const [activeTab, setActiveTab] = useState<'send' | 'templates' | 'prepayment' | 'history' | 'scheduled'>('send');
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
 
@@ -120,6 +171,11 @@ export function EmailAdmin() {
   const [historyPage, setHistoryPage] = useState(1);
   const [historyTotal, setHistoryTotal] = useState(0);
 
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledDateTime, setScheduledDateTime] = useState('');
+  const [scheduledEmails, setScheduledEmails] = useState<ScheduledEmail[]>([]);
+  const [loadingScheduled, setLoadingScheduled] = useState(false);
+
   const [prepaymentStudents, setPrepaymentStudents] = useState<PrepaymentStudent[]>([]);
   const [loadingPrepayment, setLoadingPrepayment] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
@@ -136,6 +192,7 @@ export function EmailAdmin() {
   useEffect(() => {
     loadTemplates();
     loadFilterOptions();
+    loadScheduledEmails();
   }, []);
 
   useEffect(() => {
@@ -144,6 +201,9 @@ export function EmailAdmin() {
     }
     if (activeTab === 'history') {
       loadMailingHistory();
+    }
+    if (activeTab === 'scheduled') {
+      loadScheduledEmails();
     }
   }, [activeTab, historyPage]);
 
@@ -249,6 +309,77 @@ export function EmailAdmin() {
       toast.error(error.message || 'Ошибка отправки');
     } finally {
       setTestSending(false);
+    }
+  }
+
+  async function handleScheduleEmail() {
+    if (!subject || !body) {
+      toast.error('Заполните тему и текст письма');
+      return;
+    }
+    if (!scheduledDateTime) {
+      toast.error('Выберите дату и время отправки');
+      return;
+    }
+
+    const utcTime = mskInputToUtc(scheduledDateTime);
+    if (new Date(utcTime) <= new Date()) {
+      toast.error('Время отправки должно быть в будущем');
+      return;
+    }
+
+    const activeFilters: any = {};
+    if (sendMode === 'filtered') {
+      for (const [key, value] of Object.entries(bulkFilters)) {
+        if (value) activeFilters[key] = value;
+      }
+    }
+
+    setSending(true);
+    try {
+      const result = await api.post<{ message: string; recipientCount: number }>('/email/schedule', {
+        subject,
+        body,
+        scheduledAt: utcTime,
+        sendMode,
+        to: sendMode === 'manual' ? to : undefined,
+        filters: sendMode === 'filtered' ? activeFilters : undefined
+      });
+      toast.success(`Рассылка запланирована на ${formatMskDateTime(utcTime)} (${result.recipientCount} получателей)`);
+      setSubject('');
+      setBody('');
+      setTo('');
+      setIsScheduled(false);
+      setScheduledDateTime('');
+      setBulkFilters({ ...emptyFilters });
+      setRecipientCount(null);
+    } catch (error: any) {
+      toast.error(error.message || 'Ошибка планирования');
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function loadScheduledEmails() {
+    setLoadingScheduled(true);
+    try {
+      const data = await api.get<{ scheduled: ScheduledEmail[] }>('/email/scheduled');
+      setScheduledEmails(data.scheduled);
+    } catch (error) {
+      console.error('Failed to load scheduled emails:', error);
+    } finally {
+      setLoadingScheduled(false);
+    }
+  }
+
+  async function cancelScheduledEmail(id: string) {
+    if (!confirm('Отменить запланированную рассылку?')) return;
+    try {
+      await api.delete(`/email/scheduled/${id}`);
+      toast.success('Рассылка отменена');
+      loadScheduledEmails();
+    } catch (error: any) {
+      toast.error(error.message || 'Ошибка отмены');
     }
   }
 
@@ -420,6 +551,19 @@ export function EmailAdmin() {
           <span className="sm:hidden">Доплата</span>
         </button>
         <button
+          onClick={() => setActiveTab('scheduled')}
+          className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-xl transition-colors ${activeTab === 'scheduled' ? 'bg-[#a67c52] text-white' : 'bg-white text-[#3d3527] hover:bg-[#f5f3ed]'}`}
+        >
+          <Clock className="w-4 h-4 inline-block mr-1 md:mr-2" />
+          <span className="hidden sm:inline">Запланированные</span>
+          <span className="sm:hidden">План</span>
+          {scheduledEmails.filter(s => s.status === 'pending').length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 bg-orange-500 text-white rounded-full text-[10px] font-bold">
+              {scheduledEmails.filter(s => s.status === 'pending').length}
+            </span>
+          )}
+        </button>
+        <button
           onClick={() => setActiveTab('history')}
           className={`px-3 md:px-4 py-2 text-sm md:text-base rounded-xl transition-colors ${activeTab === 'history' ? 'bg-[#a67c52] text-white' : 'bg-white text-[#3d3527] hover:bg-[#f5f3ed]'}`}
         >
@@ -489,15 +633,52 @@ export function EmailAdmin() {
                     rows={8}
                   />
                 </div>
+                <div className="flex items-center gap-3 p-3 bg-[#f5f3ed]/50 border border-[#d4c9b0]/20 rounded-xl">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isScheduled}
+                      onChange={(e) => setIsScheduled(e.target.checked)}
+                      className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                    />
+                    <Clock className="w-4 h-4 text-[#a67c52]" />
+                    <span className="text-sm font-medium text-[#3d3527]">Запланировать отправку</span>
+                  </label>
+                  {isScheduled && (
+                    <div className="flex items-center gap-2 ml-auto">
+                      <input
+                        type="datetime-local"
+                        value={scheduledDateTime}
+                        onChange={(e) => setScheduledDateTime(e.target.value)}
+                        min={toMskString(new Date())}
+                        className="px-3 py-1.5 border border-[#d4c9b0] rounded-lg text-sm focus:outline-none focus:border-[#a67c52]"
+                      />
+                      <span className="text-xs text-[#3d3527]/60 font-medium">МСК</span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex flex-wrap gap-2 md:gap-3">
-                  <button
-                    type="submit"
-                    disabled={sending || !to || !subject || !body}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 text-sm md:text-base"
-                  >
-                    <Send className="w-4 h-4" />
-                    {sending ? 'Отправка...' : 'Отправить'}
-                  </button>
+                  {isScheduled ? (
+                    <button
+                      type="button"
+                      onClick={handleScheduleEmail}
+                      disabled={sending || !to || !subject || !body || !scheduledDateTime}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 text-sm md:text-base"
+                    >
+                      <Clock className="w-4 h-4" />
+                      {sending ? 'Планирование...' : 'Запланировать'}
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={sending || !to || !subject || !body}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 text-sm md:text-base"
+                    >
+                      <Send className="w-4 h-4" />
+                      {sending ? 'Отправка...' : 'Отправить'}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setShowPreview(true)}
@@ -696,15 +877,51 @@ export function EmailAdmin() {
                   />
                 </div>
 
+                <div className="flex items-center gap-3 p-3 bg-[#f5f3ed]/50 border border-[#d4c9b0]/20 rounded-xl">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isScheduled}
+                      onChange={(e) => setIsScheduled(e.target.checked)}
+                      className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                    />
+                    <Clock className="w-4 h-4 text-[#a67c52]" />
+                    <span className="text-sm font-medium text-[#3d3527]">Запланировать отправку</span>
+                  </label>
+                  {isScheduled && (
+                    <div className="flex items-center gap-2 ml-auto">
+                      <input
+                        type="datetime-local"
+                        value={scheduledDateTime}
+                        onChange={(e) => setScheduledDateTime(e.target.value)}
+                        min={toMskString(new Date())}
+                        className="px-3 py-1.5 border border-[#d4c9b0] rounded-lg text-sm focus:outline-none focus:border-[#a67c52]"
+                      />
+                      <span className="text-xs text-[#3d3527]/60 font-medium">МСК</span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex flex-wrap gap-2 md:gap-3">
-                  <button
-                    onClick={sendFiltered}
-                    disabled={sending || !subject || !body || recipientCount === null || recipientCount === 0}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 text-sm md:text-base"
-                  >
-                    <Send className="w-4 h-4" />
-                    {sending ? 'Отправка...' : `Отправить (${recipientCount ?? 0})`}
-                  </button>
+                  {isScheduled ? (
+                    <button
+                      onClick={handleScheduleEmail}
+                      disabled={sending || !subject || !body || !scheduledDateTime || recipientCount === null || recipientCount === 0}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-400 text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 text-sm md:text-base"
+                    >
+                      <Clock className="w-4 h-4" />
+                      {sending ? 'Планирование...' : `Запланировать (${recipientCount ?? 0})`}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={sendFiltered}
+                      disabled={sending || !subject || !body || recipientCount === null || recipientCount === 0}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow disabled:opacity-50 text-sm md:text-base"
+                    >
+                      <Send className="w-4 h-4" />
+                      {sending ? 'Отправка...' : `Отправить (${recipientCount ?? 0})`}
+                    </button>
+                  )}
                   <button
                     onClick={() => setShowPreview(true)}
                     disabled={!body}
@@ -809,6 +1026,102 @@ export function EmailAdmin() {
                   </button>
                 </div>
               )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'scheduled' && (
+        <div className="space-y-4">
+          {loadingScheduled ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#a67c52]"></div>
+            </div>
+          ) : scheduledEmails.length === 0 ? (
+            <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-12 text-center text-[#3d3527]/60">
+              Нет запланированных рассылок
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {scheduledEmails.map((item) => (
+                <div key={item.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-4 md:p-5">
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-[#3d3527] truncate">{item.subject}</h3>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-medium flex-shrink-0 ${
+                          item.status === 'pending' ? 'bg-orange-100 text-orange-700' :
+                          item.status === 'sent' ? 'bg-green-100 text-green-700' :
+                          item.status === 'cancelled' ? 'bg-gray-100 text-gray-600' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {item.status === 'pending' ? 'Ожидает' :
+                           item.status === 'sent' ? 'Отправлено' :
+                           item.status === 'cancelled' ? 'Отменено' :
+                           'Ошибка'}
+                        </span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-medium flex-shrink-0 ${item.sendMode === 'manual' ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {item.sendMode === 'manual' ? 'Ручная' : 'По фильтрам'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-50 text-orange-700 rounded-lg text-xs">
+                          <Clock className="w-3 h-3" />
+                          {formatMskDateTime(item.scheduledAt)}
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs">
+                          <Users className="w-3 h-3" />
+                          Получателей: {item.actualRecipients ?? item.recipientCount}
+                        </span>
+                        {item.status === 'sent' && (
+                          <>
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-lg text-xs">
+                              <Send className="w-3 h-3" />
+                              Отправлено: {item.sent}
+                            </span>
+                            {(item.failed ?? 0) > 0 && (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs">
+                                Ошибок: {item.failed}
+                              </span>
+                            )}
+                          </>
+                        )}
+                        {item.error && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-700 rounded-lg text-xs">
+                            {item.error}
+                          </span>
+                        )}
+                      </div>
+
+                      {Object.keys(item.filters).length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {Object.entries(item.filters).map(([key, value]) => (
+                            <span key={key} className="inline-flex items-center px-2 py-0.5 bg-[#f5f3ed] text-[#3d3527]/70 rounded-lg text-[10px]">
+                              {key}: {value}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="text-xs text-[#3d3527]/50 mt-2">
+                        {item.adminName} ({item.adminEmail}) · Создано: {formatMskDateTime(item.createdAt)}
+                        {item.sentAt && ` · Отправлено: ${formatMskDateTime(item.sentAt)}`}
+                      </div>
+                    </div>
+
+                    {item.status === 'pending' && (
+                      <button
+                        onClick={() => cancelScheduledEmail(item.id)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm hover:bg-red-100 transition-colors flex-shrink-0"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Отменить
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

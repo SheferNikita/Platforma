@@ -3,9 +3,11 @@ import { prisma } from '../db';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth';
 import { z } from 'zod';
 import { startScheduledPublishJob } from '../services/scheduledPublish';
+import { startScheduledEmailJob } from '../services/scheduledEmail';
 import { notificationService } from '../services/notificationService';
 
 startScheduledPublishJob();
+startScheduledEmailJob();
 
 interface IdParams {
   id: string;

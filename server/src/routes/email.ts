@@ -458,4 +458,155 @@ router.get('/jobs', async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.post('/schedule', async (req: AuthRequest, res: Response) => {
+  try {
+    const { subject, body, scheduledAt, sendMode, to, filters } = req.body;
+
+    if (!subject || !body || !scheduledAt) {
+      return res.status(400).json({ error: 'Тема, текст и время отправки обязательны' });
+    }
+
+    const scheduledDate = new Date(scheduledAt);
+    if (isNaN(scheduledDate.getTime())) {
+      return res.status(400).json({ error: 'Неверный формат даты' });
+    }
+
+    if (scheduledDate <= new Date()) {
+      return res.status(400).json({ error: 'Время отправки должно быть в будущем' });
+    }
+
+    const filterLabels: Record<string, string> = {
+      tariff: 'Тариф', gender: 'Пол', city: 'Город', addictionType: 'Зависимость',
+      surveyStatus: 'Опрос', isClergy: 'Духовенство', hasPrepayment: 'Предоплата',
+      miniGroupStatus: 'Мини-группа', dateFrom: 'Дата от', dateTo: 'Дата до'
+    };
+
+    const appliedFilters: Record<string, string> = {};
+    if (filters) {
+      for (const [key, value] of Object.entries(filters)) {
+        if (value && filterLabels[key]) {
+          appliedFilters[filterLabels[key]] = String(value);
+        }
+      }
+    }
+
+    let recipientCount = 0;
+    let recipientEmails: string[] = [];
+    if (sendMode === 'manual') {
+      if (!to) {
+        return res.status(400).json({ error: 'Укажите получателей' });
+      }
+      recipientEmails = typeof to === 'string'
+        ? to.split(',').map((e: string) => e.trim()).filter((e: string) => e)
+        : Array.isArray(to) ? to : [to];
+      recipientCount = recipientEmails.length;
+    } else {
+      const emails = await buildStudentFilterQuery(filters || {});
+      recipientCount = emails.length;
+    }
+
+    const log = await prisma.adminLog.create({
+      data: {
+        userId: req.user!.id,
+        action: 'SCHEDULED_EMAIL',
+        entity: 'EMAIL',
+        details: {
+          status: 'pending',
+          subject,
+          body,
+          scheduledAt: scheduledDate.toISOString(),
+          sendMode: sendMode || 'filtered',
+          recipients: sendMode === 'manual' ? recipientEmails : undefined,
+          recipientCount,
+          filters: appliedFilters,
+          rawFilters: filters || {},
+          createdBy: req.user!.name || req.user!.email
+        }
+      }
+    });
+
+    res.status(201).json({
+      message: `Рассылка запланирована на ${scheduledDate.toISOString()}`,
+      id: log.id,
+      recipientCount
+    });
+  } catch (error) {
+    console.error('Schedule email error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/scheduled', async (req: AuthRequest, res: Response) => {
+  try {
+    const logs = await prisma.adminLog.findMany({
+      where: {
+        action: 'SCHEDULED_EMAIL',
+        entity: 'EMAIL'
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { user: { select: { name: true, email: true } } }
+    });
+
+    const scheduled = logs.map(log => {
+      const details = log.details as any;
+      return {
+        id: log.id,
+        subject: details?.subject || '',
+        body: details?.body || '',
+        scheduledAt: details?.scheduledAt || '',
+        status: details?.status || 'pending',
+        sendMode: details?.sendMode || 'filtered',
+        recipientCount: details?.recipientCount || 0,
+        actualRecipients: details?.actualRecipients,
+        sent: details?.sent,
+        failed: details?.failed,
+        sentAt: details?.sentAt,
+        error: details?.error,
+        filters: details?.filters || {},
+        adminName: log.user.name,
+        adminEmail: log.user.email,
+        createdAt: log.createdAt
+      };
+    });
+
+    res.json({ scheduled });
+  } catch (error) {
+    console.error('Get scheduled emails error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.delete('/scheduled/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const log = await prisma.adminLog.findUnique({ where: { id } });
+    if (!log || log.action !== 'SCHEDULED_EMAIL') {
+      return res.status(404).json({ error: 'Запланированная рассылка не найдена' });
+    }
+
+    const details = log.details as any;
+    if (details?.status !== 'pending') {
+      return res.status(400).json({ error: 'Можно отменить только ожидающие рассылки' });
+    }
+
+    await prisma.adminLog.update({
+      where: { id },
+      data: {
+        details: {
+          ...details,
+          status: 'cancelled',
+          cancelledAt: new Date().toISOString(),
+          cancelledBy: req.user!.name || req.user!.email
+        }
+      }
+    });
+
+    res.json({ message: 'Рассылка отменена' });
+  } catch (error) {
+    console.error('Cancel scheduled email error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;

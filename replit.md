@@ -35,6 +35,14 @@ The project is structured into `prisma/` (schema, seed), `server/` (entry point,
         - Variable substitution using `{{variableName}}` syntax
         - Fallback to hardcoded templates if DB template not found or disabled
         - Admin can customize templates at `/admin/settings` (Email templates section)
+        - **Scheduled Email Sending:** Emails can be scheduled for future sending with MSK timezone support
+            - `ScheduledEmailService` (`server/src/services/scheduledEmail.ts`): Background job checking every minute for pending scheduled emails
+            - Stored in AdminLog table (action='SCHEDULED_EMAIL') with status tracking in JSONB details field (pending/sent/cancelled/error)
+            - Frontend datetime picker shows MSK time; converted to UTC for storage via timezone-agnostic conversion (MSK = UTC+3)
+            - Supports both manual (specific emails) and filtered (by student filters) scheduled sends
+            - API: POST /api/email/schedule, GET /api/email/scheduled, DELETE /api/email/scheduled/:id
+            - "Запланированные" tab shows all scheduled emails with status badges and cancel option for pending items
+            - After sending, creates separate AdminLog entry for mailing history tracking
     -   **Rich Text Editor:** Lessons support rich text content via TipTap, Kinescope video integration, and file attachments.
     -   **Diary and Notes Attachments:** Students can attach files (images, documents, audio) to diary entries, personal notes, and questions. Files are stored as base64 in the TimeWeb PostgreSQL database (DiaryAttachment, NoteAttachment models). Attachments are displayed in the moderation chat interface with image preview and file download support.
     -   **Scheduled Lesson Publishing:** Lessons can be scheduled for future publication with date/time picker. When the scheduled time arrives, the lesson is automatically published and email notifications are sent to students with module access.

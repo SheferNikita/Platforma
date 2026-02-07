@@ -37,8 +37,7 @@ interface ModerationItem {
   attachments: AttachmentInfo[];
 }
 
-async function getMentorStudentIds(userId: string): Promise<string[]> {
-  // Get all mini-groups and filter by mentorIds in chatLink JSON
+async function getMentorStudentIds(userId: string, role?: string): Promise<string[]> {
   const allGroups = await prisma.miniGroup.findMany({
     select: { 
       id: true, 
@@ -49,7 +48,6 @@ async function getMentorStudentIds(userId: string): Promise<string[]> {
     }
   });
   
-  // Filter groups where user is in mentorIds
   const userGroups = allGroups.filter(group => {
     if (!group.chatLink) return false;
     try {
@@ -68,6 +66,14 @@ async function getMentorStudentIds(userId: string): Promise<string[]> {
     });
   });
 
+  if (role === 'PSYCHOLOGIST') {
+    const individualStudents = await prisma.student.findMany({
+      where: { assignedPsychologistId: userId },
+      select: { id: true }
+    });
+    individualStudents.forEach(s => studentIds.add(s.id));
+  }
+
   return Array.from(studentIds);
 }
 
@@ -79,7 +85,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     let studentFilter: { studentId?: { in: string[] } | string } = {};
     
     if (user.role === 'MENTOR' || user.role === 'INTERN' || user.role === 'PSYCHOLOGIST') {
-      const studentIds = await getMentorStudentIds(user.id);
+      const studentIds = await getMentorStudentIds(user.id, user.role);
       if (studentIds.length === 0) {
         return res.json([]);
       }
@@ -205,7 +211,7 @@ router.get('/count', async (req: AuthRequest, res: Response) => {
     let studentFilter: { studentId?: { in: string[] } } = {};
     
     if (user.role === 'MENTOR' || user.role === 'INTERN' || user.role === 'PSYCHOLOGIST') {
-      const studentIds = await getMentorStudentIds(user.id);
+      const studentIds = await getMentorStudentIds(user.id, user.role);
       if (studentIds.length === 0) {
         return res.json({ count: 0 });
       }

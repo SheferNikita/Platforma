@@ -230,7 +230,6 @@ router.get('/schedule', async (req, res) => {
     const events = await prisma.scheduleEvent.findMany({
       where: {
         isPublished: true,
-        date: { gte: new Date() },
         miniGroupId: null
       },
       orderBy: { date: 'asc' }

@@ -172,79 +172,81 @@ export function AdminsAdmin() {
 
       {/* Desktop table view */}
       <div className="hidden md:block bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-[#f5f3ed]">
-            <tr>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Администратор</th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Роль</th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Статус</th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Дата создания</th>
-              <th className="text-right px-6 py-4 text-sm font-semibold text-[#3d3527]">Действия</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px]">
+            <thead className="bg-[#f5f3ed]">
               <tr>
-                <td colSpan={5} className="text-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#a67c52] mx-auto"></div>
-                </td>
+                <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Администратор</th>
+                <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Роль</th>
+                <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Статус</th>
+                <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527] hidden lg:table-cell">Дата создания</th>
+                <th className="text-right px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Действия</th>
               </tr>
-            ) : filteredAdmins.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="text-center py-12 text-[#3d3527]/60">Администраторы не найдены</td>
-              </tr>
-            ) : (
-              filteredAdmins.map((admin) => (
-                <tr key={admin.id} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-[#3d3527]">{admin.name}</p>
-                        <p className="text-sm text-[#3d3527]/60">{admin.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs ${roleLabels[admin.role]?.color || 'bg-gray-100'}`}>
-                      {roleLabels[admin.role]?.label || admin.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs ${admin.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {admin.isActive ? 'Активен' : 'Неактивен'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-[#3d3527]/60">
-                    {new Date(admin.createdAt).toLocaleDateString('ru')}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex justify-end gap-2">
-                      {canEditAdmin(admin.role) && (
-                        <button
-                          onClick={() => { setEditingAdmin(admin); setShowModal(true); }}
-                          className="p-2 hover:bg-[#f5f3ed] rounded-lg"
-                        >
-                          <Edit className="w-4 h-4 text-[#3d3527]" />
-                        </button>
-                      )}
-                      {admin.id !== user?.id && canEditAdmin(admin.role) && (
-                        <button
-                          onClick={() => deleteAdmin(admin.id)}
-                          className="p-2 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-500" />
-                        </button>
-                      )}
-                    </div>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#a67c52] mx-auto"></div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : filteredAdmins.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center py-12 text-[#3d3527]/60">Администраторы не найдены</td>
+                </tr>
+              ) : (
+                filteredAdmins.map((admin) => (
+                  <tr key={admin.id} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
+                    <td className="px-3 lg:px-6 py-3 lg:py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center">
+                          <User className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-[#3d3527]">{admin.name}</p>
+                          <p className="text-sm text-[#3d3527]/60">{admin.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 lg:px-6 py-3 lg:py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs ${roleLabels[admin.role]?.color || 'bg-gray-100'}`}>
+                        {roleLabels[admin.role]?.label || admin.role}
+                      </span>
+                    </td>
+                    <td className="px-3 lg:px-6 py-3 lg:py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs ${admin.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {admin.isActive ? 'Активен' : 'Неактивен'}
+                      </span>
+                    </td>
+                    <td className="px-3 lg:px-6 py-3 lg:py-4 text-[#3d3527]/60 hidden lg:table-cell">
+                      {new Date(admin.createdAt).toLocaleDateString('ru')}
+                    </td>
+                    <td className="px-3 lg:px-6 py-3 lg:py-4">
+                      <div className="flex justify-end gap-2">
+                        {canEditAdmin(admin.role) && (
+                          <button
+                            onClick={() => { setEditingAdmin(admin); setShowModal(true); }}
+                            className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                          >
+                            <Edit className="w-4 h-4 text-[#3d3527]" />
+                          </button>
+                        )}
+                        {admin.id !== user?.id && canEditAdmin(admin.role) && (
+                          <button
+                            onClick={() => deleteAdmin(admin.id)}
+                            className="p-2 hover:bg-red-50 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showModal && (

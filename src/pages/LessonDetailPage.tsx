@@ -772,7 +772,7 @@ export function LessonDetailPage() {
         {/* Блок Задание/Рекомендация */}
         {lessonData.showTask && lessonData.taskContent && (
           (!lessonData.taskAllowedTariffs || lessonData.taskAllowedTariffs.length === 0 || (userTariff && lessonData.taskAllowedTariffs.includes(userTariff))) && (
-            <div className="mb-10 border border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/95 to-white/60 backdrop-blur-sm shadow-[0_4px_16px_var(--ethereal-shadow)]">
+            <div className="mb-10 border border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/95 to-white/60 backdrop-blur-sm shadow-[0_4px_16px_var(--ethereal-shadow)]">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-[var(--sky-light)]/30 flex items-center justify-center">
                   <FileText className="w-4 h-4 text-[#3d3527]/60" />
@@ -801,7 +801,7 @@ export function LessonDetailPage() {
 
         {/* Контент урока (HTML) */}
         {lessonData.content && (
-          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/95 to-white/60 backdrop-blur-sm shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)]">
+          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/95 to-white/60 backdrop-blur-sm shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)]">
             <div 
               className="prose prose-lg max-w-none prose-headings:text-[#3a3a3a] prose-p:text-[#3d3527] prose-a:text-[var(--button-lavender-dark)] prose-ul:text-[#3d3527] prose-ol:text-[#3d3527] prose-li:text-[#3d3527] prose-strong:text-[#3a3a3a] prose-blockquote:border-l-[var(--button-lavender-dark)] prose-blockquote:text-[#3d3527]/80"
               dangerouslySetInnerHTML={{ __html: lessonData.content }}
@@ -811,7 +811,7 @@ export function LessonDetailPage() {
 
         {/* Прикрепленные файлы */}
         {lessonData.attachments.length > 0 && (
-          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm">
+          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm">
             <div className="flex items-start gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
                 <Paperclip className="w-5 h-5 text-[var(--icon-lavender)]" />
@@ -866,7 +866,7 @@ export function LessonDetailPage() {
 
         {/* Info message for basic tariffs */}
         {!canAccessMentorFeatures(userTariff) && userTariff && (
-          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-[var(--sky-soft)]/30 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm">
+          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-[var(--sky-soft)]/30 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
                 <Info className="w-5 h-5 text-[var(--icon-lavender)]" />
@@ -883,7 +883,7 @@ export function LessonDetailPage() {
 
         {/* Форма дневника с чатом */}
         {canAccessMentorFeatures(userTariff) && lessonData.showDiary !== false && (
-        <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
+        <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
           <div className="flex items-start gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
               <FileText className="w-5 h-5 text-[var(--icon-lavender)]" />
@@ -1040,7 +1040,7 @@ export function LessonDetailPage() {
 
         {/* Форма конспекта с чатом */}
         {canAccessMentorFeatures(userTariff) && lessonData.showNotes !== false && (
-        <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-6 md:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
+        <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
           <div className="flex items-start gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
               <NotebookPen className="w-5 h-5 text-[var(--icon-lavender)]" />
@@ -1221,7 +1221,7 @@ export function LessonDetailPage() {
         </div>
 
         {/* Повал */}
-        <div className="mb-8 p-6 md:p-8 bg-gradient-to-br from-[var(--sky-soft)]/25 to-white/60 border-2 border-[var(--sky-light)]/40 rounded-2xl shadow-[0_8px_24px_var(--ethereal-shadow)] text-center backdrop-blur-sm">
+        <div className="mb-8 p-4 md:p-6 lg:p-8 bg-gradient-to-br from-[var(--sky-soft)]/25 to-white/60 border-2 border-[var(--sky-light)]/40 rounded-2xl shadow-[0_8px_24px_var(--ethereal-shadow)] text-center backdrop-blur-sm">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/20 to-[var(--button-lavender-dark)]/10 flex items-center justify-center mx-auto mb-4 border border-[var(--button-lavender-light)]/20">
             <HelpCircle className="w-6 h-6 text-[var(--button-lavender-dark)]" />
           </div>

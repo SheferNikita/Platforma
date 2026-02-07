@@ -127,31 +127,31 @@ export function PaymentsAdmin() {
             </div>
 
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[600px]">
                 <thead className="bg-[#f5f3ed]">
                   <tr>
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Клиент</th>
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Продукт</th>
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Сумма</th>
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Статус</th>
-                    <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Дата</th>
+                    <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Клиент</th>
+                    <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Продукт</th>
+                    <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Сумма</th>
+                    <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Статус</th>
+                    <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527] hidden xl:table-cell">Дата</th>
                   </tr>
                 </thead>
                 <tbody>
                   {payments.map((payment) => (
                     <tr key={payment.id} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
-                      <td className="px-6 py-4">
+                      <td className="px-3 lg:px-6 py-3 lg:py-4">
                         <p className="font-medium text-[#3d3527]">{payment.student.user.name}</p>
                         <p className="text-sm text-[#3d3527]/60">{payment.student.user.email}</p>
                       </td>
-                      <td className="px-6 py-4 text-[#3d3527]">{payment.product.name}</td>
-                      <td className="px-6 py-4 font-bold text-[#3d3527]">{payment.amount.toLocaleString()} ₽</td>
-                      <td className="px-6 py-4">
+                      <td className="px-3 lg:px-6 py-3 lg:py-4 text-[#3d3527]">{payment.product.name}</td>
+                      <td className="px-3 lg:px-6 py-3 lg:py-4 font-bold text-[#3d3527]">{payment.amount.toLocaleString()} ₽</td>
+                      <td className="px-3 lg:px-6 py-3 lg:py-4">
                         <span className={`px-2 py-1 rounded-full text-xs ${statusLabels[payment.status]?.color || 'bg-gray-100'}`}>
                           {statusLabels[payment.status]?.label || payment.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-[#3d3527]/60">
+                      <td className="px-3 lg:px-6 py-3 lg:py-4 text-[#3d3527]/60 hidden xl:table-cell">
                         {payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('ru') : new Date(payment.createdAt).toLocaleDateString('ru')}
                       </td>
                     </tr>

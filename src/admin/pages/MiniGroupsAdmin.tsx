@@ -171,7 +171,7 @@ export function MiniGroupsAdmin() {
           <div className="col-span-full text-center py-12 text-[#3d3527]/60">Нет групп</div>
         ) : (
           groups.map((group) => (
-            <div key={group.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-5">
+            <div key={group.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 p-4 md:p-5">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center">

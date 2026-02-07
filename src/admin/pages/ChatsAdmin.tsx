@@ -109,8 +109,8 @@ export function ChatsAdmin() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#3d3527]">Чаты</h1>
-          <p className="text-[#3d3527]/60 mt-1">Управление карточками чатов и групп поддержки</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Чаты</h1>
+          <p className="text-sm md:text-base text-[#3d3527]/60 mt-1">Управление карточками чатов и групп поддержки</p>
         </div>
         <button
           onClick={() => { setEditingChat(null); setShowModal(true); }}
@@ -131,7 +131,7 @@ export function ChatsAdmin() {
           {chats.map((chat) => (
             <div
               key={chat.id}
-              className={`bg-white/80 backdrop-blur-sm rounded-xl p-5 border-2 ${
+              className={`bg-white/80 backdrop-blur-sm rounded-xl p-4 md:p-5 border-2 ${
                 chat.isPublished ? 'border-[#e8e4da]' : 'border-red-200 bg-red-50/30'
               } shadow-sm`}
             >

@@ -57,7 +57,7 @@ export function SOSPage() {
           </div>
 
           {/* Single Card */}
-          <div className="border-2 border-[var(--sky-light)]/40 bg-gradient-to-br from-white/90 to-white/50 rounded-3xl p-8 md:p-10 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] relative overflow-hidden">
+          <div className="border-2 border-[var(--sky-light)]/40 bg-gradient-to-br from-white/90 to-white/50 rounded-3xl p-6 md:p-8 lg:p-10 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] relative overflow-hidden">
             {/* Dove background inside card */}
             <div className="absolute top-4 right-4 opacity-[0.04] pointer-events-none text-[100px]">
               🕊️

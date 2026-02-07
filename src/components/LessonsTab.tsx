@@ -168,7 +168,7 @@ export function LessonsTab() {
                 return (
                   <div
                     key={lesson.id}
-                    className={`border-2 rounded-2xl p-5 md:p-8 transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden group ${
+                    className={`border-2 rounded-2xl p-4 md:p-6 lg:p-8 transition-all duration-300 transform hover:-translate-y-1 relative overflow-hidden group ${
                       isLocked
                         ? 'border-[var(--book-border)]/40 bg-gradient-to-br from-gray-50/60 to-gray-100/40 opacity-60'
                         : isCompleted

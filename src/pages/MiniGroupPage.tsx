@@ -134,10 +134,10 @@ export function MiniGroupPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 space-y-6">
             {group.chatLink && (
-              <div className="border-2 border-[var(--button-lavender-dark)]/30 bg-gradient-to-br from-white/90 to-[var(--button-lavender-light)]/5 rounded-2xl p-6 md:p-8 shadow-lg relative overflow-hidden">
+              <div className="border-2 border-[var(--button-lavender-dark)]/30 bg-gradient-to-br from-white/90 to-[var(--button-lavender-light)]/5 rounded-2xl p-4 md:p-6 lg:p-8 shadow-lg relative overflow-hidden">
                 <div className="absolute bottom-4 right-4 opacity-[0.04] pointer-events-none text-[120px]">
                   🕊️
                 </div>
@@ -184,7 +184,7 @@ export function MiniGroupPage() {
             )}
 
             {group.events.length > 0 && (
-              <div className="border-2 border-[var(--sky-light)]/40 bg-gradient-to-br from-white/90 to-white/50 rounded-2xl p-6 md:p-8 shadow-lg">
+              <div className="border-2 border-[var(--sky-light)]/40 bg-gradient-to-br from-white/90 to-white/50 rounded-2xl p-4 md:p-6 lg:p-8 shadow-lg">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-12 h-12 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] rounded-xl flex items-center justify-center shadow-lg">
                     <Video className="w-6 h-6 text-white" />

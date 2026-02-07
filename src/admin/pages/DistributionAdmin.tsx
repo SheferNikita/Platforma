@@ -833,7 +833,7 @@ export function DistributionAdmin() {
 
       {showPsychologistModal && selectedStudentForPsychologist && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#f5f3ed] rounded-2xl p-6 w-full max-w-md shadow-xl">
+          <div className="bg-[#f5f3ed] rounded-2xl p-4 md:p-6 w-full max-w-md shadow-xl">
             <h3 className="text-lg font-semibold text-[#3d3527] mb-2">Назначить психолога</h3>
             <p className="text-sm text-[#3d3527]/60 mb-4">
               Ученик: <span className="font-medium text-[#3d3527]">{selectedStudentForPsychologist.user.name}</span>

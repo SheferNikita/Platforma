@@ -1143,7 +1143,7 @@ export function EmailAdmin() {
                   />
                 </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 overflow-x-auto">
                 <select
                   value={prepaymentFilters.tariff}
                   onChange={(e) => setPrepaymentFilters(prev => ({ ...prev, tariff: e.target.value }))}

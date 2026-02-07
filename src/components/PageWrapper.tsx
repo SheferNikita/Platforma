@@ -6,7 +6,7 @@ interface PageWrapperProps {
 
 export function PageWrapper({ children }: PageWrapperProps) {
   return (
-    <main className="bg-gradient-to-br from-[#f8f9fc]/95 via-[#e3ebf1]/85 to-[#f5f6fa]/90 backdrop-blur-sm rounded-3xl shadow-[0_16px_48px_var(--ethereal-shadow),0_8px_24px_var(--book-shadow),inset_0_1px_0_rgba(255,255,255,0.95)] border-2 border-[#b5cad9]/30 p-8 md:p-12 lg:p-14 min-h-[600px] relative overflow-hidden">
+    <main className="bg-gradient-to-br from-[#f8f9fc]/95 via-[#e3ebf1]/85 to-[#f5f6fa]/90 backdrop-blur-sm rounded-3xl shadow-[0_16px_48px_var(--ethereal-shadow),0_8px_24px_var(--book-shadow),inset_0_1px_0_rgba(255,255,255,0.95)] border-2 border-[#b5cad9]/30 p-4 md:p-8 lg:p-10 xl:p-14 min-h-[600px] relative overflow-hidden">
       {/* Enhanced paper texture */}
       <div className="absolute inset-0 opacity-[0.02] pointer-events-none" style={{
         backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.5'/%3E%3C/svg%3E")`

@@ -120,7 +120,7 @@ export function MyDiariesPage() {
         )}
 
         {diaries.length > 0 && (
-          <div className="mb-8 border-2 border-[var(--button-lavender-dark)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-white/80 rounded-2xl p-6 shadow-[0_8px_24px_var(--ethereal-shadow)]">
+          <div className="mb-8 border-2 border-[var(--button-lavender-dark)]/30 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-white/80 rounded-2xl p-4 md:p-6 shadow-[0_8px_24px_var(--ethereal-shadow)]">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 bg-gradient-to-br from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] rounded-xl flex items-center justify-center shadow-lg">

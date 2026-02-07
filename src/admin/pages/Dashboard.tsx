@@ -83,7 +83,7 @@ export function Dashboard() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 lg:space-y-8">
       <div>
         <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Дашборд</h1>
         <p className="text-sm md:text-base text-[#3d3527]/60 mt-1">Обзор ключевых метрик платформы</p>

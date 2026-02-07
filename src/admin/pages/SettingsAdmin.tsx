@@ -319,7 +319,7 @@ export function SettingsAdmin() {
         <h1 className="text-2xl font-bold text-[#3d3527]">Настройки платформы</h1>
       </div>
 
-      <div className="flex gap-2 border-b border-[#e8e4da]">
+      <div className="flex gap-2 border-b border-[#e8e4da] overflow-x-auto">
         {[
           { id: 'general' as TabType, label: 'Общие', icon: Settings },
           { id: 'sos' as TabType, label: 'SOS', icon: AlertCircle },
@@ -330,7 +330,7 @@ export function SettingsAdmin() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
+            className={`flex items-center gap-2 px-3 md:px-4 py-3 border-b-2 transition-colors whitespace-nowrap text-sm md:text-base ${
               activeTab === tab.id
                 ? 'border-[var(--button-lavender-dark)] text-[var(--button-lavender-dark)]'
                 : 'border-transparent text-[#3d3527]/60 hover:text-[#3d3527]'
@@ -372,7 +372,7 @@ export function SettingsAdmin() {
 
       {activeTab === 'visibility' && (
         <div className="space-y-6">
-          <div className="bg-white/60 rounded-xl p-6 border border-[#e8e4da]">
+          <div className="bg-white/60 rounded-xl p-4 md:p-6 border border-[#e8e4da]">
             <h2 className="text-lg font-semibold text-[#3d3527] mb-2">Видимость разделов</h2>
             <p className="text-sm text-[#3d3527]/60 mb-6">
               Управляйте видимостью разделов платформы для учеников. Отключённые разделы не будут показываться в навигации.
@@ -661,7 +661,7 @@ function SettingsSection({ title, settings, editedValues, setEditedValues, savin
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   return (
-    <div className="bg-white/60 rounded-xl p-6 border border-[#e8e4da]">
+    <div className="bg-white/60 rounded-xl p-4 md:p-6 border border-[#e8e4da]">
       <h2 className="text-lg font-semibold text-[#3d3527] mb-4">{title}</h2>
       <div className="space-y-4">
         {settings.map(setting => (

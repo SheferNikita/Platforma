@@ -510,15 +510,16 @@ export function StudentsAdmin() {
 
       {/* Desktop table view */}
       <div className="hidden md:block bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 overflow-hidden">
-        <table className="w-full">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[600px]">
           <thead className="bg-[#f5f3ed]">
             <tr>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Ученик</th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Тариф</th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Статус</th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Прогресс</th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-[#3d3527]">Мини-группы</th>
-              <th className="text-right px-6 py-4 text-sm font-semibold text-[#3d3527]">Действия</th>
+              <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Ученик</th>
+              <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Тариф</th>
+              <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Статус</th>
+              <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527] hidden lg:table-cell">Прогресс</th>
+              <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527] hidden xl:table-cell">Мини-группы</th>
+              <th className="text-right px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Действия</th>
             </tr>
           </thead>
           <tbody>
@@ -535,20 +536,20 @@ export function StudentsAdmin() {
             ) : (
               students.map((student) => (
                 <tr key={student.id} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-white" />
+                  <td className="px-3 lg:px-6 py-3 lg:py-4">
+                    <div className="flex items-center gap-2 lg:gap-3">
+                      <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center flex-shrink-0">
+                        <User className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
                       </div>
-                      <div>
-                        <p className="font-medium text-[#3d3527]">{student.name}</p>
-                        <p className="text-sm text-[#3d3527]/60">{student.email}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium text-[#3d3527] text-sm lg:text-base truncate">{student.name}</p>
+                        <p className="text-xs lg:text-sm text-[#3d3527]/60 truncate">{student.email}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 lg:px-6 py-3 lg:py-4">
                     <div className="flex flex-wrap gap-1">
-                      <span className={`px-2 py-1 rounded-lg text-xs ${
+                      <span className={`px-2 py-0.5 lg:py-1 rounded-lg text-xs ${
                         student.student?.tariff === 'BASIC' ? 'bg-gray-100 text-gray-700' :
                         student.student?.tariff === 'FAMILY' ? 'bg-purple-100 text-purple-700' :
                         student.student?.tariff === 'RELATIVE' ? 'bg-orange-100 text-orange-700' :
@@ -566,25 +567,25 @@ export function StudentsAdmin() {
                          'Не указан'}
                       </span>
                       {student.student?.notes?.includes('[PREPAYMENT]') && (
-                        <span className="px-2 py-1 rounded-lg text-xs bg-amber-100 text-amber-700">
+                        <span className="px-2 py-0.5 lg:py-1 rounded-lg text-xs bg-amber-100 text-amber-700">
                           Предоплата
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs ${student.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  <td className="px-3 lg:px-6 py-3 lg:py-4">
+                    <span className={`px-2 py-0.5 lg:py-1 rounded-full text-xs ${student.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {student.isActive ? 'Активен' : 'Неактивен'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <p className="text-[#3d3527]">{student.student?.progress?.length || 0} уроков</p>
+                  <td className="px-3 lg:px-6 py-3 lg:py-4 hidden lg:table-cell">
+                    <p className="text-sm text-[#3d3527]">{student.student?.progress?.length || 0} уроков</p>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 lg:px-6 py-3 lg:py-4 hidden xl:table-cell">
                     {student.student?.miniGroups?.length > 0 ? (
                       <div className="flex flex-wrap gap-1">
                         {student.student.miniGroups.map(mg => (
-                          <span key={mg.miniGroup.id} className="px-2 py-1 bg-[#a67c52]/10 text-[#a67c52] rounded-lg text-xs">
+                          <span key={mg.miniGroup.id} className="px-2 py-0.5 bg-[#a67c52]/10 text-[#a67c52] rounded-lg text-xs">
                             {mg.miniGroup.title}
                           </span>
                         ))}
@@ -593,32 +594,32 @@ export function StudentsAdmin() {
                       <span className="text-[#3d3527]/40">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex justify-end gap-2">
+                  <td className="px-3 lg:px-6 py-3 lg:py-4">
+                    <div className="flex justify-end gap-1 lg:gap-2">
                       <button
                         onClick={() => { setInitialTab('info'); setSelectedStudent(student); }}
-                        className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                        className="p-1.5 lg:p-2 hover:bg-[#f5f3ed] rounded-lg"
                         title="Информация об ученике"
                       >
                         <Info className="w-4 h-4 text-[#3d3527]" />
                       </button>
                       <button
                         onClick={() => { setInitialTab('access'); setSelectedStudent(student); }}
-                        className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                        className="p-1.5 lg:p-2 hover:bg-[#f5f3ed] rounded-lg"
                         title="Настройка доступов к модулям"
                       >
                         <ListChecks className="w-4 h-4 text-[#3d3527]" />
                       </button>
                       <button
                         onClick={() => { setEditingStudent(student); setShowModal(true); }}
-                        className="p-2 hover:bg-[#f5f3ed] rounded-lg"
+                        className="p-1.5 lg:p-2 hover:bg-[#f5f3ed] rounded-lg"
                         title="Редактировать"
                       >
                         <Edit className="w-4 h-4 text-[#3d3527]" />
                       </button>
                       <button
                         onClick={() => deleteStudent(student.id)}
-                        className="p-2 hover:bg-red-50 rounded-lg"
+                        className="p-1.5 lg:p-2 hover:bg-red-50 rounded-lg"
                         title="Удалить"
                       >
                         <Trash2 className="w-4 h-4 text-red-500" />
@@ -630,6 +631,7 @@ export function StudentsAdmin() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {!loading && students.length > 0 && (

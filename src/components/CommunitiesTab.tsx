@@ -228,7 +228,7 @@ export function CommunitiesTab() {
       </div>
       )}
 
-      <div className="mt-10 p-5 md:p-8 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-[var(--button-lavender-dark)]/5 border-2 border-[var(--button-lavender-dark)]/30 rounded-2xl shadow-[0_4px_16px_rgba(122,132,171,0.08)]">
+      <div className="mt-10 p-4 md:p-6 lg:p-8 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-[var(--button-lavender-dark)]/5 border-2 border-[var(--button-lavender-dark)]/30 rounded-2xl shadow-[0_4px_16px_rgba(122,132,171,0.08)]">
         <h4 className="mb-3 text-[var(--button-lavender-dark)] text-base md:text-lg">Не нашли общину в своем городе?</h4>
         <p className="text-xs md:text-sm opacity-80 mb-5 leading-relaxed">
           Вы можете создать свою группу поддержки или присоединиться к онлайн-сообществам. 
@@ -240,7 +240,7 @@ export function CommunitiesTab() {
         </button>
       </div>
 
-      <div className="mt-6 p-8 bg-white/60 border-2 border-[var(--sky-light)]/50 rounded-2xl shadow-[0_4px_16px_var(--book-shadow)]">
+      <div className="mt-6 p-4 md:p-6 lg:p-8 bg-white/60 border-2 border-[var(--sky-light)]/50 rounded-2xl shadow-[0_4px_16px_var(--book-shadow)]">
         <h4 className="mb-4">О программе Анонимных Алкаголиков</h4>
         <p className="text-sm opacity-80 mb-4 leading-relaxed">
           АА — это международное сообщество мужчин и женщин, которые делятся друг с другом своим 

@@ -946,10 +946,10 @@ export function CRMAdmin() {
             </div>
 
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[900px]">
                 <thead className="bg-[#f5f3ed]">
                   <tr>
-                    <th className="p-3 text-center">
+                    <th className="p-2 lg:p-3 text-center">
                       <input
                         type="checkbox"
                         checked={selectedOrders.length === orders.length && orders.length > 0}
@@ -957,25 +957,25 @@ export function CRMAdmin() {
                         className="w-4 h-4 rounded border-[#d4c9b0]"
                       />
                     </th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">№</th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Статус</th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Источник</th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Дата оплаты</th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Контакт</th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Продукт</th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Сумма</th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Тариф</th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Статус уч.</th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Группа</th>
-                    <th className="text-left p-3 text-sm font-medium text-[#3d3527]">Уроков</th>
-                    <th className="p-3"></th>
+                    <th className="text-left p-2 lg:p-3 text-sm font-medium text-[#3d3527]">№</th>
+                    <th className="text-left p-2 lg:p-3 text-sm font-medium text-[#3d3527]">Статус</th>
+                    <th className="text-left p-2 lg:p-3 text-sm font-medium text-[#3d3527] hidden lg:table-cell">Источник</th>
+                    <th className="text-left p-2 lg:p-3 text-sm font-medium text-[#3d3527] hidden xl:table-cell">Дата оплаты</th>
+                    <th className="text-left p-2 lg:p-3 text-sm font-medium text-[#3d3527]">Контакт</th>
+                    <th className="text-left p-2 lg:p-3 text-sm font-medium text-[#3d3527]">Продукт</th>
+                    <th className="text-left p-2 lg:p-3 text-sm font-medium text-[#3d3527]">Сумма</th>
+                    <th className="text-left p-2 lg:p-3 text-sm font-medium text-[#3d3527] hidden xl:table-cell">Тариф</th>
+                    <th className="text-left p-2 lg:p-3 text-sm font-medium text-[#3d3527] hidden xl:table-cell">Статус уч.</th>
+                    <th className="text-left p-2 lg:p-3 text-sm font-medium text-[#3d3527] hidden xl:table-cell">Группа</th>
+                    <th className="text-left p-2 lg:p-3 text-sm font-medium text-[#3d3527] hidden xl:table-cell">Уроков</th>
+                    <th className="p-2 lg:p-3"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {orders.map((order, index) => {
                     return (
                       <tr key={order.id} className={`border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50 ${selectedOrders.includes(order.id) ? 'bg-blue-50' : ''}`}>
-                        <td className="p-3 text-center">
+                        <td className="p-2 lg:p-3 text-center">
                           <input
                             type="checkbox"
                             checked={selectedOrders.includes(order.id)}
@@ -983,27 +983,27 @@ export function CRMAdmin() {
                             className="w-4 h-4 rounded border-[#d4c9b0]"
                           />
                         </td>
-                        <td className="p-3 text-sm text-[#3d3527]">{orders.length - index}</td>
-                        <td className="p-3">
+                        <td className="p-2 lg:p-3 text-sm text-[#3d3527]">{orders.length - index}</td>
+                        <td className="p-2 lg:p-3">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${statusConfig[order.status].color}`}>
                             {statusConfig[order.status].label}
                           </span>
                         </td>
-                        <td className="p-3 text-sm">
+                        <td className="p-2 lg:p-3 text-sm hidden lg:table-cell">
                           <span className={`px-2 py-1 rounded text-xs ${order.source === 'TILDA' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'}`}>
                             {order.source === 'TILDA' ? 'Tilda' : 'Вручную'}
                           </span>
                         </td>
-                        <td className="p-3 text-sm text-[#3d3527]">
+                        <td className="p-2 lg:p-3 text-sm text-[#3d3527] hidden xl:table-cell">
                           {order.paidAt ? format(new Date(order.paidAt), 'dd.MM.yy HH:mm', { locale: ru }) : '—'}
                         </td>
-                        <td className="p-3 text-sm">
+                        <td className="p-2 lg:p-3 text-sm">
                           <div className="text-[#3d3527]">{order.firstName} {order.lastName}</div>
                           <div className="text-xs text-[#3d3527]/60">{order.email}</div>
                         </td>
-                        <td className="p-3 text-sm text-[#3d3527] max-w-[150px] truncate">{order.product.name}</td>
-                        <td className="p-3 text-sm font-medium text-[#3d3527]">{order.amount.toLocaleString()} ₽</td>
-                        <td className="p-3 text-sm">
+                        <td className="p-2 lg:p-3 text-sm text-[#3d3527] max-w-[150px] truncate">{order.product.name}</td>
+                        <td className="p-2 lg:p-3 text-sm font-medium text-[#3d3527]">{order.amount.toLocaleString()} ₽</td>
+                        <td className="p-2 lg:p-3 text-sm hidden xl:table-cell">
                           {order.productTariff ? (
                             <span className={`px-2 py-1 rounded text-xs ${
                               order.productTariff === 'BASIC' ? 'bg-gray-100 text-gray-700' :
@@ -1016,7 +1016,7 @@ export function CRMAdmin() {
                             </span>
                           ) : <span className="text-[#3d3527]/40">—</span>}
                         </td>
-                        <td className="p-3 text-sm">
+                        <td className="p-2 lg:p-3 text-sm hidden xl:table-cell">
                           {order.student?.status ? (
                             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${studentStatusConfig[order.student.status]?.color || 'bg-gray-100 text-gray-700'}`}>
                               <UserCheck className="w-3 h-3" />
@@ -1024,7 +1024,7 @@ export function CRMAdmin() {
                             </span>
                           ) : <span className="text-[#3d3527]/40">—</span>}
                         </td>
-                        <td className="p-3 text-sm text-[#3d3527]">
+                        <td className="p-2 lg:p-3 text-sm text-[#3d3527] hidden xl:table-cell">
                           {order.student?.miniGroup ? (
                             <div>
                               <div className="font-medium text-xs">{order.student.miniGroup.name}</div>
@@ -1034,7 +1034,7 @@ export function CRMAdmin() {
                             </div>
                           ) : <span className="text-[#3d3527]/40">—</span>}
                         </td>
-                        <td className="p-3 text-sm text-[#3d3527]">
+                        <td className="p-2 lg:p-3 text-sm text-[#3d3527] hidden xl:table-cell">
                           {order.student ? (
                             <div className="flex items-center gap-1">
                               <BookOpen className="w-4 h-4 text-[#a67c52]" />
@@ -1042,7 +1042,7 @@ export function CRMAdmin() {
                             </div>
                           ) : <span className="text-[#3d3527]/40">—</span>}
                         </td>
-                        <td className="p-3">
+                        <td className="p-2 lg:p-3">
                           <button
                             onClick={() => setSelectedOrder(order)}
                             className="p-2 hover:bg-[#f5f3ed] rounded-lg"

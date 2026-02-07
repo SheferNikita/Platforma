@@ -470,9 +470,12 @@ router.delete('/schedule/:id', moderatorRoles, async (req: AuthRequest & Request
 
 router.get('/contacts', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
-    const contacts = await prisma.contact.findMany({
-      orderBy: { order: 'asc' }
-    });
+    const contacts: any[] = await prisma.$queryRaw`
+      SELECT id, name, role, phone, email, telegram, photo, "order", "isPublished", "createdAt", "updatedAt",
+             format, address, website, description, city
+      FROM "Contact"
+      ORDER BY "order" ASC
+    `;
     res.json(contacts);
   } catch (error) {
     console.error('Get contacts error:', error);
@@ -482,14 +485,22 @@ router.get('/contacts', adminOnly, async (req: AuthRequest, res: Response) => {
 
 router.post('/contacts', adminOnly, async (req: AuthRequest, res: Response) => {
   try {
-    const contact = await prisma.contact.create({ data: { ...req.body, isPublished: true } });
+    const { format, address, website, description, city, ...prismaData } = req.body;
+    const contact = await prisma.contact.create({ data: { ...prismaData, isPublished: true } });
+    
+    await prisma.$executeRaw`
+      UPDATE "Contact" SET format = ${format || null}, address = ${address || null}, website = ${website || null}, description = ${description || null}, city = ${city || null}
+      WHERE id = ${contact.id}
+    `;
+    
+    const fullContact = { ...contact, format: format || null, address: address || null, website: website || null, description: description || null, city: city || null };
     
     await prisma.$executeRaw`
       INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "newData", "createdAt")
-      VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'CONTACT', ${contact.id}, ${JSON.stringify({ name: contact.name })}::jsonb, ${JSON.stringify(contact)}::jsonb, NOW())
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'CONTACT', ${contact.id}, ${JSON.stringify({ name: contact.name })}::jsonb, ${JSON.stringify(fullContact)}::jsonb, NOW())
     `;
     
-    res.status(201).json(contact);
+    res.status(201).json(fullContact);
   } catch (error) {
     console.error('Create contact error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -499,12 +510,44 @@ router.post('/contacts', adminOnly, async (req: AuthRequest, res: Response) => {
 router.put('/contacts/:id', adminOnly, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
-    const oldContact = await prisma.contact.findUnique({ where: { id } });
-    const contact = await prisma.contact.update({ where: { id }, data: req.body });
+    const oldRows: any[] = await prisma.$queryRaw`
+      SELECT id, name, role, phone, email, telegram, photo, "order", "isPublished", format, address, website, description, city
+      FROM "Contact" WHERE id = ${id}
+    `;
+    const oldContact = oldRows[0] || null;
+    
+    const { format, address, website, description, city, ...prismaData } = req.body;
+    
+    if (Object.keys(prismaData).length > 0) {
+      await prisma.contact.update({ where: { id }, data: prismaData });
+    }
+    
+    const extFields: Record<string, string | null> = {};
+    if (format !== undefined) extFields.format = format || null;
+    if (address !== undefined) extFields.address = address || null;
+    if (website !== undefined) extFields.website = website || null;
+    if (description !== undefined) extFields.description = description || null;
+    if (city !== undefined) extFields.city = city || null;
+    
+    if (Object.keys(extFields).length > 0) {
+      const setClauses = Object.keys(extFields).map((key, i) => `"${key}" = $${i + 2}`).join(', ');
+      const values = Object.values(extFields);
+      await prisma.$executeRawUnsafe(
+        `UPDATE "Contact" SET ${setClauses} WHERE id = $1`,
+        id,
+        ...values
+      );
+    }
+    
+    const updatedRows: any[] = await prisma.$queryRaw`
+      SELECT id, name, role, phone, email, telegram, photo, "order", "isPublished", "createdAt", "updatedAt", format, address, website, description, city
+      FROM "Contact" WHERE id = ${id}
+    `;
+    const contact = updatedRows[0];
     
     await prisma.$executeRaw`
       INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
-      VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'CONTACT', ${id}, ${JSON.stringify({ name: contact.name })}::jsonb, ${JSON.stringify(oldContact)}::jsonb, ${JSON.stringify(contact)}::jsonb, NOW())
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'CONTACT', ${id}, ${JSON.stringify({ name: contact?.name })}::jsonb, ${JSON.stringify(oldContact)}::jsonb, ${JSON.stringify(contact)}::jsonb, NOW())
     `;
     
     res.json(contact);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, Phone, Eye, EyeOff, User, ArrowLeft, ArrowRight, Move, Check, X, Upload } from 'lucide-react';
+import { Plus, Edit, Trash2, Phone, Eye, EyeOff, User, ArrowLeft, ArrowRight, Move, Check, X, Upload, Globe, MapPin, MessageCircle, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Contact {
@@ -13,6 +13,11 @@ interface Contact {
   photo: string | null;
   order: number;
   isPublished: boolean;
+  format: string | null;
+  address: string | null;
+  website: string | null;
+  description: string | null;
+  city: string | null;
 }
 
 function normalizeTelegramForDisplay(input: string): string {
@@ -38,6 +43,18 @@ function getDisplayTelegram(input: string): string {
   if (!input) return '';
   return normalizeTelegramForDisplay(input);
 }
+
+const FORMAT_LABELS: Record<string, string> = {
+  offline: 'Очно',
+  online: 'Онлайн',
+  both: 'Очно и Онлайн'
+};
+
+const FORMAT_COLORS: Record<string, string> = {
+  offline: 'bg-blue-100 text-blue-700',
+  online: 'bg-green-100 text-green-700',
+  both: 'bg-purple-100 text-purple-700'
+};
 
 export function ContactsAdmin() {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -128,7 +145,7 @@ export function ContactsAdmin() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Контакты</h1>
-          <p className="text-sm md:text-base text-[#3d3527]/60 mt-1">Управление контактами кураторов</p>
+          <p className="text-sm md:text-base text-[#3d3527]/60 mt-1">Полезные контакты специалистов и клиник</p>
         </div>
         <div className="flex gap-2">
           {reordering ? (
@@ -212,13 +229,34 @@ export function ContactsAdmin() {
                 </div>
               </div>
               <h3 className="font-bold text-[#3d3527]">{contact.name}</h3>
-              <p className="text-sm text-[#3d3527]/60 mb-2">{contact.role}</p>
+              <p className="text-sm text-[#3d3527]/60 mb-1">{contact.role}</p>
+              <div className="flex flex-wrap gap-1 mb-2">
+                {contact.format && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${FORMAT_COLORS[contact.format] || 'bg-gray-100 text-gray-600'}`}>
+                    {FORMAT_LABELS[contact.format] || contact.format}
+                  </span>
+                )}
+                {contact.city && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                    {contact.city}
+                  </span>
+                )}
+              </div>
               <div className="space-y-1 text-sm text-[#3d3527]/80">
-                {contact.phone && <p><Phone className="w-4 h-4 inline mr-2" />{contact.phone}</p>}
+                {contact.phone && <p><Phone className="w-3.5 h-3.5 inline mr-1.5" />{contact.phone}</p>}
+                {contact.email && <p><Mail className="w-3.5 h-3.5 inline mr-1.5" />{contact.email}</p>}
                 {contact.telegram && (
                   <a href={getTelegramLink(contact.telegram)} target="_blank" rel="noopener noreferrer" className="block hover:text-[#a67c52]">
-                    @{getDisplayTelegram(contact.telegram)}
+                    <MessageCircle className="w-3.5 h-3.5 inline mr-1.5" />@{getDisplayTelegram(contact.telegram)}
                   </a>
+                )}
+                {contact.website && (
+                  <a href={contact.website.startsWith('http') ? contact.website : `https://${contact.website}`} target="_blank" rel="noopener noreferrer" className="block hover:text-[#a67c52] truncate">
+                    <Globe className="w-3.5 h-3.5 inline mr-1.5" />{contact.website}
+                  </a>
+                )}
+                {contact.address && (
+                  <p className="truncate"><MapPin className="w-3.5 h-3.5 inline mr-1.5" />{contact.address}</p>
                 )}
               </div>
             </div>
@@ -245,6 +283,11 @@ function ContactForm({ contact, onSave, onClose }: { contact: Contact | null; on
   const [email, setEmail] = useState(contact?.email || '');
   const [telegram, setTelegram] = useState(contact?.telegram || '');
   const [photo, setPhoto] = useState(contact?.photo || '');
+  const [format, setFormat] = useState(contact?.format || '');
+  const [address, setAddress] = useState(contact?.address || '');
+  const [website, setWebsite] = useState(contact?.website || '');
+  const [description, setDescription] = useState(contact?.description || '');
+  const [city, setCity] = useState(contact?.city || '');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -286,7 +329,11 @@ function ContactForm({ contact, onSave, onClose }: { contact: Contact | null; on
 
   function handleSave() {
     const normalizedTelegram = normalizeTelegramForDisplay(telegram);
-    onSave({ name, role, phone, email, telegram: normalizedTelegram, photo: photo || null });
+    onSave({ 
+      name, role, phone, email, telegram: normalizedTelegram, photo: photo || null,
+      format: format || null, address: address || null, website: website || null, 
+      description: description || null, city: city || null
+    });
   }
 
   return (
@@ -325,31 +372,81 @@ function ContactForm({ contact, onSave, onClose }: { contact: Contact | null; on
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-[#3d3527] mb-1">Имя</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Название / Имя *</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="Клиника или ФИО специалиста" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[#3d3527] mb-1">Роль</label>
-          <input value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="Куратор" />
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Специализация</label>
+          <input value={role} onChange={(e) => setRole(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="Наркологическая помощь" />
         </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-[#3d3527] mb-1">Формат приёма</label>
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { value: '', label: 'Не указан' },
+            { value: 'offline', label: 'Очно' },
+            { value: 'online', label: 'Онлайн' },
+            { value: 'both', label: 'Очно и Онлайн' }
+          ].map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setFormat(opt.value)}
+              className={`px-4 py-2 rounded-xl text-sm transition-all ${
+                format === opt.value
+                  ? 'bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white shadow-md'
+                  : 'bg-[#f5f3ed] border border-[#d4c9b0] text-[#3d3527] hover:bg-[#ebe8dc]'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-[#3d3527] mb-1">Описание</label>
+        <textarea 
+          value={description} 
+          onChange={(e) => setDescription(e.target.value)} 
+          className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl resize-none" 
+          rows={3}
+          placeholder="Краткое описание услуг или специализации"
+        />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-[#3d3527] mb-1">Телефон</label>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="+7 (999) 123-45-67" />
         </div>
         <div>
           <label className="block text-sm font-medium text-[#3d3527] mb-1">Email</label>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="info@example.com" />
         </div>
       </div>
-      <div>
-        <label className="block text-sm font-medium text-[#3d3527] mb-1">Telegram</label>
-        <input value={telegram} onChange={(e) => setTelegram(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="@username или ссылка" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Telegram</label>
+          <input value={telegram} onChange={(e) => setTelegram(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="@username или ссылка" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Сайт</label>
+          <input value={website} onChange={(e) => setWebsite(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="https://example.com" />
+        </div>
       </div>
-      <div className="flex justify-end gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Город</label>
+          <input value={city} onChange={(e) => setCity(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="Москва" />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Адрес</label>
+          <input value={address} onChange={(e) => setAddress(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl" placeholder="ул. Примерная, д. 1" />
+        </div>
+      </div>
+      <div className="flex justify-end gap-3 pt-2">
         <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
-        <button onClick={handleSave} className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl">Сохранить</button>
+        <button onClick={handleSave} className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg">Сохранить</button>
       </div>
     </div>
   );

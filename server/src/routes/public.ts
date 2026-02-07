@@ -243,10 +243,13 @@ router.get('/schedule', async (req, res) => {
 
 router.get('/contacts', async (req, res) => {
   try {
-    const contacts = await prisma.contact.findMany({
-      where: { isPublished: true },
-      orderBy: { order: 'asc' }
-    });
+    const contacts: any[] = await prisma.$queryRaw`
+      SELECT id, name, role, phone, email, telegram, photo, "order", "isPublished",
+             format, address, website, description, city
+      FROM "Contact"
+      WHERE "isPublished" = true
+      ORDER BY "order" ASC
+    `;
     const result = contacts.map(c => ({
       ...c,
       photoUrl: c.photo

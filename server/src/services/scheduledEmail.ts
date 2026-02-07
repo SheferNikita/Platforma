@@ -153,7 +153,8 @@ export async function processScheduledEmails(): Promise<number> {
       let sentCount = 0;
       let failedCount = 0;
 
-      for (const email of emails) {
+      for (let i = 0; i < emails.length; i++) {
+        const email = emails[i];
         const personalizedBody = await replaceEmailVariables(details.body, email);
 
         await prisma.emailJob.create({
@@ -179,6 +180,10 @@ export async function processScheduledEmails(): Promise<number> {
             data: { status: 'failed', error: String(emailError) }
           });
           failedCount++;
+        }
+
+        if (i < emails.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
       }
 

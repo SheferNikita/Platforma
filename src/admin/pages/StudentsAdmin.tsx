@@ -79,6 +79,7 @@ export function StudentsAdmin() {
   const [filterMiniGroup, setFilterMiniGroup] = useState<string>('');
   const [filterTariff, setFilterTariff] = useState<string>('all');
   const [filterPrepayment, setFilterPrepayment] = useState<string>('all');
+  const [filterDistributed, setFilterDistributed] = useState<string>('all');
   const [miniGroups, setMiniGroups] = useState<MiniGroup[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [perPage, setPerPage] = useState<string>('20');
@@ -87,12 +88,12 @@ export function StudentsAdmin() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, perPage]);
+  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, filterDistributed, perPage]);
 
   useEffect(() => {
     loadStudents();
     loadMiniGroups();
-  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, currentPage, perPage]);
+  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, filterDistributed, currentPage, perPage]);
 
   useEffect(() => {
     loadStats();
@@ -123,6 +124,7 @@ export function StudentsAdmin() {
       if (filterMiniGroup) params.set('miniGroup', filterMiniGroup);
       if (filterTariff !== 'all') params.set('tariff', filterTariff);
       if (filterPrepayment !== 'all') params.set('prepayment', filterPrepayment);
+      if (filterDistributed !== 'all') params.set('distributed', filterDistributed);
 
       const { students: data, pagination } = await api.get<{ students: Student[]; pagination: { page: number; limit: number; total: number; pages: number } }>(`/students?${params.toString()}`);
       
@@ -172,9 +174,10 @@ export function StudentsAdmin() {
     setFilterMiniGroup('');
     setFilterTariff('all');
     setFilterPrepayment('all');
+    setFilterDistributed('all');
   }
 
-  const hasActiveFilters = filterStatus !== 'all' || filterMiniGroup !== '' || filterTariff !== 'all' || filterPrepayment !== 'all';
+  const hasActiveFilters = filterStatus !== 'all' || filterMiniGroup !== '' || filterTariff !== 'all' || filterPrepayment !== 'all' || filterDistributed !== 'all';
 
   return (
     <div className="space-y-6">
@@ -406,6 +409,18 @@ export function StudentsAdmin() {
                 <option value="all">Все</option>
                 <option value="yes">С предоплатой</option>
                 <option value="no">Без предоплаты</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#3d3527] mb-1">Распределение</label>
+              <select
+                value={filterDistributed}
+                onChange={(e) => setFilterDistributed(e.target.value)}
+                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              >
+                <option value="all">Все</option>
+                <option value="yes">Распределён</option>
+                <option value="no">Не распределён</option>
               </select>
             </div>
             <div className="flex items-end sm:col-span-2 lg:col-span-1">

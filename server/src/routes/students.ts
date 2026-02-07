@@ -1147,7 +1147,7 @@ router.post('/:id/send-credentials', async (req: AuthRequest, res: Response) => 
     const { id } = req.params;
 
     const student = await prisma.student.findUnique({
-      where: { id },
+      where: { id: id as string },
       include: { user: true }
     });
 
@@ -1162,29 +1162,41 @@ router.post('/:id/send-credentials', async (req: AuthRequest, res: Response) => 
       }
     }
 
+    const studentUser = student.user as any;
     const newPassword = generatePassword();
     const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const appUrl = process.env.APP_URL || 'https://your-platform.com';
+    const loginUrl = `${appUrl}/login`;
+
+    let emailContent;
+    try {
+      emailContent = await emailTemplateService.getWelcomeEmail({
+        name: studentUser.name,
+        email: studentUser.email,
+        password: newPassword,
+        loginUrl
+      });
+    } catch (templateError) {
+      console.error('Send credentials - template error:', templateError);
+      return res.status(500).json({ error: 'Ошибка подготовки письма. Пароль не был изменён.' });
+    }
+
+    try {
+      await sendEmail(
+        studentUser.email,
+        emailContent.subject,
+        emailContent.body
+      );
+    } catch (emailError) {
+      console.error('Send credentials - email send error:', emailError);
+      return res.status(500).json({ error: 'Ошибка отправки письма. Пароль не был изменён.' });
+    }
 
     await prisma.user.update({
       where: { id: student.userId },
       data: { password: hashedPassword }
     });
-
-    const appUrl = process.env.APP_URL || 'https://your-platform.com';
-    const loginUrl = `${appUrl}/login`;
-
-    const emailContent = await emailTemplateService.getWelcomeEmail({
-      name: student.user.name,
-      email: student.user.email,
-      password: newPassword,
-      loginUrl
-    });
-
-    await sendEmail(
-      student.user.email,
-      emailContent.subject,
-      emailContent.body
-    );
 
     res.json({ message: 'Данные для входа отправлены на почту ученика' });
   } catch (error) {

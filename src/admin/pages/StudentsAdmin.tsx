@@ -786,8 +786,9 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
     try {
       await api.post(`/students/${student.student.id}/send-credentials`);
       toast.success('Данные для входа отправлены на почту ученика');
-    } catch (error) {
-      toast.error('Ошибка при отправке данных');
+    } catch (error: any) {
+      const message = error?.response?.data?.error || 'Ошибка при отправке данных';
+      toast.error(message);
     } finally {
       setSendingCredentials(false);
     }

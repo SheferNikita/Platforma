@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks, Shuffle, TrendingUp, BarChart3, UserCheck, UserX, Mail, Key, Eye, EyeOff, Download } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks, Shuffle, TrendingUp, BarChart3, UserCheck, UserX, Mail, Key, Eye, EyeOff, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface StudentsStats {
@@ -80,11 +80,19 @@ export function StudentsAdmin() {
   const [filterTariff, setFilterTariff] = useState<string>('all');
   const [filterPrepayment, setFilterPrepayment] = useState<string>('all');
   const [miniGroups, setMiniGroups] = useState<MiniGroup[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState<string>('20');
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, perPage]);
 
   useEffect(() => {
     loadStudents();
     loadMiniGroups();
-  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment]);
+  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, currentPage, perPage]);
 
   useEffect(() => {
     loadStats();
@@ -106,33 +114,25 @@ export function StudentsAdmin() {
 
   async function loadStudents() {
     try {
-      const { students } = await api.get<{ students: Student[] }>(`/students?search=${search}`);
-      let filtered = students;
-      
-      if (filterStatus === 'active') {
-        filtered = filtered.filter(s => s.isActive);
-      } else if (filterStatus === 'inactive') {
-        filtered = filtered.filter(s => !s.isActive);
-      }
-      
-      if (filterMiniGroup) {
-        filtered = filtered.filter(s => 
-          s.student?.miniGroups?.some(mg => mg.miniGroup.id === filterMiniGroup)
-        );
-      }
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      params.set('page', String(currentPage));
+      params.set('limit', perPage);
+      if (filterStatus !== 'all') params.set('status', filterStatus);
+      if (filterMiniGroup) params.set('miniGroup', filterMiniGroup);
+      if (filterTariff !== 'all') params.set('tariff', filterTariff);
+      if (filterPrepayment !== 'all') params.set('prepayment', filterPrepayment);
 
-      if (filterTariff !== 'all') {
-        filtered = filtered.filter(s => s.student?.tariff === filterTariff);
-      }
-      if (filterPrepayment !== 'all') {
-        const hasPrepay = filterPrepayment === 'yes';
-        filtered = filtered.filter(s => 
-          hasPrepay ? s.student?.notes?.includes('[PREPAYMENT]') : !s.student?.notes?.includes('[PREPAYMENT]')
-        );
-      }
+      const { students: data, pagination } = await api.get<{ students: Student[]; pagination: { page: number; limit: number; total: number; pages: number } }>(`/students?${params.toString()}`);
       
-      setStudents(filtered);
+      setStudents(data);
+      setTotalStudents(pagination.total);
+      setTotalPages(pagination.pages);
     } catch (error) {
+      setStudents([]);
+      setTotalStudents(0);
+      setTotalPages(0);
       toast.error('Ошибка загрузки');
     } finally {
       setLoading(false);
@@ -616,6 +616,79 @@ export function StudentsAdmin() {
           </tbody>
         </table>
       </div>
+
+      {!loading && students.length > 0 && (
+        <div className="mt-4 bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 px-4 py-3">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm text-[#3d3527]/70">
+              <span>Показать по:</span>
+              <select
+                value={perPage}
+                onChange={(e) => setPerPage(e.target.value)}
+                className="px-2 py-1 border border-[#d4c9b0] rounded-lg text-sm focus:outline-none focus:border-[#a67c52] bg-white"
+              >
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="all">Все</option>
+              </select>
+              <span className="ml-2">
+                Всего: <span className="font-medium text-[#3d3527]">{totalStudents}</span>
+              </span>
+            </div>
+
+            {perPage !== 'all' && totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  className="p-1.5 rounded-lg hover:bg-[#f5f3ed] disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4 text-[#3d3527]" />
+                </button>
+                {(() => {
+                  const pages: (number | string)[] = [];
+                  if (totalPages <= 7) {
+                    for (let i = 1; i <= totalPages; i++) pages.push(i);
+                  } else {
+                    pages.push(1);
+                    if (currentPage > 3) pages.push('...');
+                    const start = Math.max(2, currentPage - 1);
+                    const end = Math.min(totalPages - 1, currentPage + 1);
+                    for (let i = start; i <= end; i++) pages.push(i);
+                    if (currentPage < totalPages - 2) pages.push('...');
+                    pages.push(totalPages);
+                  }
+                  return pages.map((p, idx) =>
+                    typeof p === 'string' ? (
+                      <span key={`dots-${idx}`} className="px-1 text-[#3d3527]/40">...</span>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => setCurrentPage(p)}
+                        className={`min-w-[32px] h-8 rounded-lg text-sm font-medium transition-colors ${
+                          currentPage === p
+                            ? 'bg-[#a67c52] text-white'
+                            : 'hover:bg-[#f5f3ed] text-[#3d3527]'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    )
+                  );
+                })()}
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="p-1.5 rounded-lg hover:bg-[#f5f3ed] disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4 text-[#3d3527]" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <StudentModal

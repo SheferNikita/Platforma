@@ -239,12 +239,36 @@ router.get('/psychologists', async (req: AuthRequest, res: Response) => {
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { search, page = '1', limit = '20' } = req.query;
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
+    const { search, page = '1', limit = '20', status, miniGroup, tariff, prepayment } = req.query;
+    const isAllRecords = limit === 'all';
+    const parsedLimit = isAllRecords ? 0 : parseInt(limit as string);
+    const skip = isAllRecords ? 0 : (parseInt(page as string) - 1) * parsedLimit;
 
     const where: any = {
       role: 'STUDENT'
     };
+
+    if (status === 'active') {
+      where.isActive = true;
+    } else if (status === 'inactive') {
+      where.isActive = false;
+    }
+
+    const studentWhere: any = {};
+    if (tariff && tariff !== 'all') {
+      studentWhere.tariff = tariff as string;
+    }
+    if (miniGroup && typeof miniGroup === 'string') {
+      studentWhere.miniGroups = { some: { miniGroupId: miniGroup } };
+    }
+    if (prepayment === 'yes') {
+      studentWhere.notes = { contains: '[PREPAYMENT]' };
+    } else if (prepayment === 'no') {
+      studentWhere.NOT = { notes: { contains: '[PREPAYMENT]' } };
+    }
+    if (Object.keys(studentWhere).length > 0) {
+      where.student = { ...where.student, ...studentWhere };
+    }
 
     if (req.user!.role === 'MENTOR' || req.user!.role === 'INTERN' || req.user!.role === 'PSYCHOLOGIST') {
       const userId = req.user!.id;
@@ -288,11 +312,11 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       if (allStudentIds.length === 0) {
         return res.json({
           students: [],
-          pagination: { page: 1, limit: 20, total: 0, pages: 0 }
+          pagination: { page: 1, limit: isAllRecords ? 0 : parsedLimit, total: 0, pages: 0 }
         });
       }
       
-      where.student = { id: { in: allStudentIds } };
+      where.student = { ...where.student, id: { in: allStudentIds } };
     }
 
     if (search) {
@@ -337,8 +361,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
           }
         },
         orderBy: { createdAt: 'desc' },
-        skip,
-        take: parseInt(limit as string)
+        ...(isAllRecords ? {} : { skip, take: parsedLimit })
       }),
       prisma.user.count({ where })
     ]);
@@ -346,10 +369,10 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     res.json({
       students,
       pagination: {
-        page: parseInt(page as string),
-        limit: parseInt(limit as string),
+        page: isAllRecords ? 1 : parseInt(page as string),
+        limit: isAllRecords ? total : parsedLimit,
         total,
-        pages: Math.ceil(total / parseInt(limit as string))
+        pages: isAllRecords ? 1 : Math.ceil(total / parsedLimit)
       }
     });
   } catch (error) {

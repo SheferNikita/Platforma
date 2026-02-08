@@ -72,7 +72,7 @@ const lessonSchema = z.object({
   taskAllowedTariffs: z.array(z.string()).optional(),
   videos: z.array(z.object({
     id: z.string().optional(),
-    title: z.string().optional(),
+    title: z.string().nullable().optional(),
     url: z.string(),
     order: z.number().optional()
   })).optional()

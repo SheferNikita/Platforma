@@ -361,7 +361,13 @@ router.get('/', async (req: AuthRequest, res: Response) => {
               },
               assignedPsychologist: {
                 select: { id: true, name: true, email: true }
-              }
+              },
+              city: true,
+              gender: true,
+              age: true,
+              addictionType: true,
+              isClergy: true,
+              surveyCompleted: true
             }
           }
         },

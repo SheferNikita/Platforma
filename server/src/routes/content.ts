@@ -281,6 +281,7 @@ router.put('/lessons/:id', moderatorRoles, async (req: AuthRequest & Request<IdP
     
     res.json(lesson);
   } catch (error: any) {
+    console.error('Error updating lesson:', error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.issues[0].message });
     }

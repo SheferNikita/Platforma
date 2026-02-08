@@ -42,28 +42,57 @@ export function NotificationBell() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchNotifications = useCallback(async () => {
+  const retryCountRef = useRef(0);
+
+  const fetchNotifications = useCallback(async (isRetry = false) => {
     try {
-      setLoading(true);
-      setError(null);
+      if (!isRetry) {
+        setLoading(true);
+        setError(null);
+      }
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      if (!token) {
+        setNotifications([]);
+        setLoading(false);
+        return;
+      }
       const res = await fetch('/api/notifications', {
         credentials: 'include',
         headers: getAuthHeaders()
       });
       if (!res.ok) {
-        if (res.status === 401) {
+        if (res.status === 401 || res.status === 403) {
           setNotifications([]);
+          retryCountRef.current = 0;
           return;
         }
-        throw new Error('Failed to fetch notifications');
+        const text = await res.text().catch(() => '');
+        console.error(`Notifications fetch failed: status=${res.status}`, text.slice(0, 200));
+        if (retryCountRef.current < 2) {
+          retryCountRef.current++;
+          setTimeout(() => fetchNotifications(true), 3000);
+          return;
+        }
+        retryCountRef.current = 0;
+        setError('Не удалось загрузить уведомления');
+        return;
       }
+      retryCountRef.current = 0;
       const data = await res.json();
       setNotifications(data.notifications || []);
     } catch (err) {
-      console.error('Error fetching notifications:', err);
+      console.error('Notifications network error:', err);
+      if (retryCountRef.current < 2) {
+        retryCountRef.current++;
+        setTimeout(() => fetchNotifications(true), 3000);
+        return;
+      }
+      retryCountRef.current = 0;
       setError('Не удалось загрузить уведомления');
     } finally {
-      setLoading(false);
+      if (!isRetry || retryCountRef.current === 0) {
+        setLoading(false);
+      }
     }
   }, []);
 

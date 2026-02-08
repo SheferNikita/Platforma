@@ -86,6 +86,7 @@ export function StudentsAdmin() {
   const [filterTariff, setFilterTariff] = useState<string>('all');
   const [filterPrepayment, setFilterPrepayment] = useState<string>('all');
   const [filterDistributed, setFilterDistributed] = useState<string>('all');
+  const [filterSurvey, setFilterSurvey] = useState<string>('all');
   const [miniGroups, setMiniGroups] = useState<MiniGroup[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [perPage, setPerPage] = useState<string>('20');
@@ -94,12 +95,12 @@ export function StudentsAdmin() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, filterDistributed, perPage]);
+  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, filterDistributed, filterSurvey, perPage]);
 
   useEffect(() => {
     loadStudents();
     loadMiniGroups();
-  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, filterDistributed, currentPage, perPage]);
+  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, filterDistributed, filterSurvey, currentPage, perPage]);
 
   useEffect(() => {
     loadStats();
@@ -131,6 +132,7 @@ export function StudentsAdmin() {
       if (filterTariff !== 'all') params.set('tariff', filterTariff);
       if (filterPrepayment !== 'all') params.set('prepayment', filterPrepayment);
       if (filterDistributed !== 'all') params.set('distributed', filterDistributed);
+      if (filterSurvey !== 'all') params.set('survey', filterSurvey);
 
       const { students: data, pagination } = await api.get<{ students: Student[]; pagination: { page: number; limit: number; total: number; pages: number } }>(`/students?${params.toString()}`);
       
@@ -181,9 +183,10 @@ export function StudentsAdmin() {
     setFilterTariff('all');
     setFilterPrepayment('all');
     setFilterDistributed('all');
+    setFilterSurvey('all');
   }
 
-  const hasActiveFilters = filterStatus !== 'all' || filterMiniGroup !== '' || filterTariff !== 'all' || filterPrepayment !== 'all' || filterDistributed !== 'all';
+  const hasActiveFilters = filterStatus !== 'all' || filterMiniGroup !== '' || filterTariff !== 'all' || filterPrepayment !== 'all' || filterDistributed !== 'all' || filterSurvey !== 'all';
 
   return (
     <div className="space-y-6">
@@ -429,6 +432,18 @@ export function StudentsAdmin() {
                 <option value="no">Не распределён</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-[#3d3527] mb-1">Анкета заполнена</label>
+              <select
+                value={filterSurvey}
+                onChange={(e) => setFilterSurvey(e.target.value)}
+                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              >
+                <option value="all">Все</option>
+                <option value="yes">Да</option>
+                <option value="no">Нет</option>
+              </select>
+            </div>
             <div className="flex items-end sm:col-span-2 lg:col-span-1">
               <button
                 onClick={clearFilters}
@@ -471,7 +486,14 @@ export function StudentsAdmin() {
                     )}
                   </div>
                   <p className="text-sm text-[#3d3527]/60 truncate">{student.email}</p>
-                  <p className="text-xs text-[#3d3527]/50 mt-1">{student.student?.progress?.length || 0} уроков пройдено</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-xs text-[#3d3527]/50">{student.student?.progress?.length || 0} уроков пройдено</p>
+                    {!['BASIC', 'FAMILY', 'RELATIVE'].includes(student.student?.tariff || '') && (
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${student.student?.surveyCompleted ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                        Анкета: {student.student?.surveyCompleted ? 'Да' : 'Нет'}
+                      </span>
+                    )}
+                  </div>
                   {student.student?.miniGroups?.length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {student.student.miniGroups.map(mg => (
@@ -524,6 +546,7 @@ export function StudentsAdmin() {
               <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Тариф</th>
               <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Статус</th>
               <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527] hidden lg:table-cell">Прогресс</th>
+              <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527] hidden lg:table-cell">Анкета</th>
               <th className="text-left px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527] hidden xl:table-cell">Мини-группы</th>
               <th className="text-right px-3 lg:px-6 py-3 lg:py-4 text-sm font-semibold text-[#3d3527]">Действия</th>
             </tr>
@@ -531,13 +554,13 @@ export function StudentsAdmin() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="text-center py-12">
+                <td colSpan={7} className="text-center py-12">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#a67c52] mx-auto"></div>
                 </td>
               </tr>
             ) : students.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center py-12 text-[#3d3527]/60">Ученики не найдены</td>
+                <td colSpan={7} className="text-center py-12 text-[#3d3527]/60">Ученики не найдены</td>
               </tr>
             ) : (
               students.map((student) => (
@@ -586,6 +609,15 @@ export function StudentsAdmin() {
                   </td>
                   <td className="px-3 lg:px-6 py-3 lg:py-4 hidden lg:table-cell">
                     <p className="text-sm text-[#3d3527]">{student.student?.progress?.length || 0} уроков</p>
+                  </td>
+                  <td className="px-3 lg:px-6 py-3 lg:py-4 hidden lg:table-cell">
+                    {['BASIC', 'FAMILY', 'RELATIVE'].includes(student.student?.tariff || '') ? (
+                      <span className="text-[#3d3527]/40">—</span>
+                    ) : student.student?.surveyCompleted ? (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">Да</span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-orange-100 text-orange-700">Нет</span>
+                    )}
                   </td>
                   <td className="px-3 lg:px-6 py-3 lg:py-4 hidden xl:table-cell">
                     {student.student?.miniGroups?.length > 0 ? (

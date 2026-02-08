@@ -78,7 +78,8 @@ function ProtectedStudentRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (user.role === 'STUDENT' && !user.surveyCompleted) {
+  const noSurveyTariffs = ['BASIC', 'FAMILY', 'RELATIVE'];
+  if (user.role === 'STUDENT' && !user.surveyCompleted && !noSurveyTariffs.includes(user.tariff || '')) {
     return <Navigate to="/survey" replace />;
   }
 

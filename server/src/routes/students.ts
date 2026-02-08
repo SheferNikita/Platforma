@@ -239,7 +239,7 @@ router.get('/psychologists', async (req: AuthRequest, res: Response) => {
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { search, page = '1', limit = '20', status, miniGroup, tariff, prepayment, distributed } = req.query;
+    const { search, page = '1', limit = '20', status, miniGroup, tariff, prepayment, distributed, survey } = req.query;
     const isAllRecords = limit === 'all';
     const parsedLimit = isAllRecords ? 0 : parseInt(limit as string);
     const skip = isAllRecords ? 0 : (parseInt(page as string) - 1) * parsedLimit;
@@ -270,6 +270,11 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       studentWhere.miniGroups = { some: {} };
     } else if (distributed === 'no') {
       studentWhere.miniGroups = { none: {} };
+    }
+    if (survey === 'yes') {
+      studentWhere.surveyCompleted = true;
+    } else if (survey === 'no') {
+      studentWhere.surveyCompleted = false;
     }
     if (Object.keys(studentWhere).length > 0) {
       where.student = { ...where.student, ...studentWhere };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks, Shuffle, TrendingUp, BarChart3, UserCheck, UserX, Mail, Key, Eye, EyeOff, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks, Shuffle, TrendingUp, BarChart3, UserCheck, UserX, Mail, Key, Eye, EyeOff, Download, ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface StudentsStats {
@@ -37,6 +37,12 @@ interface Student {
     tariff?: string;
     assignedPsychologistId?: string;
     assignedPsychologist?: { id: string; name: string; email: string };
+    city?: string;
+    gender?: string;
+    age?: number;
+    addictionType?: string;
+    isClergy?: boolean;
+    surveyCompleted?: boolean;
   };
 }
 
@@ -929,6 +935,61 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
               {TARIFF_OPTIONS.find(o => o.value === tariff)?.description}
             </p>
           </div>
+          {student?.student && (
+            <div className="p-4 bg-[#f0f4f8] rounded-xl space-y-2">
+              <div className="flex items-center gap-2 mb-2">
+                <ClipboardList className="w-4 h-4 text-[#5b7a9d]" />
+                <span className="font-medium text-[#3d3527]">Ответы на анкету</span>
+                {student.student.surveyCompleted ? (
+                  <span className="ml-auto text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded-full">Заполнена</span>
+                ) : (
+                  <span className="ml-auto text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">Не заполнена</span>
+                )}
+              </div>
+              {student.student.surveyCompleted ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                  <div className="p-2 bg-white/70 rounded-lg">
+                    <span className="text-[#3d3527]/60 block text-xs">Город</span>
+                    <span className="text-[#3d3527]">{student.student.city || '—'}</span>
+                  </div>
+                  <div className="p-2 bg-white/70 rounded-lg">
+                    <span className="text-[#3d3527]/60 block text-xs">Пол</span>
+                    <span className="text-[#3d3527]">
+                      {student.student.gender === 'male' ? 'Мужской' : student.student.gender === 'female' ? 'Женский' : student.student.gender || '—'}
+                    </span>
+                  </div>
+                  <div className="p-2 bg-white/70 rounded-lg">
+                    <span className="text-[#3d3527]/60 block text-xs">Возраст</span>
+                    <span className="text-[#3d3527]">{student.student.age || '—'}</span>
+                  </div>
+                  <div className="p-2 bg-white/70 rounded-lg">
+                    <span className="text-[#3d3527]/60 block text-xs">Духовенство</span>
+                    <span className="text-[#3d3527]">{student.student.isClergy ? 'Да' : 'Нет'}</span>
+                  </div>
+                  <div className="p-2 bg-white/70 rounded-lg sm:col-span-2">
+                    <span className="text-[#3d3527]/60 block text-xs">Тип зависимости</span>
+                    <span className="text-[#3d3527]">
+                      {student.student.addictionType
+                        ? student.student.addictionType.split(',').map((t: string) => {
+                            const labels: Record<string, string> = {
+                              alcohol: 'Алкогольная',
+                              drugs: 'Наркотическая',
+                              gambling: 'Игровая',
+                              food: 'Пищевая',
+                              codependency: 'Зависимость у родственника',
+                              other: 'Другая'
+                            };
+                            return labels[t.trim()] || t.trim();
+                          }).join(', ')
+                        : '—'}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-[#3d3527]/60">Ученик ещё не заполнил анкету</p>
+              )}
+            </div>
+          )}
           <label className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl cursor-pointer">
             <input
               type="checkbox"

@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { sendEmail } from './email';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 
 async function replaceEmailVariables(body: string, recipientEmail: string): Promise<string> {
   if (!body.includes('{{')) return body;

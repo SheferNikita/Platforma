@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client';
 import { sendEmail } from './email';
 import { emailTemplateService } from './emailTemplateService';
 import { notificationService } from './notificationService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../db';
 const PLATFORM_URL = 'https://schkola-trezvosti.ru';
 
 export async function publishScheduledLessons(): Promise<number> {

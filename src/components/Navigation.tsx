@@ -1,6 +1,6 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { BookOpen, MessageSquare, Library, Calendar, Users, Building, User, AlertCircle, Users2, MessageCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { BookOpen, MessageSquare, Library, Calendar, Users, Building, User, AlertCircle, Users2, MessageCircle, MoreHorizontal, X } from 'lucide-react';
 import { SobrietyCounter } from './SobrietyCounter';
 import { NotificationBell } from './NotificationBell';
 import { useAuth } from '../lib/auth';
@@ -10,10 +10,14 @@ export function Navigation() {
   const { user } = useAuth();
   const { isSectionVisible, settings } = useSettings();
   const userTariff = user?.tariff;
+  const location = useLocation();
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  useEffect(() => {
+    setMoreOpen(false);
+  }, [location.pathname]);
   
-  // Тарифы без доступа к мини-группам: BASIC, FAMILY, RELATIVE, INDIVIDUAL_PSYCHOLOGIST
   const hasMiniGroupAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST';
-  // Тарифы с доступом к ответам наставника (не BASIC, FAMILY, RELATIVE)
   const hasMentorResponsesAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST' || user?.tariff === 'INDIVIDUAL_PSYCHOLOGIST';
   
   const allNavItems = [
@@ -32,19 +36,30 @@ export function Navigation() {
     return isSectionVisible(item.section, userTariff);
   });
 
-  const allMobileNavItems = [
+  const mobilePrimaryPaths = ['/', '/chats', '/library', '/sos'];
+
+  const allMobileItems = [
     { path: '/', label: 'Уроки', icon: BookOpen, section: 'lessons' as const },
     { path: '/mentor-responses', label: 'Ответы', icon: MessageCircle, section: 'mentor_responses' as const, tariffCheck: hasMentorResponsesAccess },
     { path: '/chats', label: 'Чаты', icon: MessageSquare, section: 'chats' as const },
     { path: '/library', label: 'Библиотека', icon: Library, section: 'library' as const },
+    { path: '/schedule', label: 'Расписание', icon: Calendar, section: 'schedule' as const },
     { path: '/mini-group', label: 'Группа', icon: Users2, section: 'mini_group' as const, tariffCheck: hasMiniGroupAccess },
+    { path: '/contacts', label: 'Контакты', icon: Users, section: 'contacts' as const },
+    { path: '/communities', label: 'Общины', icon: Building, section: 'communities' as const },
     { path: '/sos', label: 'SOS', icon: AlertCircle, section: 'sos' as const },
+    { path: '/profile', label: 'Профиль', icon: User, section: 'profile' as const },
   ];
 
-  const mobileNavItems = allMobileNavItems.filter(item => {
+  const filteredMobileItems = allMobileItems.filter(item => {
     if (item.tariffCheck === false) return false;
     return isSectionVisible(item.section, userTariff);
   });
+
+  const mobileMainItems = filteredMobileItems.filter(item => mobilePrimaryPaths.includes(item.path));
+  const mobileMoreItems = filteredMobileItems.filter(item => !mobilePrimaryPaths.includes(item.path));
+  const isMoreActive = mobileMoreItems.some(item => location.pathname === item.path);
+  const mainColCount = mobileMainItems.length + (mobileMoreItems.length > 0 ? 1 : 0);
 
   return (
     <>
@@ -123,14 +138,48 @@ export function Navigation() {
 
       {/* Mobile Navigation - Fixed Bottom */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50">
-        {/* Меню навигации */}
-        <div className="bg-gradient-to-t from-[#fdfbf7]/95 via-[#e3ebf1]/90 to-[#f5f3ed]/95 backdrop-blur-md shadow-[0_-4px_24px_var(--ethereal-shadow),0_-2px_8px_var(--book-shadow)] border-t-2 border-[#b5cad9]/30">
+        {moreOpen && (
+          <div className="fixed inset-0 bg-black/30 z-[60]" onClick={() => setMoreOpen(false)} />
+        )}
+
+        {moreOpen && (
+          <div className="relative z-[70] bg-gradient-to-t from-[#fdfbf7] via-[#f0f4f8] to-[#f5f3ed] border-t-2 border-[#b5cad9]/30 rounded-t-2xl shadow-[0_-8px_32px_rgba(0,0,0,0.12)] px-4 pt-4 pb-2 animate-slide-up">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-[#3d3527]">Разделы</span>
+              <button onClick={() => setMoreOpen(false)} className="p-1.5 rounded-lg hover:bg-[#3d3527]/10 transition-colors">
+                <X className="w-5 h-5 text-[#3d3527]/60" />
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-1 mb-2">
+              {mobileMoreItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex flex-col items-center justify-center gap-1.5 py-3 px-1 rounded-xl transition-all duration-200 ${
+                      isActive
+                        ? 'bg-gradient-to-b from-[#e8eaf5]/80 to-[#f0f1f9]/60 text-[var(--button-lavender-dark)] shadow-sm'
+                        : item.path === '/sos'
+                        ? 'hover:bg-red-50 text-red-500'
+                        : 'hover:bg-white/60 text-[#3d3527]/70'
+                    }`
+                  }
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="text-[11px] tracking-wide text-center leading-tight">{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="bg-gradient-to-t from-[#fdfbf7]/95 via-[#e3ebf1]/90 to-[#f5f3ed]/95 backdrop-blur-md shadow-[0_-4px_24px_var(--ethereal-shadow),0_-2px_8px_var(--book-shadow)] border-t-2 border-[#b5cad9]/30 relative z-[70]">
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.5'/%3E%3C/svg%3E")`
           }}></div>
           
-          <div className={`grid relative z-10 ${mobileNavItems.length === 7 ? 'grid-cols-7' : mobileNavItems.length === 6 ? 'grid-cols-6' : 'grid-cols-5'}`}>
-            {mobileNavItems.map((item) => (
+          <div className={`grid relative z-10`} style={{ gridTemplateColumns: `repeat(${mainColCount}, 1fr)` }}>
+            {mobileMainItems.map((item) => (
               <NavLink
                 key={item.path}
                 to={item.path}
@@ -155,6 +204,22 @@ export function Navigation() {
                 )}
               </NavLink>
             ))}
+
+            {mobileMoreItems.length > 0 && (
+              <button
+                onClick={() => setMoreOpen(!moreOpen)}
+                className={`flex flex-col items-center justify-center gap-1 py-3 px-1 transition-all duration-300 border-t-3 ${
+                  moreOpen
+                    ? 'bg-gradient-to-t from-[#e8eaf5]/60 to-[#f0f1f9]/40 border-[var(--button-lavender-dark)] text-[var(--button-lavender-dark)]'
+                    : isMoreActive
+                    ? 'bg-gradient-to-t from-[#e8eaf5]/40 to-transparent border-[var(--button-lavender-dark)]/60 text-[var(--button-lavender-dark)]'
+                    : 'bg-transparent border-transparent opacity-60 hover:opacity-100'
+                }`}
+              >
+                <MoreHorizontal className="w-5 h-5 relative z-10" />
+                <span className="text-[10px] relative z-10 tracking-wide text-center leading-tight">Ещё</span>
+              </button>
+            )}
           </div>
         </div>
       </nav>

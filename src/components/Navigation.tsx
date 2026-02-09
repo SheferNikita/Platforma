@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { BookOpen, MessageSquare, Library, Calendar, Users, Building, User, AlertCircle, Users2, MessageCircle, MoreHorizontal, X } from 'lucide-react';
+import { BookOpen, MessageSquare, Library, Calendar, Users, Building, User, AlertCircle, Users2, MessageCircle, MoreHorizontal, X, Shield } from 'lucide-react';
 import { SobrietyCounter } from './SobrietyCounter';
 import { NotificationBell } from './NotificationBell';
 import { useAuth } from '../lib/auth';
 import { useSettings } from '../lib/settings';
 
 export function Navigation() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { isSectionVisible, settings } = useSettings();
   const userTariff = user?.tariff;
   const location = useLocation();
@@ -106,6 +106,15 @@ export function Navigation() {
               ))}
             </div>
             <div className="py-2 flex items-center gap-2 lg:gap-3 flex-shrink-0">
+              {isAdmin && (
+                <NavLink
+                  to="/admin"
+                  className="flex items-center gap-1.5 px-3 lg:px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-[0_8px_20px_rgba(166,124,82,0.35)] transition-all duration-300 text-xs lg:text-sm font-medium transform hover:scale-105 active:scale-95"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>В админку</span>
+                </NavLink>
+              )}
               <NotificationBell />
               {isSectionVisible('sos', userTariff) && (
                 <NavLink
@@ -150,6 +159,16 @@ export function Navigation() {
                 <X className="w-5 h-5 text-[#3d3527]/60" />
               </button>
             </div>
+            {isAdmin && (
+              <NavLink
+                to="/admin"
+                onClick={() => setMoreOpen(false)}
+                className="flex items-center gap-2.5 px-3 py-2.5 mb-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-all duration-200 text-sm font-medium"
+              >
+                <Shield className="w-5 h-5" />
+                <span>В админку</span>
+              </NavLink>
+            )}
             <div className="grid grid-cols-4 gap-1 mb-2">
               {mobileMoreItems.map((item) => (
                 <NavLink

@@ -66,31 +66,28 @@ export function MiniGroupsAdmin() {
   const [settingsGroup, setSettingsGroup] = useState<MiniGroup | null>(null);
 
   useEffect(() => { 
-    loadGroups(); 
-    loadContacts();
-    loadMentors();
+    loadAllData();
   }, []);
+
+  async function loadAllData() {
+    try {
+      const [groupsData, contactsData, mentorsData] = await Promise.all([
+        api.get<MiniGroup[]>('/content/mini-groups'),
+        api.get<Contact[]>('/content/contacts').catch(() => [] as Contact[]),
+        api.get<Mentor[]>('/admin/mentors').catch(() => [] as Mentor[])
+      ]);
+      setGroups(groupsData);
+      setContacts(contactsData);
+      setMentors(mentorsData);
+    } catch (error) { toast.error('Ошибка загрузки'); }
+    finally { setLoading(false); }
+  }
 
   async function loadGroups() {
     try {
       const data = await api.get<MiniGroup[]>('/content/mini-groups');
       setGroups(data);
     } catch (error) { toast.error('Ошибка загрузки'); }
-    finally { setLoading(false); }
-  }
-
-  async function loadContacts() {
-    try {
-      const data = await api.get<Contact[]>('/content/contacts');
-      setContacts(data);
-    } catch (error) { }
-  }
-
-  async function loadMentors() {
-    try {
-      const data = await api.get<Mentor[]>('/admin/mentors');
-      setMentors(data);
-    } catch (error) { }
   }
 
   function getMentorNames(curatorId: string, mentorsList: Mentor[]): string {

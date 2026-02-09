@@ -30,23 +30,26 @@ export function ScheduleAdmin() {
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
 
   useEffect(() => { 
-    loadEvents(); 
-    loadMiniGroups();
+    loadAllData();
   }, []);
+
+  async function loadAllData() {
+    try {
+      const [eventsData, groupsData] = await Promise.all([
+        api.get<ScheduleEvent[]>('/content/schedule'),
+        api.get<MiniGroup[]>('/content/mini-groups').catch(() => [] as MiniGroup[])
+      ]);
+      setEvents(eventsData);
+      setMiniGroups(groupsData);
+    } catch (error) { toast.error('Ошибка загрузки'); }
+    finally { setLoading(false); }
+  }
 
   async function loadEvents() {
     try {
       const data = await api.get<ScheduleEvent[]>('/content/schedule');
       setEvents(data);
     } catch (error) { toast.error('Ошибка загрузки'); }
-    finally { setLoading(false); }
-  }
-
-  async function loadMiniGroups() {
-    try {
-      const data = await api.get<MiniGroup[]>('/content/mini-groups');
-      setMiniGroups(data);
-    } catch (error) { }
   }
 
   async function saveEvent(data: Partial<ScheduleEvent>) {

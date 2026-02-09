@@ -143,14 +143,27 @@ export function CRMAdmin() {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    loadProducts();
-    loadModules();
-    loadStats();
+    loadInitialData();
   }, []);
 
   useEffect(() => {
     loadOrders();
   }, [search, filters]);
+
+  async function loadInitialData() {
+    try {
+      const [productsData, modulesData, statsData] = await Promise.all([
+        api.get<Product[]>('/products').catch(() => [] as Product[]),
+        api.get<Module[]>('/content/modules').catch(() => [] as Module[]),
+        api.get<CRMStats>('/public/orders/admin/stats').catch(() => null)
+      ]);
+      setProducts(productsData);
+      setModules(modulesData);
+      if (statsData) setStats(statsData);
+    } catch (error) {
+      console.error('Error loading initial data');
+    }
+  }
 
   async function loadProducts() {
     try {
@@ -158,15 +171,6 @@ export function CRMAdmin() {
       setProducts(data);
     } catch (error) {
       console.error('Error loading products');
-    }
-  }
-
-  async function loadModules() {
-    try {
-      const data = await api.get<Module[]>('/content/modules');
-      setModules(data);
-    } catch (error) {
-      console.error('Error loading modules');
     }
   }
 

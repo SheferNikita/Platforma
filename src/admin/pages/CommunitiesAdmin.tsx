@@ -42,23 +42,26 @@ export function CommunitiesAdmin() {
   const [sectionVisible, setSectionVisible] = useState(true);
 
   useEffect(() => { 
-    loadCommunities(); 
-    loadVisibility();
+    loadAllData();
   }, []);
+
+  async function loadAllData() {
+    try {
+      const [communitiesData, visibilityData] = await Promise.all([
+        api.get<Community[]>('/content/communities'),
+        api.get<{ value: string | null }>('/content/settings/communities_visible').catch(() => ({ value: null }))
+      ]);
+      setCommunities(communitiesData);
+      setSectionVisible(visibilityData.value !== 'false');
+    } catch (error) { toast.error('Ошибка загрузки'); }
+    finally { setLoading(false); }
+  }
 
   async function loadCommunities() {
     try {
       const data = await api.get<Community[]>('/content/communities');
       setCommunities(data);
     } catch (error) { toast.error('Ошибка загрузки'); }
-    finally { setLoading(false); }
-  }
-
-  async function loadVisibility() {
-    try {
-      const data = await api.get<{ value: string | null }>('/content/settings/communities_visible');
-      setSectionVisible(data.value !== 'false');
-    } catch (error) { console.error('Error loading visibility setting'); }
   }
 
   async function toggleVisibility() {

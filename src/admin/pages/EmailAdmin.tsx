@@ -190,9 +190,11 @@ export function EmailAdmin() {
   const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    loadTemplates();
-    loadFilterOptions();
-    loadScheduledEmails();
+    Promise.all([
+      loadTemplates(),
+      loadFilterOptions(),
+      loadScheduledEmails()
+    ]);
   }, []);
 
   useEffect(() => {

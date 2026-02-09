@@ -99,11 +99,13 @@ export function StudentsAdmin() {
 
   useEffect(() => {
     loadStudents();
-    loadMiniGroups();
   }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, filterDistributed, filterSurvey, currentPage, perPage]);
 
   useEffect(() => {
-    loadStats();
+    Promise.all([
+      loadMiniGroups(),
+      loadStats()
+    ]);
   }, []);
 
   async function loadMiniGroups() {

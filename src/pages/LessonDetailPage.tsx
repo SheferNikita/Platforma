@@ -769,24 +769,6 @@ export function LessonDetailPage() {
           </div>
         </div>
 
-        {/* Блок Задание/Рекомендация */}
-        {lessonData.showTask && lessonData.taskContent && (
-          (!lessonData.taskAllowedTariffs || lessonData.taskAllowedTariffs.length === 0 || (userTariff && lessonData.taskAllowedTariffs.includes(userTariff))) && (
-            <div className="mb-10 border border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/95 to-white/60 backdrop-blur-sm shadow-[0_4px_16px_var(--ethereal-shadow)]">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-[var(--sky-light)]/30 flex items-center justify-center">
-                  <FileText className="w-4 h-4 text-[#3d3527]/60" />
-                </div>
-                <h3 className="text-base font-medium text-[#3a3a3a]">Задание / Рекомендация</h3>
-              </div>
-              <div 
-                className="prose prose-sm max-w-none prose-headings:text-[#3a3a3a] prose-p:text-[#3d3527] prose-a:text-[var(--button-lavender-dark)] prose-ul:text-[#3d3527] prose-ol:text-[#3d3527] prose-li:text-[#3d3527] prose-strong:text-[#3a3a3a]"
-                dangerouslySetInnerHTML={{ __html: lessonData.taskContent }}
-              />
-            </div>
-          )
-        )}
-
         {/* Видео блок - только если не текстовый урок */}
         {!lessonData.isTextOnly && lessonData.videos.length > 0 && (
           <div className="mb-10">
@@ -841,6 +823,24 @@ export function LessonDetailPage() {
               ))}
             </div>
           </div>
+        )}
+
+        {/* Блок Задание/Рекомендация */}
+        {lessonData.showTask && lessonData.taskContent && (
+          (!lessonData.taskAllowedTariffs || lessonData.taskAllowedTariffs.length === 0 || (userTariff && lessonData.taskAllowedTariffs.includes(userTariff))) && (
+            <div className="mb-10 border border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/95 to-white/60 backdrop-blur-sm shadow-[0_4px_16px_var(--ethereal-shadow)]">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-[var(--sky-light)]/30 flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-[#3d3527]/60" />
+                </div>
+                <h3 className="text-base font-medium text-[#3a3a3a]">Задание / Рекомендация</h3>
+              </div>
+              <div 
+                className="prose prose-sm max-w-none prose-headings:text-[#3a3a3a] prose-p:text-[#3d3527] prose-a:text-[var(--button-lavender-dark)] prose-ul:text-[#3d3527] prose-ol:text-[#3d3527] prose-li:text-[#3d3527] prose-strong:text-[#3a3a3a]"
+                dangerouslySetInnerHTML={{ __html: lessonData.taskContent }}
+              />
+            </div>
+          )
         )}
 
         {/* Кнопка отметить пройденным */}

@@ -788,7 +788,7 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
   const [notes, setNotes] = useState(parsedNotes.notes);
   const [hasPrepayment, setHasPrepayment] = useState(parsedNotes.hasPrepayment);
   const [sendCredentials, setSendCredentials] = useState(true);
-  const [tariff, setTariff] = useState((student?.student as any)?.tariff || 'WITH_MENTOR');
+  const [tariff, setTariff] = useState((student?.student as any)?.tariff || 'BASIC');
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);

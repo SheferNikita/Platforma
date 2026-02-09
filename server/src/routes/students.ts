@@ -789,7 +789,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
             phone: data.phone,
             sobrietyDate: data.sobrietyDate ? new Date(data.sobrietyDate) : undefined,
             notes: data.notes,
-            tariff: data.tariff || 'WITH_MENTOR',
+            tariff: data.tariff || 'BASIC',
             assignedPsychologistId: data.tariff === 'INDIVIDUAL_PSYCHOLOGIST' ? data.assignedPsychologistId : undefined
           }
         }

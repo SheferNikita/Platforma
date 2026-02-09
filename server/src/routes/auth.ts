@@ -143,7 +143,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response) => {
         user: { 
           ...req.user, 
           surveyCompleted: student?.surveyCompleted || false,
-          tariff: student?.tariff || 'WITH_MENTOR'
+          tariff: student?.tariff || 'BASIC'
         } 
       });
     }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, Users2, Eye, EyeOff, Settings, MessageCircle, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, Users2, Eye, EyeOff, Settings, MessageCircle, Calendar, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Contact {
@@ -220,7 +220,12 @@ export function MiniGroupsAdmin() {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-[#3d3527] mb-4">{editingGroup ? 'Редактировать' : 'Новая группа'}</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-[#3d3527]">{editingGroup ? 'Редактировать' : 'Новая группа'}</h2>
+              <button onClick={() => { setShowModal(false); setEditingGroup(null); }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Закрыть">
+                <X className="w-5 h-5 text-[#3d3527]" />
+              </button>
+            </div>
             <MiniGroupForm 
               group={editingGroup} 
               mentors={mentors}
@@ -234,7 +239,12 @@ export function MiniGroupsAdmin() {
       {showSettingsModal && settingsGroup && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-bold text-[#3d3527] mb-4">Настройки группы</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-[#3d3527]">Настройки группы</h2>
+              <button onClick={() => { setShowSettingsModal(false); setSettingsGroup(null); }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Закрыть">
+                <X className="w-5 h-5 text-[#3d3527]" />
+              </button>
+            </div>
             <MiniGroupSettings 
               group={settingsGroup}
               mentors={mentors}

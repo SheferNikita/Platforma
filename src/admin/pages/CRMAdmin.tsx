@@ -1077,7 +1077,12 @@ export function CRMAdmin() {
       {orderToDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-bold text-[#3d3527] mb-4">Удаление заявки</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-[#3d3527]">Удаление заявки</h3>
+              <button onClick={() => setOrderToDelete(null)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Закрыть">
+                <X className="w-5 h-5 text-[#3d3527]" />
+              </button>
+            </div>
             <p className="text-[#3d3527]/70 mb-6">
               Вы уверены, что хотите удалить заявку от{' '}
               <span className="font-medium text-[#3d3527]">{orderToDelete.firstName} {orderToDelete.lastName}</span>?
@@ -1165,7 +1170,12 @@ function OrderModal({ order, onClose, onUpdateStatus, onDelete }: {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-lg my-4 max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
-        <h2 className="text-lg md:text-xl font-bold text-[#3d3527] mb-4 md:mb-6">Детали заявки</h2>
+        <div className="flex items-center justify-between mb-4 md:mb-6">
+          <h2 className="text-lg md:text-xl font-bold text-[#3d3527]">Детали заявки</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Закрыть">
+            <X className="w-5 h-5 text-[#3d3527]" />
+          </button>
+        </div>
 
         <div className="space-y-4">
           <div className="flex items-center gap-3 p-3 md:p-4 bg-[#f5f3ed] rounded-xl">

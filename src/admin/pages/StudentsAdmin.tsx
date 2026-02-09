@@ -836,7 +836,12 @@ function StudentModal({ student, onSave, onClose }: { student: Student | null; o
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold text-[#3d3527] mb-4">{student ? 'Редактировать ученика' : 'Новый ученик'}</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-[#3d3527]">{student ? 'Редактировать ученика' : 'Новый ученик'}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Закрыть">
+            <X className="w-5 h-5 text-[#3d3527]" />
+          </button>
+        </div>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#3d3527] mb-1">Имя</label>

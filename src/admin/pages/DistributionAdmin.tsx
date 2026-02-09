@@ -834,7 +834,12 @@ export function DistributionAdmin() {
       {showPsychologistModal && selectedStudentForPsychologist && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-[#f5f3ed] rounded-2xl p-4 md:p-6 w-full max-w-md shadow-xl">
-            <h3 className="text-lg font-semibold text-[#3d3527] mb-2">Назначить психолога</h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold text-[#3d3527]">Назначить психолога</h3>
+              <button onClick={() => { setShowPsychologistModal(false); setSelectedStudentForPsychologist(null); setSelectedPsychologistId(''); }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Закрыть">
+                <X className="w-5 h-5 text-[#3d3527]" />
+              </button>
+            </div>
             <p className="text-sm text-[#3d3527]/60 mb-4">
               Ученик: <span className="font-medium text-[#3d3527]">{selectedStudentForPsychologist.user.name}</span>
             </p>

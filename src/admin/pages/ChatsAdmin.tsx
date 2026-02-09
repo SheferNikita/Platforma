@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, MessageCircle, Eye, EyeOff, Users, Phone, Video, ExternalLink } from 'lucide-react';
+import { Plus, Edit, Trash2, MessageCircle, Eye, EyeOff, Users, Phone, Video, ExternalLink, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ChatLink {
@@ -252,10 +252,13 @@ function ChatModal({ chat, onSave, onClose }: ChatModalProps) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-[#e8e4da]">
+        <div className="p-6 border-b border-[#e8e4da] flex items-center justify-between">
           <h2 className="text-xl font-semibold text-[#3d3527]">
             {chat ? 'Редактировать чат' : 'Новый чат'}
           </h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Закрыть">
+            <X className="w-5 h-5 text-[#3d3527]" />
+          </button>
         </div>
         
         <form onSubmit={handleSubmit} className="p-6 space-y-4">

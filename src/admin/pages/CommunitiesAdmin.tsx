@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, Building, Eye, EyeOff, MapPin, Globe, Clock, User, Phone } from 'lucide-react';
+import { Plus, Edit, Trash2, Building, Eye, EyeOff, MapPin, Globe, Clock, User, Phone, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Community {
@@ -235,7 +235,12 @@ export function CommunitiesAdmin() {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h2 className="text-lg md:text-xl font-bold text-[#3d3527] mb-4">{editingCommunity ? 'Редактировать' : 'Новая община'}</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg md:text-xl font-bold text-[#3d3527]">{editingCommunity ? 'Редактировать' : 'Новая община'}</h2>
+              <button onClick={() => { setShowModal(false); setEditingCommunity(null); }} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Закрыть">
+                <X className="w-5 h-5 text-[#3d3527]" />
+              </button>
+            </div>
             <CommunityForm 
               community={editingCommunity} 
               onSave={saveCommunity} 

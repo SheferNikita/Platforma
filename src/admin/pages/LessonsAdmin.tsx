@@ -510,7 +510,12 @@ function ModuleModal({ module, onSave, onClose }: { module: Module | null; onSav
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4">
       <div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 w-full max-w-lg max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg sm:text-xl font-bold text-[#3d3527] mb-4">{module ? 'Редактировать модуль' : 'Новый модуль'}</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg sm:text-xl font-bold text-[#3d3527]">{module ? 'Редактировать модуль' : 'Новый модуль'}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Закрыть">
+            <X className="w-5 h-5 text-[#3d3527]" />
+          </button>
+        </div>
         <div className="space-y-3 sm:space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#3d3527] mb-1">Название</label>
@@ -662,7 +667,12 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-0 sm:p-4 overflow-y-auto">
       <div className="bg-white sm:rounded-2xl p-4 sm:p-6 w-full sm:max-w-4xl h-full sm:h-auto sm:my-8 sm:max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg sm:text-xl font-bold text-[#3d3527] mb-4">{lesson ? 'Редактировать урок' : 'Новый урок'}</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg sm:text-xl font-bold text-[#3d3527]">{lesson ? 'Редактировать урок' : 'Новый урок'}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Закрыть">
+            <X className="w-5 h-5 text-[#3d3527]" />
+          </button>
+        </div>
         <div className="space-y-3 sm:space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#3d3527] mb-1">Название</label>

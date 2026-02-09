@@ -1444,7 +1444,12 @@ function TemplateModal({ template, onSave, onClose }: { template: EmailTemplate 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-2xl my-8 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold text-[#3d3527] mb-4">{template ? 'Редактировать шаблон' : 'Новый шаблон'}</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-[#3d3527]">{template ? 'Редактировать шаблон' : 'Новый шаблон'}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Закрыть">
+            <X className="w-5 h-5 text-[#3d3527]" />
+          </button>
+        </div>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#3d3527] mb-1">Название шаблона</label>

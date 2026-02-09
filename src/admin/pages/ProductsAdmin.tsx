@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, ShoppingBag, Link as LinkIcon, Copy, Check } from 'lucide-react';
+import { Plus, Edit, Trash2, ShoppingBag, Link as LinkIcon, Copy, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { RichTextEditor } from '../../components/RichTextEditor';
 
@@ -255,7 +255,12 @@ function ProductModal({ product, onSave, onClose }: { product: Product | null; o
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-3xl my-4 md:my-8 max-h-[90vh] overflow-y-auto mx-4 sm:mx-auto">
-        <h2 className="text-lg md:text-xl font-bold text-[#3d3527] mb-4">{product ? 'Редактировать продукт' : 'Новый продукт'}</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg md:text-xl font-bold text-[#3d3527]">{product ? 'Редактировать продукт' : 'Новый продукт'}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title="Закрыть">
+            <X className="w-5 h-5 text-[#3d3527]" />
+          </button>
+        </div>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#3d3527] mb-1">Название</label>

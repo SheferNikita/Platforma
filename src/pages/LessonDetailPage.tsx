@@ -256,48 +256,62 @@ export function LessonDetailPage() {
     return messages;
   };
 
-  // Fetch lesson data from API — parallel loading for speed
-  useEffect(() => {
-    let cancelled = false;
-    async function fetchLesson() {
-      if (!lessonId) return;
-      setLoading(true);
-      setError(null);
-      try {
-        const [lesson, modules, progress, tariffData] = await Promise.all([
-          api.get<LessonData>(`/public/lessons/${lessonId}`),
-          api.get<ModuleWithLessons[]>('/public/modules'),
-          api.get<string[]>('/public/progress').catch(() => [] as string[]),
-          api.get<{ user: { tariff?: StudentTariff; role?: string } }>('/auth/me').catch(() => ({ user: { tariff: undefined, role: undefined } }))
-        ]);
+  const cancelledRef = useRef(false);
 
-        if (cancelled) return;
+  const fetchLessonData = async (id: string) => {
+    cancelledRef.current = false;
+    setLoading(true);
+    setError(null);
+    try {
+      const lessonResult = await api.get<LessonData>(`/public/lessons/${id}`);
+      
+      if (cancelledRef.current) return;
 
-        setLessonData(lesson);
+      const [modules, progress, tariffData] = await Promise.all([
+        api.get<ModuleWithLessons[]>('/public/modules').catch(() => [] as ModuleWithLessons[]),
+        api.get<string[]>('/public/progress').catch(() => [] as string[]),
+        api.get<{ user: { tariff?: StudentTariff; role?: string } }>('/auth/me').catch(() => ({ user: { tariff: undefined, role: undefined } }))
+      ]);
 
-        const currentModule = modules.find(m => m.id === lesson.module.id);
-        if (currentModule) {
-          setModuleLessons(currentModule);
-        }
+      if (cancelledRef.current) return;
 
-        setIsLessonCompleted(progress.includes(lessonId));
+      setLessonData(lessonResult);
 
-        if (tariffData.user.tariff) {
-          setUserTariff(tariffData.user.tariff);
-        }
-        if (tariffData.user.role && ADMIN_ROLES.includes(tariffData.user.role)) {
-          setIsAdmin(true);
-        }
-      } catch (err) {
-        if (cancelled) return;
-        console.error('Error fetching lesson:', err);
-        setError('Урок не найден');
-      } finally {
-        if (!cancelled) setLoading(false);
+      const currentModule = modules.find(m => m.id === lessonResult.module.id);
+      if (currentModule) {
+        setModuleLessons(currentModule);
       }
+
+      setIsLessonCompleted(progress.includes(id));
+
+      if (tariffData.user.tariff) {
+        setUserTariff(tariffData.user.tariff);
+      }
+      if (tariffData.user.role && ADMIN_ROLES.includes(tariffData.user.role)) {
+        setIsAdmin(true);
+      }
+    } catch (err: any) {
+      if (cancelledRef.current) return;
+      console.error('Error fetching lesson:', err);
+      const isTimeout = err?.message?.includes('время ожидания') || err?.message?.includes('AbortError');
+      if (isTimeout) {
+        setError('Не удалось загрузить урок — слишком долгий ответ сервера. Попробуйте ещё раз.');
+      } else if (err?.message?.includes('Урок не найден') || err?.message?.includes('Доступ запрещён') || err?.message?.includes('нет доступа')) {
+        setError(err.message);
+      } else {
+        setError('Не удалось загрузить урок. Проверьте подключение к интернету.');
+      }
+    } finally {
+      if (!cancelledRef.current) setLoading(false);
     }
-    fetchLesson();
-    return () => { cancelled = true; };
+  };
+
+  useEffect(() => {
+    cancelledRef.current = false;
+    if (lessonId) {
+      fetchLessonData(lessonId);
+    }
+    return () => { cancelledRef.current = true; };
   }, [lessonId]);
 
   // Fetch chat sections in parallel (secondary data, loaded after main content)
@@ -639,13 +653,27 @@ export function LessonDetailPage() {
     return (
       <PageWrapper>
         <div className="text-center py-20">
-          <h2 className="mb-4">{error || 'Урок не найден'}</h2>
-          <button
-            onClick={() => navigate('/')}
-            className="px-6 py-3 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_6px_16px_rgba(139,149,188,0.4)] transition-all duration-300"
-          >
-            Вернуться к урокам
-          </button>
+          <div className="mb-6 text-5xl">📡</div>
+          <h2 className="mb-2 text-lg font-semibold text-[#3d3527]">{error || 'Урок не найден'}</h2>
+          <p className="mb-6 text-sm text-[#3d3527]/60">Попробуйте обновить страницу или вернитесь к списку уроков</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => {
+                if (lessonId) {
+                  fetchLessonData(lessonId);
+                }
+              }}
+              className="px-6 py-3 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_6px_16px_rgba(139,149,188,0.4)] transition-all duration-300 font-medium"
+            >
+              Попробовать снова
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="px-6 py-3 border border-[#d4c9b8] text-[#3d3527] rounded-xl hover:bg-[#f5f3ed] transition-all duration-300"
+            >
+              Вернуться к урокам
+            </button>
+          </div>
         </div>
       </PageWrapper>
     );

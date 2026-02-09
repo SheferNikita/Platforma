@@ -1,4 +1,5 @@
 const API_BASE = '/api';
+const REQUEST_TIMEOUT = 15000;
 
 function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
@@ -17,9 +18,28 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json();
 }
 
+function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = REQUEST_TIMEOUT): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  return fetch(url, {
+    ...options,
+    signal: controller.signal,
+  }).then(response => {
+    clearTimeout(timeoutId);
+    return response;
+  }).catch(err => {
+    clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error('Превышено время ожидания ответа. Проверьте подключение к интернету.');
+    }
+    throw err;
+  });
+}
+
 export const api = {
   get: async <T>(url: string): Promise<T> => {
-    const response = await fetch(`${API_BASE}${url}`, {
+    const response = await fetchWithTimeout(`${API_BASE}${url}`, {
       credentials: 'include',
       headers: getAuthHeaders(),
     });
@@ -27,7 +47,7 @@ export const api = {
   },
 
   post: async <T>(url: string, data?: any): Promise<T> => {
-    const response = await fetch(`${API_BASE}${url}`, {
+    const response = await fetchWithTimeout(`${API_BASE}${url}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       credentials: 'include',
@@ -37,7 +57,7 @@ export const api = {
   },
 
   put: async <T>(url: string, data: any): Promise<T> => {
-    const response = await fetch(`${API_BASE}${url}`, {
+    const response = await fetchWithTimeout(`${API_BASE}${url}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       credentials: 'include',
@@ -47,7 +67,7 @@ export const api = {
   },
 
   delete: async <T>(url: string, data?: any): Promise<T> => {
-    const response = await fetch(`${API_BASE}${url}`, {
+    const response = await fetchWithTimeout(`${API_BASE}${url}`, {
       method: 'DELETE',
       credentials: 'include',
       headers: data ? { 'Content-Type': 'application/json', ...getAuthHeaders() } : getAuthHeaders(),

@@ -10,7 +10,10 @@ import { useSettings } from '../lib/settings';
 
 type StudentTariff = 'BASIC' | 'FAMILY' | 'RELATIVE' | 'WITH_MENTOR' | 'WITH_PSYCHOLOGIST' | 'INDIVIDUAL_PSYCHOLOGIST';
 
-const canAccessMentorFeatures = (tariff: StudentTariff | null): boolean => {
+const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR', 'ADMIN_ASSISTANT'];
+
+const canAccessMentorFeatures = (tariff: StudentTariff | null, isAdmin = false): boolean => {
+  if (isAdmin) return true;
   if (!tariff) return false;
   const fullAccessTariffs: StudentTariff[] = ['WITH_MENTOR', 'WITH_PSYCHOLOGIST', 'INDIVIDUAL_PSYCHOLOGIST'];
   return fullAccessTariffs.includes(tariff);
@@ -194,6 +197,7 @@ export function LessonDetailPage() {
   
   // User tariff state
   const [userTariff, setUserTariff] = useState<StudentTariff | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -264,7 +268,7 @@ export function LessonDetailPage() {
           api.get<LessonData>(`/public/lessons/${lessonId}`),
           api.get<ModuleWithLessons[]>('/public/modules'),
           api.get<string[]>('/public/progress').catch(() => [] as string[]),
-          api.get<{ user: { tariff?: StudentTariff } }>('/auth/me').catch(() => ({ user: { tariff: undefined } }))
+          api.get<{ user: { tariff?: StudentTariff; role?: string } }>('/auth/me').catch(() => ({ user: { tariff: undefined, role: undefined } }))
         ]);
 
         if (cancelled) return;
@@ -280,6 +284,9 @@ export function LessonDetailPage() {
 
         if (tariffData.user.tariff) {
           setUserTariff(tariffData.user.tariff);
+        }
+        if (tariffData.user.role && ADMIN_ROLES.includes(tariffData.user.role)) {
+          setIsAdmin(true);
         }
       } catch (err) {
         if (cancelled) return;
@@ -762,7 +769,7 @@ export function LessonDetailPage() {
 
         {/* Блок Задание/Рекомендация */}
         {lessonData.showTask && lessonData.taskContent && (
-          (!lessonData.taskAllowedTariffs || lessonData.taskAllowedTariffs.length === 0 || (userTariff && lessonData.taskAllowedTariffs.includes(userTariff))) && (
+          (isAdmin || !lessonData.taskAllowedTariffs || lessonData.taskAllowedTariffs.length === 0 || (userTariff && lessonData.taskAllowedTariffs.includes(userTariff))) && (
             <div className="mb-10 border border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/95 to-white/60 backdrop-blur-sm shadow-[0_4px_16px_var(--ethereal-shadow)]">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-[var(--sky-light)]/30 flex items-center justify-center">
@@ -800,7 +807,7 @@ export function LessonDetailPage() {
         </div>
 
         {/* Info message for basic tariffs */}
-        {!canAccessMentorFeatures(userTariff) && userTariff && (
+        {!isAdmin && !canAccessMentorFeatures(userTariff, isAdmin) && userTariff && (
           <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-[var(--sky-soft)]/30 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
@@ -817,7 +824,7 @@ export function LessonDetailPage() {
         )}
 
         {/* Форма дневника с чатом */}
-        {canAccessMentorFeatures(userTariff) && lessonData.showDiary !== false && (
+        {canAccessMentorFeatures(userTariff, isAdmin) && lessonData.showDiary !== false && (
         <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
           <div className="flex items-start gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
@@ -974,7 +981,7 @@ export function LessonDetailPage() {
         )}
 
         {/* Форма конспекта с чатом */}
-        {canAccessMentorFeatures(userTariff) && lessonData.showNotes !== false && (
+        {canAccessMentorFeatures(userTariff, isAdmin) && lessonData.showNotes !== false && (
         <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
           <div className="flex items-start gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">

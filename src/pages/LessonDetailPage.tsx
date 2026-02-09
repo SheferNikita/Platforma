@@ -911,8 +911,9 @@ export function LessonDetailPage() {
                               <img 
                                 src={file.url} 
                                 alt={file.name}
+                                loading="lazy"
                                 onClick={() => setFullscreenImage(file.url!)}
-                                className="w-full max-w-full rounded-lg mt-1 border border-white/20 cursor-pointer hover:opacity-90 transition-opacity"
+                                className="max-w-full max-h-48 md:max-h-64 rounded-lg mt-1 border border-white/20 cursor-pointer hover:opacity-90 transition-opacity object-contain"
                               />
                             ) : (
                               <div
@@ -1068,8 +1069,9 @@ export function LessonDetailPage() {
                               <img 
                                 src={file.url} 
                                 alt={file.name}
+                                loading="lazy"
                                 onClick={() => setFullscreenImage(file.url!)}
-                                className="w-full max-w-full rounded-lg mt-1 border border-white/20 cursor-pointer hover:opacity-90 transition-opacity"
+                                className="max-w-full max-h-48 md:max-h-64 rounded-lg mt-1 border border-white/20 cursor-pointer hover:opacity-90 transition-opacity object-contain"
                               />
                             ) : (
                               <div

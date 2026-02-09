@@ -218,170 +218,105 @@ export function LessonDetailPage() {
   const videoInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch lesson data from API
+  const parseNotesToMessages = (notes: StudentNoteFromAPI[], type: 'question' | 'diary' | 'notes'): ChatMessage[] => {
+    const messages: ChatMessage[] = [];
+    notes.forEach(note => {
+      const entryFiles = type !== 'question' ? note.attachments?.map(att => ({
+        name: att.originalName,
+        type: att.mimeType,
+        url: `/api/public/attachments/${type === 'diary' ? 'diary' : 'note'}/${att.id}`
+      })) : undefined;
+      messages.push({
+        id: note.id,
+        text: note.content,
+        author: 'student',
+        timestamp: new Date(note.createdAt),
+        files: entryFiles && entryFiles.length > 0 ? entryFiles : undefined
+      });
+      if (note.reply) {
+        const replyHistory = parseReplyHistory(note.reply);
+        replyHistory.forEach((replyItem, idx) => {
+          messages.push({
+            id: `${note.id}-reply-${idx}`,
+            text: replyItem.text,
+            author: 'curator',
+            timestamp: new Date(replyItem.createdAt),
+            curatorName: replyItem.authorName,
+            audioData: replyItem.audioData,
+            audioDuration: replyItem.audioDuration,
+            hasAudio: !!replyItem.audioData
+          });
+        });
+      }
+    });
+    return messages;
+  };
+
+  // Fetch lesson data from API — parallel loading for speed
   useEffect(() => {
+    let cancelled = false;
     async function fetchLesson() {
       if (!lessonId) return;
       setLoading(true);
       setError(null);
       try {
-        const lesson = await api.get<LessonData>(`/public/lessons/${lessonId}`);
+        const [lesson, modules, progress, tariffData] = await Promise.all([
+          api.get<LessonData>(`/public/lessons/${lessonId}`),
+          api.get<ModuleWithLessons[]>('/public/modules'),
+          api.get<string[]>('/public/progress').catch(() => [] as string[]),
+          api.get<{ user: { tariff?: StudentTariff } }>('/auth/me').catch(() => ({ user: { tariff: undefined } }))
+        ]);
+
+        if (cancelled) return;
+
         setLessonData(lesson);
-        
-        // Fetch module with all lessons for navigation
-        const modules = await api.get<ModuleWithLessons[]>('/public/modules');
+
         const currentModule = modules.find(m => m.id === lesson.module.id);
         if (currentModule) {
           setModuleLessons(currentModule);
         }
 
-        // Fetch lesson completion status
-        try {
-          const progress = await api.get<string[]>('/public/progress');
-          setIsLessonCompleted(progress.includes(lessonId));
-        } catch (progressErr) {
-          console.error('Error fetching progress:', progressErr);
-        }
+        setIsLessonCompleted(progress.includes(lessonId));
 
-        // Fetch chat history (student questions and replies)
-        try {
-          console.log('[LessonDetailPage] Fetching notes for lesson:', lessonId);
-          const notes = await api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/notes`);
-          console.log('[LessonDetailPage] Received notes:', notes);
-          const messages: ChatMessage[] = [];
-          
-          notes.forEach(note => {
-            // Add student question
-            messages.push({
-              id: note.id,
-              text: note.content,
-              author: 'student',
-              timestamp: new Date(note.createdAt)
-            });
-            
-            // Add curator replies if exists
-            if (note.reply) {
-              const replyHistory = parseReplyHistory(note.reply);
-              replyHistory.forEach((replyItem, idx) => {
-                messages.push({
-                  id: `${note.id}-reply-${idx}`,
-                  text: replyItem.text,
-                  author: 'curator',
-                  timestamp: new Date(replyItem.createdAt),
-                  curatorName: replyItem.authorName,
-                  audioData: replyItem.audioData,
-                  audioDuration: replyItem.audioDuration,
-                  hasAudio: !!replyItem.audioData
-                });
-              });
-            }
-          });
-          
-          console.log('[LessonDetailPage] Setting chat history:', messages.length, 'messages');
-          setChatHistory(messages);
-        } catch (notesErr) {
-          console.error('Error fetching notes:', notesErr);
-        }
-
-        // Fetch diary history
-        try {
-          const diaryEntries = await api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/diary`);
-          const diaryMessages: ChatMessage[] = [];
-          diaryEntries.forEach(entry => {
-            const entryFiles = entry.attachments?.map(att => ({
-              name: att.originalName,
-              type: att.mimeType,
-              url: `/api/public/attachments/diary/${att.id}`
-            }));
-            diaryMessages.push({
-              id: entry.id,
-              text: entry.content,
-              author: 'student',
-              timestamp: new Date(entry.createdAt),
-              files: entryFiles && entryFiles.length > 0 ? entryFiles : undefined
-            });
-            if (entry.reply) {
-              const replyHistory = parseReplyHistory(entry.reply);
-              replyHistory.forEach((replyItem, idx) => {
-                diaryMessages.push({
-                  id: `${entry.id}-reply-${idx}`,
-                  text: replyItem.text,
-                  author: 'curator',
-                  timestamp: new Date(replyItem.createdAt),
-                  curatorName: replyItem.authorName,
-                  audioData: replyItem.audioData,
-                  audioDuration: replyItem.audioDuration,
-                  hasAudio: !!replyItem.audioData
-                });
-              });
-            }
-          });
-          setDiaryHistory(diaryMessages);
-        } catch (diaryErr) {
-          console.error('Error fetching diary:', diaryErr);
-        }
-
-        // Fetch personal notes history (конспект)
-        try {
-          const notesEntries = await api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/personal-notes`);
-          const notesMessages: ChatMessage[] = [];
-          notesEntries.forEach(entry => {
-            const entryFiles = entry.attachments?.map(att => ({
-              name: att.originalName,
-              type: att.mimeType,
-              url: `/api/public/attachments/note/${att.id}`
-            }));
-            notesMessages.push({
-              id: entry.id,
-              text: entry.content,
-              author: 'student',
-              timestamp: new Date(entry.createdAt),
-              files: entryFiles && entryFiles.length > 0 ? entryFiles : undefined
-            });
-            if (entry.reply) {
-              const replyHistory = parseReplyHistory(entry.reply);
-              replyHistory.forEach((replyItem, idx) => {
-                notesMessages.push({
-                  id: `${entry.id}-reply-${idx}`,
-                  text: replyItem.text,
-                  author: 'curator',
-                  timestamp: new Date(replyItem.createdAt),
-                  curatorName: replyItem.authorName,
-                  audioData: replyItem.audioData,
-                  audioDuration: replyItem.audioDuration,
-                  hasAudio: !!replyItem.audioData
-                });
-              });
-            }
-          });
-          setNotesHistory(notesMessages);
-        } catch (notesErr) {
-          console.error('Error fetching personal notes:', notesErr);
+        if (tariffData.user.tariff) {
+          setUserTariff(tariffData.user.tariff);
         }
       } catch (err) {
+        if (cancelled) return;
         console.error('Error fetching lesson:', err);
         setError('Урок не найден');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     fetchLesson();
+    return () => { cancelled = true; };
   }, [lessonId]);
 
-  // Fetch user tariff from API
+  // Fetch chat sections in parallel (secondary data, loaded after main content)
   useEffect(() => {
-    async function fetchUserTariff() {
+    let cancelled = false;
+    async function fetchChatData() {
+      if (!lessonId) return;
       try {
-        const { user } = await api.get<{ user: { tariff?: StudentTariff } }>('/auth/me');
-        if (user.tariff) {
-          setUserTariff(user.tariff);
-        }
+        const [questionsData, diaryData, notesData] = await Promise.all([
+          api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/notes`).catch(() => [] as StudentNoteFromAPI[]),
+          api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/diary`).catch(() => [] as StudentNoteFromAPI[]),
+          api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/personal-notes`).catch(() => [] as StudentNoteFromAPI[])
+        ]);
+
+        if (cancelled) return;
+
+        setChatHistory(parseNotesToMessages(questionsData, 'question'));
+        setDiaryHistory(parseNotesToMessages(diaryData, 'diary'));
+        setNotesHistory(parseNotesToMessages(notesData, 'notes'));
       } catch (err) {
-        console.error('Error fetching user tariff:', err);
+        console.error('Error fetching chat data:', err);
       }
     }
-    fetchUserTariff();
-  }, []);
+    fetchChatData();
+    return () => { cancelled = true; };
+  }, [lessonId]);
 
   // Navigation helpers
   const currentLessonIndex = moduleLessons?.lessons.findIndex(l => l.id === lessonId) ?? -1;

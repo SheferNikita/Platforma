@@ -43,8 +43,13 @@ export function NotificationBell() {
   const [error, setError] = useState<string | null>(null);
 
   const retryCountRef = useRef(0);
+  const disabledRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const consecutiveErrorsRef = useRef(0);
 
   const fetchNotifications = useCallback(async (isRetry = false) => {
+    if (disabledRef.current) return;
+
     try {
       if (!isRetry) {
         setLoading(true);
@@ -64,31 +69,60 @@ export function NotificationBell() {
         if (res.status === 401 || res.status === 403) {
           setNotifications([]);
           retryCountRef.current = 0;
+          consecutiveErrorsRef.current = 0;
           return;
         }
-        const text = await res.text().catch(() => '');
-        console.error(`Notifications fetch failed: status=${res.status}`, text.slice(0, 200));
-        if (retryCountRef.current < 2) {
+        if (res.status === 404) {
+          console.warn('Notifications endpoint not available (404). Disabling polling.');
+          disabledRef.current = true;
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          retryCountRef.current = 0;
+          return;
+        }
+        consecutiveErrorsRef.current++;
+        if (consecutiveErrorsRef.current >= 3) {
+          console.warn('Notifications: too many errors, stopping polling.');
+          disabledRef.current = true;
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          setError('Уведомления временно недоступны');
+          return;
+        }
+        if (retryCountRef.current < 1) {
           retryCountRef.current++;
-          setTimeout(() => fetchNotifications(true), 3000);
+          setTimeout(() => fetchNotifications(true), 5000 * retryCountRef.current);
           return;
         }
         retryCountRef.current = 0;
-        setError('Не удалось загрузить уведомления');
         return;
       }
       retryCountRef.current = 0;
+      consecutiveErrorsRef.current = 0;
       const data = await res.json();
       setNotifications(data.notifications || []);
     } catch (err) {
-      console.error('Notifications network error:', err);
-      if (retryCountRef.current < 2) {
+      consecutiveErrorsRef.current++;
+      if (consecutiveErrorsRef.current >= 3) {
+        console.warn('Notifications: too many network errors, stopping polling.');
+        disabledRef.current = true;
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+        setError('Уведомления временно недоступны');
+        return;
+      }
+      if (retryCountRef.current < 1) {
         retryCountRef.current++;
-        setTimeout(() => fetchNotifications(true), 3000);
+        setTimeout(() => fetchNotifications(true), 5000 * retryCountRef.current);
         return;
       }
       retryCountRef.current = 0;
-      setError('Не удалось загрузить уведомления');
     } finally {
       if (!isRetry || retryCountRef.current === 0) {
         setLoading(false);
@@ -98,8 +132,13 @@ export function NotificationBell() {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
+    intervalRef.current = setInterval(fetchNotifications, 60000);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, [fetchNotifications]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;

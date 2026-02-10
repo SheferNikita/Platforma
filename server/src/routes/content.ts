@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { startScheduledPublishJob } from '../services/scheduledPublish';
 import { startScheduledEmailJob } from '../services/scheduledEmail';
 import { notificationService } from '../services/notificationService';
+import { invalidateModulesCache } from './public';
 
 startScheduledPublishJob();
 startScheduledEmailJob();
@@ -104,6 +105,7 @@ router.post('/modules', moderatorRoles, async (req: AuthRequest, res: Response) 
   try {
     const data = moduleSchema.parse(req.body);
     const module = await prisma.module.create({ data });
+    invalidateModulesCache();
     
     await prisma.$executeRaw`
       INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "newData", "createdAt")
@@ -127,6 +129,7 @@ router.put('/modules/:id', moderatorRoles, async (req: AuthRequest & Request<IdP
     const data = moduleSchema.partial().parse(req.body);
     const oldModule = await prisma.module.findUnique({ where: { id } });
     const module = await prisma.module.update({ where: { id }, data });
+    invalidateModulesCache();
     
     await prisma.$executeRaw`
       INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
@@ -148,6 +151,7 @@ router.delete('/modules/:id', moderatorRoles, async (req: AuthRequest & Request<
     const id = req.params.id;
     const oldModule = await prisma.module.findUnique({ where: { id } });
     await prisma.module.delete({ where: { id } });
+    invalidateModulesCache();
     
     await prisma.$executeRaw`
       INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "createdAt")
@@ -222,6 +226,7 @@ router.post('/lessons', moderatorRoles, async (req: AuthRequest, res: Response) 
         }
       }
     });
+    invalidateModulesCache();
     
     await prisma.$executeRaw`
       INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "newData", "createdAt")
@@ -273,6 +278,7 @@ router.put('/lessons/:id', moderatorRoles, async (req: AuthRequest & Request<IdP
         }
       }
     });
+    invalidateModulesCache();
     
     await prisma.$executeRaw`
       INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
@@ -296,6 +302,7 @@ router.delete('/lessons/:id', moderatorRoles, async (req: AuthRequest & Request<
     const oldLesson = await prisma.lesson.findUnique({ where: { id } });
     
     await prisma.lesson.delete({ where: { id } });
+    invalidateModulesCache();
     
     await prisma.$executeRaw`
       INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "createdAt")
@@ -1119,6 +1126,7 @@ router.post('/modules/reorder', moderatorRoles, async (req: AuthRequest, res: Re
       prisma.module.update({ where: { id }, data: { order: targetModule.order } }),
       prisma.module.update({ where: { id: targetModule.id }, data: { order: currentModule.order } })
     ]);
+    invalidateModulesCache();
     
     res.json({ message: 'Порядок изменен' });
   } catch (error) {
@@ -1149,6 +1157,7 @@ router.post('/lessons/reorder', moderatorRoles, async (req: AuthRequest, res: Re
       prisma.lesson.update({ where: { id }, data: { order: targetLesson.order } }),
       prisma.lesson.update({ where: { id: targetLesson.id }, data: { order: currentLesson.order } })
     ]);
+    invalidateModulesCache();
     
     res.json({ message: 'Порядок изменен' });
   } catch (error) {
@@ -1219,6 +1228,7 @@ router.post('/modules/reorder-batch', moderatorRoles, async (req: AuthRequest, r
         prisma.module.update({ where: { id: item.id }, data: { order: item.order } })
       )
     );
+    invalidateModulesCache();
     res.json({ message: 'Порядок сохранен' });
   } catch (error) {
     console.error('Batch reorder modules error:', error);
@@ -1234,6 +1244,7 @@ router.post('/lessons/reorder-batch', moderatorRoles, async (req: AuthRequest, r
         prisma.lesson.update({ where: { id: item.id }, data: { order: item.order } })
       )
     );
+    invalidateModulesCache();
     res.json({ message: 'Порядок сохранен' });
   } catch (error) {
     console.error('Batch reorder lessons error:', error);

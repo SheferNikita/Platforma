@@ -10,6 +10,50 @@ import distributionRouter from './distribution';
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
+let modulesCache: { data: any[] | null; timestamp: number } = { data: null, timestamp: 0 };
+const MODULES_CACHE_TTL = 2 * 60 * 1000;
+
+async function getCachedModules() {
+  const now = Date.now();
+  if (modulesCache.data && (now - modulesCache.timestamp) < MODULES_CACHE_TTL) {
+    return modulesCache.data;
+  }
+  const currentDate = new Date();
+  const modules = await prisma.module.findMany({
+    where: { isPublished: true },
+    include: {
+      lessons: {
+        where: {
+          OR: [
+            { isPublished: true },
+            { 
+              isPublished: false,
+              publishAt: { gt: currentDate }
+            }
+          ]
+        },
+        orderBy: { order: 'asc' },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          duration: true,
+          order: true,
+          isPublished: true,
+          publishAt: true
+        }
+      }
+    },
+    orderBy: { order: 'asc' }
+  });
+  modulesCache = { data: modules, timestamp: now };
+  return modules;
+}
+
+function invalidateModulesCache() {
+  modulesCache = { data: null, timestamp: 0 };
+}
+
 router.use('/orders', ordersRouter);
 router.use('/moderation', moderationRouter);
 router.use('/audit', auditRouter);
@@ -63,36 +107,12 @@ function isAdminRole(role: string | null): boolean {
 
 router.get('/modules', async (req: Request, res: Response) => {
   try {
+    const startTime = Date.now();
     const student = await getStudentFromToken(req);
+    const t1 = Date.now();
     
-    const now = new Date();
-    const modules = await prisma.module.findMany({
-      where: { isPublished: true },
-      include: {
-        lessons: {
-          where: {
-            OR: [
-              { isPublished: true },
-              { 
-                isPublished: false,
-                publishAt: { gt: now }
-              }
-            ]
-          },
-          orderBy: { order: 'asc' },
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            duration: true,
-            order: true,
-            isPublished: true,
-            publishAt: true
-          }
-        }
-      },
-      orderBy: { order: 'asc' }
-    });
+    const modules = await getCachedModules();
+    const t2 = Date.now();
 
     const userRole = await getUserRoleFromToken(req);
 
@@ -104,6 +124,7 @@ router.get('/modules', async (req: Request, res: Response) => {
           accessExpiresAt: null,
           accessFrom: null
         }));
+        console.log(`[Perf] GET /modules: auth=${t1-startTime}ms, modules=${t2-t1}ms, total=${Date.now()-startTime}ms (admin)`);
         return res.json(result);
       }
       const result = modules.map(m => ({
@@ -111,12 +132,14 @@ router.get('/modules', async (req: Request, res: Response) => {
         hasAccess: false,
         accessExpiresAt: null
       }));
+      console.log(`[Perf] GET /modules: auth=${t1-startTime}ms, modules=${t2-t1}ms, total=${Date.now()-startTime}ms (guest)`);
       return res.json(result);
     }
 
     const accessList = await prisma.moduleAccess.findMany({
       where: { studentId: student.studentId }
     });
+    const t3 = Date.now();
     const accessMap = new Map(accessList.map(a => [a.moduleId, a]));
 
     const result = modules.map(m => {
@@ -129,9 +152,57 @@ router.get('/modules', async (req: Request, res: Response) => {
       };
     });
 
+    console.log(`[Perf] GET /modules: auth=${t1-startTime}ms, modules=${t2-t1}ms, access=${t3-t2}ms, total=${Date.now()-startTime}ms`);
     res.json(result);
   } catch (error) {
     console.error('Get public modules error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/modules-with-progress', async (req: Request, res: Response) => {
+  try {
+    const startTime = Date.now();
+    const student = await getStudentFromToken(req);
+    const userRole = await getUserRoleFromToken(req);
+    const t1 = Date.now();
+
+    const modules = await getCachedModules();
+    const t2 = Date.now();
+
+    let completedLessonIds: string[] = [];
+    let accessMap = new Map<string, any>();
+
+    if (student) {
+      const [accessList, progress] = await Promise.all([
+        prisma.moduleAccess.findMany({
+          where: { studentId: student.studentId }
+        }),
+        prisma.lessonProgress.findMany({
+          where: { studentId: student.studentId, isCompleted: true },
+          select: { lessonId: true }
+        })
+      ]);
+      accessMap = new Map(accessList.map(a => [a.moduleId, a]));
+      completedLessonIds = progress.map(p => p.lessonId);
+    }
+    const t3 = Date.now();
+
+    const isAdmin = isAdminRole(userRole);
+    const result = modules.map(m => {
+      const access = accessMap.get(m.id);
+      return {
+        ...m,
+        hasAccess: student ? true : isAdmin ? true : false,
+        accessExpiresAt: access?.expiresAt ?? null,
+        accessFrom: access?.accessFrom ?? null
+      };
+    });
+
+    console.log(`[Perf] GET /modules-with-progress: auth=${t1-startTime}ms, modules=${t2-t1}ms, access+progress=${t3-t2}ms, total=${Date.now()-startTime}ms`);
+    res.json({ modules: result, completedLessonIds });
+  } catch (error) {
+    console.error('Get modules-with-progress error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
@@ -1677,4 +1748,5 @@ router.post('/note/:id/student-reply', async (req: Request, res: Response) => {
   }
 });
 
+export { invalidateModulesCache };
 export default router;

@@ -37,12 +37,9 @@ export function LessonsTab() {
   async function loadData() {
     try {
       setLoading(true);
-      const [modulesData, progressData] = await Promise.all([
-        api.get<Module[]>('/public/modules'),
-        api.get<string[]>('/public/progress').catch(() => [])
-      ]);
-      setModules(modulesData);
-      setCompletedLessons(new Set(progressData));
+      const data = await api.get<{ modules: Module[]; completedLessonIds: string[] }>('/public/modules-with-progress');
+      setModules(data.modules);
+      setCompletedLessons(new Set(data.completedLessonIds));
       setError(null);
     } catch (err) {
       setError('Не удалось загрузить программу обучения');

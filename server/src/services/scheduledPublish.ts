@@ -2,6 +2,7 @@ import { sendEmail } from './email';
 import { emailTemplateService } from './emailTemplateService';
 import { notificationService } from './notificationService';
 import { prisma } from '../db';
+import { invalidateModulesCache } from '../routes/public';
 const PLATFORM_URL = 'https://schkola-trezvosti.ru';
 
 export async function publishScheduledLessons(): Promise<number> {
@@ -34,6 +35,7 @@ export async function publishScheduledLessons(): Promise<number> {
           publishAt: null
         }
       });
+      invalidateModulesCache();
 
       console.log(`[ScheduledPublish] Published lesson: ${lesson.title}`);
 

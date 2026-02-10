@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { api } from '../lib/api';
 import { KinescopeMultiPlayer } from '../components/KinescopePlayer';
 import { useSettings } from '../lib/settings';
+import { useAuth } from '../lib/auth';
 
 type StudentTariff = 'BASIC' | 'FAMILY' | 'RELATIVE' | 'WITH_MENTOR' | 'WITH_PSYCHOLOGIST' | 'INDIVIDUAL_PSYCHOLOGIST';
 
@@ -161,6 +162,7 @@ function SupportButton() {
 export function LessonDetailPage() {
   const { lessonId } = useParams<{ lessonId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [feedback, setFeedback] = useState('');
   
@@ -267,10 +269,9 @@ export function LessonDetailPage() {
       
       if (cancelledRef.current) return;
 
-      const [modules, progress, tariffData] = await Promise.all([
+      const [modules, progress] = await Promise.all([
         api.get<ModuleWithLessons[]>('/public/modules').catch(() => [] as ModuleWithLessons[]),
         api.get<string[]>('/public/progress').catch(() => [] as string[]),
-        api.get<{ user: { tariff?: StudentTariff; role?: string } }>('/auth/me').catch(() => ({ user: { tariff: undefined, role: undefined } }))
       ]);
 
       if (cancelledRef.current) return;
@@ -283,13 +284,6 @@ export function LessonDetailPage() {
       }
 
       setIsLessonCompleted(progress.includes(id));
-
-      if (tariffData.user.tariff) {
-        setUserTariff(tariffData.user.tariff);
-      }
-      if (tariffData.user.role && ADMIN_ROLES.includes(tariffData.user.role)) {
-        setIsAdmin(true);
-      }
     } catch (err: any) {
       if (cancelledRef.current) return;
       console.error('Error fetching lesson:', err);
@@ -314,11 +308,19 @@ export function LessonDetailPage() {
     return () => { cancelledRef.current = true; };
   }, [lessonId]);
 
-  // Fetch chat sections in parallel (secondary data, loaded after main content)
+  useEffect(() => {
+    if (user?.tariff) {
+      setUserTariff(user.tariff as StudentTariff);
+    }
+    if (user?.role && ADMIN_ROLES.includes(user.role)) {
+      setIsAdmin(true);
+    }
+  }, [user]);
+
   useEffect(() => {
     let cancelled = false;
     async function fetchChatData() {
-      if (!lessonId) return;
+      if (!lessonId || !user) return;
       try {
         const [questionsData, diaryData, notesData] = await Promise.all([
           api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/notes`).catch(() => [] as StudentNoteFromAPI[]),
@@ -337,7 +339,7 @@ export function LessonDetailPage() {
     }
     fetchChatData();
     return () => { cancelled = true; };
-  }, [lessonId]);
+  }, [lessonId, user]);
 
   // Navigation helpers
   const currentLessonIndex = moduleLessons?.lessons.findIndex(l => l.id === lessonId) ?? -1;

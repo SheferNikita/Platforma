@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
@@ -17,6 +18,15 @@ import notificationsRoutes from './routes/notifications';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
+
+app.use(compression({
+  level: 6,
+  threshold: 1024,
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  }
+}));
 
 app.use(cors({
   origin: true,
@@ -46,10 +56,20 @@ app.get('/api/health', (req, res) => {
 });
 
 const buildPath = path.join(process.cwd(), 'build');
-app.use(express.static(buildPath));
+
+app.use('/assets', express.static(path.join(buildPath, 'assets'), {
+  maxAge: '1y',
+  immutable: true,
+}));
+
+app.use(express.static(buildPath, {
+  maxAge: 0,
+  etag: true,
+}));
 
 app.use((req, res, next) => {
   if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+    res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(buildPath, 'index.html'));
   } else {
     next();

@@ -19,6 +19,14 @@ The platform is built with a modern web stack. The frontend uses **React 18 with
 
 The backend is powered by **Express.js (Node.js)**, utilizing **Prisma ORM 5.22.0** with a **PostgreSQL** database. **JWT** is implemented for authentication, and **Nodemailer** handles email services.
 
+**Performance Optimizations (Feb 2026):**
+-   **Server-side compression:** Production server (`production.ts`) uses `compression` middleware (gzip level 6) for all responses.
+-   **Static asset caching:** Files in `/assets/*` (with content hashes in filenames) get `max-age=1y, immutable` headers. HTML SPA entry uses `no-cache`.
+-   **Code splitting:** All pages and admin routes use `React.lazy()` + `Suspense` for route-based code splitting. Vendor libraries split into `vendor-react` and `vendor-ui` chunks via Vite manualChunks.
+-   **Module/lesson caching:** In-memory server cache with 2-minute TTL for modules list, invalidated on any CRUD operation or scheduled publish.
+-   **Combined endpoints:** `/api/public/modules-with-progress` merges modules + progress into single request with parallel DB queries.
+-   **Deduplicated API calls:** `useIsMobile` hook prevents duplicate NotificationBell/SobrietyCounter renders. LessonDetailPage uses `useAuth` context instead of separate `/auth/me` call.
+
 The project is structured into `prisma/` (schema, seed), `server/` (entry point, middleware, routes, services), and `src/` (admin panel, shared components, utilities, public pages).
 
 **Key Features and Design Decisions:**

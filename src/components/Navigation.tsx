@@ -5,6 +5,7 @@ import { SobrietyCounter } from './SobrietyCounter';
 import { NotificationBell } from './NotificationBell';
 import { useAuth } from '../lib/auth';
 import { useSettings } from '../lib/settings';
+import { useIsMobile } from '../lib/useIsMobile';
 
 export function Navigation() {
   const { user, isAdmin } = useAuth();
@@ -12,6 +13,7 @@ export function Navigation() {
   const userTariff = user?.tariff;
   const location = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     setMoreOpen(false);
@@ -115,7 +117,7 @@ export function Navigation() {
                   <span>В админку</span>
                 </NavLink>
               )}
-              <NotificationBell />
+              {!isMobile && <NotificationBell />}
               {isSectionVisible('sos', userTariff) && (
                 <NavLink
                   to="/sos"
@@ -137,9 +139,11 @@ export function Navigation() {
               >
                 <User className="w-4 h-4 lg:w-5 lg:h-5" />
               </NavLink>
-              <div className="hidden lg:block">
-                <SobrietyCounter />
-              </div>
+              {!isMobile && (
+                <div className="hidden lg:block">
+                  <SobrietyCounter />
+                </div>
+              )}
             </div>
           </div>
         </div>

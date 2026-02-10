@@ -14,6 +14,14 @@ export default defineConfig({
   build: {
     target: 'esnext',
     outDir: 'build',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['sonner', 'lucide-react'],
+        },
+      },
+    },
   },
   server: {
     host: '0.0.0.0',

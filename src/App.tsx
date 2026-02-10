@@ -1,44 +1,54 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { Layout } from './components/Layout';
-import { LessonsPage } from './pages/LessonsPage';
-import { LessonDetailPage } from './pages/LessonDetailPage';
-import { ChatsPage } from './pages/ChatsPage';
-import { LibraryPage } from './pages/LibraryPage';
-import { SchedulePage } from './pages/SchedulePage';
-import { ContactsPage } from './pages/ContactsPage';
-import { CommunitiesPage } from './pages/CommunitiesPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { SOSPage } from './pages/SOSPage';
-import { MyDiariesPage } from './pages/MyDiariesPage';
-import { MyNotesPage } from './pages/MyNotesPage';
-import { MentorResponsesPage } from './pages/MentorResponsesPage';
-import { MiniGroupPage } from './pages/MiniGroupPage';
 import { LoginPage } from './pages/LoginPage';
-import { OnboardingSurvey } from './pages/OnboardingSurvey';
 import { AuthProvider, useAuth } from './lib/auth';
 import { SettingsProvider, useSettings } from './lib/settings';
-import { AdminLayout } from './admin/components/AdminLayout';
-import { AdminLogin } from './admin/pages/AdminLogin';
-import { LessonsAdmin } from './admin/pages/LessonsAdmin';
-import { LibraryAdmin } from './admin/pages/LibraryAdmin';
-import { ScheduleAdmin } from './admin/pages/ScheduleAdmin';
-import { ContactsAdmin } from './admin/pages/ContactsAdmin';
-import { CommunitiesAdmin } from './admin/pages/CommunitiesAdmin';
-import { ChatsAdmin } from './admin/pages/ChatsAdmin';
-import { MiniGroupsAdmin } from './admin/pages/MiniGroupsAdmin';
-import { StudentsAdmin } from './admin/pages/StudentsAdmin';
-import { ProductsAdmin } from './admin/pages/ProductsAdmin';
-import { PaymentsAdmin } from './admin/pages/PaymentsAdmin';
-import { EmailAdmin } from './admin/pages/EmailAdmin';
-import { AdminsAdmin } from './admin/pages/AdminsAdmin';
-import { CRMAdmin } from './admin/pages/CRMAdmin';
-import { ModerationAdmin } from './admin/pages/ModerationAdmin';
-import { AuditLogAdmin } from './admin/pages/AuditLogAdmin';
-import { DistributionAdmin } from './admin/pages/DistributionAdmin';
-import { SettingsAdmin } from './admin/pages/SettingsAdmin';
-import { PaymentPage } from './pages/PaymentPage';
 import { Toaster } from 'sonner';
+
+const LessonsPage = lazy(() => import('./pages/LessonsPage').then(m => ({ default: m.LessonsPage })));
+const LessonDetailPage = lazy(() => import('./pages/LessonDetailPage').then(m => ({ default: m.LessonDetailPage })));
+const ChatsPage = lazy(() => import('./pages/ChatsPage').then(m => ({ default: m.ChatsPage })));
+const LibraryPage = lazy(() => import('./pages/LibraryPage').then(m => ({ default: m.LibraryPage })));
+const SchedulePage = lazy(() => import('./pages/SchedulePage').then(m => ({ default: m.SchedulePage })));
+const ContactsPage = lazy(() => import('./pages/ContactsPage').then(m => ({ default: m.ContactsPage })));
+const CommunitiesPage = lazy(() => import('./pages/CommunitiesPage').then(m => ({ default: m.CommunitiesPage })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const SOSPage = lazy(() => import('./pages/SOSPage').then(m => ({ default: m.SOSPage })));
+const MyDiariesPage = lazy(() => import('./pages/MyDiariesPage').then(m => ({ default: m.MyDiariesPage })));
+const MyNotesPage = lazy(() => import('./pages/MyNotesPage').then(m => ({ default: m.MyNotesPage })));
+const MentorResponsesPage = lazy(() => import('./pages/MentorResponsesPage').then(m => ({ default: m.MentorResponsesPage })));
+const MiniGroupPage = lazy(() => import('./pages/MiniGroupPage').then(m => ({ default: m.MiniGroupPage })));
+const OnboardingSurvey = lazy(() => import('./pages/OnboardingSurvey').then(m => ({ default: m.OnboardingSurvey })));
+const PaymentPage = lazy(() => import('./pages/PaymentPage').then(m => ({ default: m.PaymentPage })));
+
+const AdminLayout = lazy(() => import('./admin/components/AdminLayout').then(m => ({ default: m.AdminLayout })));
+const AdminLogin = lazy(() => import('./admin/pages/AdminLogin').then(m => ({ default: m.AdminLogin })));
+const LessonsAdmin = lazy(() => import('./admin/pages/LessonsAdmin').then(m => ({ default: m.LessonsAdmin })));
+const LibraryAdmin = lazy(() => import('./admin/pages/LibraryAdmin').then(m => ({ default: m.LibraryAdmin })));
+const ScheduleAdmin = lazy(() => import('./admin/pages/ScheduleAdmin').then(m => ({ default: m.ScheduleAdmin })));
+const ContactsAdmin = lazy(() => import('./admin/pages/ContactsAdmin').then(m => ({ default: m.ContactsAdmin })));
+const CommunitiesAdmin = lazy(() => import('./admin/pages/CommunitiesAdmin').then(m => ({ default: m.CommunitiesAdmin })));
+const ChatsAdmin = lazy(() => import('./admin/pages/ChatsAdmin').then(m => ({ default: m.ChatsAdmin })));
+const MiniGroupsAdmin = lazy(() => import('./admin/pages/MiniGroupsAdmin').then(m => ({ default: m.MiniGroupsAdmin })));
+const StudentsAdmin = lazy(() => import('./admin/pages/StudentsAdmin').then(m => ({ default: m.StudentsAdmin })));
+const ProductsAdmin = lazy(() => import('./admin/pages/ProductsAdmin').then(m => ({ default: m.ProductsAdmin })));
+const PaymentsAdmin = lazy(() => import('./admin/pages/PaymentsAdmin').then(m => ({ default: m.PaymentsAdmin })));
+const EmailAdmin = lazy(() => import('./admin/pages/EmailAdmin').then(m => ({ default: m.EmailAdmin })));
+const AdminsAdmin = lazy(() => import('./admin/pages/AdminsAdmin').then(m => ({ default: m.AdminsAdmin })));
+const CRMAdmin = lazy(() => import('./admin/pages/CRMAdmin').then(m => ({ default: m.CRMAdmin })));
+const ModerationAdmin = lazy(() => import('./admin/pages/ModerationAdmin').then(m => ({ default: m.ModerationAdmin })));
+const AuditLogAdmin = lazy(() => import('./admin/pages/AuditLogAdmin').then(m => ({ default: m.AuditLogAdmin })));
+const DistributionAdmin = lazy(() => import('./admin/pages/DistributionAdmin').then(m => ({ default: m.DistributionAdmin })));
+const SettingsAdmin = lazy(() => import('./admin/pages/SettingsAdmin').then(m => ({ default: m.SettingsAdmin })));
+
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#fdfbf7] via-[#e3ebf1] to-[#f5f3ed]">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--button-lavender)]"></div>
+    </div>
+  );
+}
 
 function LessonsRedirect() {
   const { lessonId } = useParams();
@@ -117,6 +127,7 @@ export default function App() {
         <SettingsProvider>
         <DynamicHead />
         <Toaster position="top-right" richColors />
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/sos" element={<SOSPage />} />
           <Route path="/pay/:productId" element={<PaymentPage />} />
@@ -177,6 +188,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
+        </Suspense>
       </SettingsProvider>
       </AuthProvider>
     </BrowserRouter>

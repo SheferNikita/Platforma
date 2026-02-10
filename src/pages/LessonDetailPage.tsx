@@ -1017,7 +1017,7 @@ export function LessonDetailPage() {
             <textarea
               value={diary}
               onChange={(e) => setDiary(e.target.value)}
-              placeholder="Опишите, что вы узнали сегодня, какие мысли вызвал урок, что вы чувствуете..."
+              placeholder=""
               className="w-full px-4 py-3 pr-12 border-2 border-[var(--sky-light)]/40 rounded-xl focus:outline-none focus:border-[var(--button-lavender-dark)]/50 focus:bg-white transition-all resize-none min-h-[100px] text-sm leading-relaxed backdrop-blur-sm bg-white/80 placeholder:text-xs md:placeholder:text-sm"
             />
             
@@ -1186,7 +1186,7 @@ export function LessonDetailPage() {
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Основные тезисы урока, важные определения, техники и упражнения..."
+              placeholder=""
               className="w-full px-4 py-3 pr-12 border-2 border-[var(--sky-light)]/40 rounded-xl focus:outline-none focus:border-[var(--button-lavender-dark)]/50 focus:bg-white transition-all resize-none min-h-[100px] text-sm leading-relaxed backdrop-blur-sm bg-white/80 placeholder:text-xs md:placeholder:text-sm"
             />
             

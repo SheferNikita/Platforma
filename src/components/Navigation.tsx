@@ -14,6 +14,7 @@ export function Navigation() {
   const location = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
   const isMobile = useIsMobile();
+  const isLessonPage = location.pathname.startsWith('/lesson/');
 
   useEffect(() => {
     setMoreOpen(false);
@@ -74,7 +75,7 @@ export function Navigation() {
         <div className="max-w-[1800px] mx-auto px-3 lg:px-6">
           <div className="flex items-center justify-between gap-2 relative z-10">
             <div className="flex items-center gap-0.5 lg:gap-1 overflow-x-auto scrollbar-hide">
-              {settings.logo && (
+              {settings.logo && !isLessonPage && (
                 <NavLink to="/" className="flex-shrink-0 mr-2 lg:mr-4">
                   <img 
                     src={settings.logo} 

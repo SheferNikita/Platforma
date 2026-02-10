@@ -1336,9 +1336,24 @@ router.get('/platform-settings', async (req: Request, res: Response) => {
   }
 });
 
+let logoCache: { value: string | null; timestamp: number } | null = null;
+let faviconCache: { value: string | null; timestamp: number } | null = null;
+const MEDIA_CACHE_TTL = 10 * 60 * 1000;
+
+export function invalidateMediaCache(key?: 'logo' | 'favicon') {
+  if (!key || key === 'logo') logoCache = null;
+  if (!key || key === 'favicon') faviconCache = null;
+}
+
 router.get('/platform-logo', async (req: Request, res: Response) => {
   try {
+    if (logoCache && Date.now() - logoCache.timestamp < MEDIA_CACHE_TTL) {
+      res.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=3600');
+      return res.json({ logo: logoCache.value });
+    }
     const setting = await prisma.platformSetting.findUnique({ where: { key: 'logo' } });
+    logoCache = { value: setting?.value || null, timestamp: Date.now() };
+    res.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=3600');
     res.json({ logo: setting?.value || null });
   } catch (error) {
     res.json({ logo: null });
@@ -1347,7 +1362,13 @@ router.get('/platform-logo', async (req: Request, res: Response) => {
 
 router.get('/platform-favicon', async (req: Request, res: Response) => {
   try {
+    if (faviconCache && Date.now() - faviconCache.timestamp < MEDIA_CACHE_TTL) {
+      res.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=3600');
+      return res.json({ favicon: faviconCache.value });
+    }
     const setting = await prisma.platformSetting.findUnique({ where: { key: 'favicon' } });
+    faviconCache = { value: setting?.value || null, timestamp: Date.now() };
+    res.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=3600');
     res.json({ favicon: setting?.value || null });
   } catch (error) {
     res.json({ favicon: null });

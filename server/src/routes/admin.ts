@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { sendEmail } from '../services/email';
 import { emailTemplateService } from '../services/emailTemplateService';
 import { runEmailTemplatesMigration } from '../migrations/updateEmailTemplates';
+import { invalidateMediaCache } from './public';
 
 const PLATFORM_URL = 'https://schkola-trezvosti.ru';
 
@@ -377,6 +378,10 @@ router.put('/settings/:key', settingsRoles, async (req: AuthRequest, res: Respon
       where: { key },
       data: { value }
     });
+    
+    if (key === 'logo' || key === 'favicon') {
+      invalidateMediaCache(key);
+    }
     
     res.json(updated);
   } catch (error) {

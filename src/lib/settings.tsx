@@ -132,7 +132,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadSettings();
-    loadMediaAssets();
+    const isLessonPage = window.location.pathname.startsWith('/lesson/');
+    if (!isLessonPage) {
+      loadMediaAssets();
+    }
   }, []);
 
   return (

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Check, Award } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
 
 interface ProfileData {
   id: string;
@@ -9,6 +10,7 @@ interface ProfileData {
 }
 
 export function SobrietyCounter() {
+  const { user: authUser } = useAuth();
   const [userId, setUserId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<string | null>(null);
   const [lastCheckIn, setLastCheckIn] = useState<string | null>(null);
@@ -25,6 +27,7 @@ export function SobrietyCounter() {
   const getStorageKey = (id: string) => `sobrietyData_${id}`;
 
   useEffect(() => {
+    if (!authUser) return;
     const loadFromProfile = async () => {
       try {
         const profile = await api.get<ProfileData>('/public/profile');
@@ -63,7 +66,7 @@ export function SobrietyCounter() {
     };
     
     loadFromProfile();
-  }, []);
+  }, [authUser]);
 
   // Close menu when clicking outside
   useEffect(() => {

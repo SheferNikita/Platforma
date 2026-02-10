@@ -271,7 +271,7 @@ export function LessonDetailPage() {
 
       const [modules, progress] = await Promise.all([
         api.get<ModuleWithLessons[]>('/public/modules').catch(() => [] as ModuleWithLessons[]),
-        api.get<string[]>('/public/progress').catch(() => [] as string[]),
+        user ? api.get<string[]>('/public/progress').catch(() => [] as string[]) : Promise.resolve([] as string[]),
       ]);
 
       if (cancelledRef.current) return;

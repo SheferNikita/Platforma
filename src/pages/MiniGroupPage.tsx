@@ -52,24 +52,13 @@ export function MiniGroupPage() {
   const isSectionEnabled = isSectionVisible('mini_group', user?.tariff);
 
   useEffect(() => {
-    if (hasMiniGroupAccess && isSectionEnabled && !settingsLoading) {
+    if (hasMiniGroupAccess && isSectionEnabled) {
       loadGroup();
     }
-  }, [hasMiniGroupAccess, isSectionEnabled, settingsLoading]);
+  }, [hasMiniGroupAccess, isSectionEnabled]);
 
-  // Ожидание загрузки настроек
-  if (settingsLoading) {
-    return (
-      <PageWrapper>
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--button-lavender)]"></div>
-        </div>
-      </PageWrapper>
-    );
-  }
-
-  // Редирект для учеников без доступа или если раздел скрыт
-  if (!hasMiniGroupAccess || !isSectionEnabled) {
+  // Редирект для учеников без доступа или если раздел скрыт (пропускаем пока настройки грузятся)
+  if (!hasMiniGroupAccess || (!settingsLoading && !isSectionEnabled)) {
     return <Navigate to="/" replace />;
   }
 

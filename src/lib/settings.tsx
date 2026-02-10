@@ -79,12 +79,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   async function loadSettings() {
     try {
       const data = await api.get<Record<string, string | null>>('/public/platform-settings');
-      setSettings({
+      setSettings(prev => ({
+        ...prev,
         platformName: data.platformName || defaultSettings.platformName,
         supportLink: data.supportLink || null,
         loginText: data.loginText || null,
-        logo: data.logo || null,
-        favicon: data.favicon || null,
         sosChatLink: data.sosChatLink || null,
         sosText: data.sosText || null,
         visibility: {
@@ -99,11 +98,27 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           sos: parseVisibility(data.visibility_sos),
           profile: parseVisibility(data.visibility_profile),
         },
-      });
+      }));
     } catch (error) {
       console.error('Failed to load platform settings:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadMediaAssets() {
+    try {
+      const [logoData, faviconData] = await Promise.all([
+        api.get<{ logo: string | null }>('/public/platform-logo').catch(() => ({ logo: null })),
+        api.get<{ favicon: string | null }>('/public/platform-favicon').catch(() => ({ favicon: null })),
+      ]);
+      setSettings(prev => ({
+        ...prev,
+        logo: logoData.logo,
+        favicon: faviconData.favicon,
+      }));
+    } catch (error) {
+      console.error('Failed to load media assets:', error);
     }
   }
 
@@ -117,6 +132,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadSettings();
+    loadMediaAssets();
   }, []);
 
   return (

@@ -345,19 +345,8 @@ export function MentorResponsesPage() {
     }
   };
 
-  // Ожидание загрузки настроек
-  if (settingsLoading) {
-    return (
-      <PageWrapper>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-[var(--button-lavender)]" />
-        </div>
-      </PageWrapper>
-    );
-  }
-  
-  // Редирект если раздел скрыт
-  if (!isSectionEnabled) {
+  // Редирект если раздел скрыт (пропускаем пока настройки грузятся)
+  if (!settingsLoading && !isSectionEnabled) {
     return <Navigate to="/" replace />;
   }
 

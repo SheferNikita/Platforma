@@ -1248,16 +1248,38 @@ router.get('/attachments/note/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Public platform settings
+// Public platform settings (without heavy base64 logo/favicon)
 router.get('/platform-settings', async (req: Request, res: Response) => {
   try {
     const settings = await prisma.platformSetting.findMany();
     const result: Record<string, string | null> = {};
-    settings.forEach(s => { result[s.key] = s.value; });
+    settings.forEach(s => {
+      if (s.key !== 'logo' && s.key !== 'favicon') {
+        result[s.key] = s.value;
+      }
+    });
     res.json(result);
   } catch (error) {
     console.error('Get public settings error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/platform-logo', async (req: Request, res: Response) => {
+  try {
+    const setting = await prisma.platformSetting.findUnique({ where: { key: 'logo' } });
+    res.json({ logo: setting?.value || null });
+  } catch (error) {
+    res.json({ logo: null });
+  }
+});
+
+router.get('/platform-favicon', async (req: Request, res: Response) => {
+  try {
+    const setting = await prisma.platformSetting.findUnique({ where: { key: 'favicon' } });
+    res.json({ favicon: setting?.value || null });
+  } catch (error) {
+    res.json({ favicon: null });
   }
 });
 

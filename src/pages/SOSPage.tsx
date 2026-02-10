@@ -9,15 +9,7 @@ export function SOSPage() {
   const { user } = useAuth();
   const { settings, isSectionVisible, loading: settingsLoading } = useSettings();
 
-  if (settingsLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#fdfbf7] via-[#e3ebf1] to-[#f5f3ed]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--button-lavender)]"></div>
-      </div>
-    );
-  }
-  
-  if (!isSectionVisible('sos', user?.tariff)) {
+  if (!settingsLoading && !isSectionVisible('sos', user?.tariff)) {
     return <Navigate to="/" replace />;
   }
 

@@ -13,15 +13,7 @@ export function SectionGuard({ section, children }: SectionGuardProps) {
   const { isSectionVisible, loading } = useSettings();
   const { user } = useAuth();
   
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--button-lavender)]"></div>
-      </div>
-    );
-  }
-  
-  const isVisible = isSectionVisible(section, user?.tariff);
+  const isVisible = loading ? true : isSectionVisible(section, user?.tariff);
   
   if (!isVisible) {
     return (

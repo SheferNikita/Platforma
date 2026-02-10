@@ -44,7 +44,7 @@ The backend is powered by **Express.js (Node.js)**, utilizing **Prisma ORM 5.22.
 -   Server-side compression (gzip), static asset caching, and code splitting for faster load times.
 -   In-memory server cache for modules/lessons.
 -   Combined API endpoints and deduplicated API calls.
--   Mobile-specific optimizations for lesson pages (collapsible sections, deferred data loading, simplified CSS).
+-   Mobile-specific optimizations for lesson pages (collapsible sections, deferred data loading, simplified CSS, hidden nav buttons, skipped `/public/modules` API call).
 
 The project is structured into `prisma/` (schema, seed), `server/` (entry point, middleware, routes, services), and `src/` (admin panel, shared components, utilities, public pages).
 

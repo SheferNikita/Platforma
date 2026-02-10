@@ -283,8 +283,10 @@ export function LessonDetailPage() {
       
       if (cancelledRef.current) return;
 
+      const isMobileView = window.innerWidth < 768;
+
       const [modules, progress] = await Promise.all([
-        api.get<ModuleWithLessons[]>('/public/modules').catch(() => [] as ModuleWithLessons[]),
+        isMobileView ? Promise.resolve([] as ModuleWithLessons[]) : api.get<ModuleWithLessons[]>('/public/modules').catch(() => [] as ModuleWithLessons[]),
         user ? api.get<string[]>('/public/progress').catch(() => [] as string[]) : Promise.resolve([] as string[]),
       ]);
 
@@ -292,9 +294,11 @@ export function LessonDetailPage() {
 
       setLessonData(lessonResult);
 
-      const currentModule = modules.find(m => m.id === lessonResult.module.id);
-      if (currentModule) {
-        setModuleLessons(currentModule);
+      if (!isMobileView) {
+        const currentModule = modules.find(m => m.id === lessonResult.module.id);
+        if (currentModule) {
+          setModuleLessons(currentModule);
+        }
       }
 
       setIsLessonCompleted(progress.includes(id));
@@ -726,7 +730,7 @@ export function LessonDetailPage() {
             К списку уроков
           </button>
 
-          <div className="flex gap-3 w-full sm:w-auto">
+          <div className="hidden md:flex gap-3 w-full sm:w-auto">
             {prevLesson && (
               <button
                 onClick={() => navigate(`/lesson/${prevLesson.id}`)}
@@ -1224,7 +1228,7 @@ export function LessonDetailPage() {
         )}
 
         {/* Дублирование навигации */}
-        <div className="mb-10 flex justify-center">
+        <div className="mb-10 hidden md:flex justify-center">
           <div className="flex gap-3 w-full sm:w-auto">
             {prevLesson && (
               <button

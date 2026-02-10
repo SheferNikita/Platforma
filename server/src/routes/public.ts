@@ -548,9 +548,9 @@ router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
       });
     }
 
-    if (!content || !content.trim()) {
-      console.log('[POST diary] Error: empty content');
-      return res.status(400).json({ error: 'Текст дневника обязателен' });
+    if ((!content || !content.trim()) && (!attachments || attachments.length === 0)) {
+      console.log('[POST diary] Error: empty content and no attachments');
+      return res.status(400).json({ error: 'Напишите текст или прикрепите файл' });
     }
 
     // Verify lesson exists
@@ -566,7 +566,7 @@ router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
     console.log('[POST diary] Creating diary entry...');
     const diary = await prisma.diary.create({
       data: {
-        content: content.trim(),
+        content: content?.trim() || '',
         studentId: student.studentId,
         lessonId
       }
@@ -703,8 +703,8 @@ router.post('/lessons/:lessonId/personal-notes', async (req: Request, res: Respo
     const lessonId = req.params.lessonId as string;
     const { content, attachments } = req.body;
 
-    if (!content || !content.trim()) {
-      return res.status(400).json({ error: 'Текст конспекта обязателен' });
+    if ((!content || !content.trim()) && (!attachments || attachments.length === 0)) {
+      return res.status(400).json({ error: 'Напишите текст или прикрепите файл' });
     }
 
     // Verify lesson exists
@@ -716,7 +716,7 @@ router.post('/lessons/:lessonId/personal-notes', async (req: Request, res: Respo
     // Create note entry first (without attachments)
     const note = await prisma.studentNote.create({
       data: {
-        content: content.trim(),
+        content: content?.trim() || '',
         noteType: 'personal',
         studentId: student.studentId,
         lessonId
@@ -843,8 +843,8 @@ router.post('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
     const lessonId = req.params.lessonId as string;
     const { content, noteType, attachments } = req.body;
 
-    if (!content || !content.trim()) {
-      return res.status(400).json({ error: 'Текст сообщения обязателен' });
+    if ((!content || !content.trim()) && (!attachments || attachments.length === 0)) {
+      return res.status(400).json({ error: 'Напишите текст или прикрепите файл' });
     }
 
     // Verify lesson exists
@@ -858,7 +858,7 @@ router.post('/lessons/:lessonId/notes', async (req: Request, res: Response) => {
 
     const note = await prisma.studentNote.create({
       data: {
-        content: content.trim(),
+        content: content?.trim() || '',
         noteType: noteType || 'question',
         studentId: student.studentId,
         lessonId,

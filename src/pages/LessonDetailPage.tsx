@@ -416,8 +416,8 @@ export function LessonDetailPage() {
   };
 
   const handleSaveDiary = async () => {
-    if (!diary.trim()) {
-      toast.error('Пожалуйста, напишите что-нибудь в дневнике');
+    if (!diary.trim() && diaryFiles.length === 0) {
+      toast.error('Пожалуйста, напишите что-нибудь или прикрепите файл');
       return;
     }
     if (!lessonId) return;
@@ -461,8 +461,8 @@ export function LessonDetailPage() {
   };
 
   const handleSaveNotes = async () => {
-    if (!notes.trim()) {
-      toast.error('Пожалуйста, напишите что-нибудь в конспекте');
+    if (!notes.trim() && notesFiles.length === 0) {
+      toast.error('Пожалуйста, напишите что-нибудь или прикрепите файл');
       return;
     }
     if (!lessonId) return;

@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { PageWrapper } from '../components/PageWrapper';
-import { ArrowLeft, ArrowRight, List, CheckCircle, ArrowUp, MessageCircle, HelpCircle, BookOpen, Mic, Paperclip, Image, Video, File, X, StopCircle, FileText, NotebookPen, Download, Loader2, Info } from 'lucide-react';
+import { ArrowLeft, ArrowRight, List, CheckCircle, ArrowUp, MessageCircle, HelpCircle, BookOpen, Mic, Paperclip, Image, Video, File, X, StopCircle, FileText, NotebookPen, Download, Loader2, Info, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../lib/api';
 import { KinescopeMultiPlayer } from '../components/KinescopePlayer';
 import { useSettings } from '../lib/settings';
 import { useAuth } from '../lib/auth';
+import { useIsMobile } from '../lib/useIsMobile';
 
 type StudentTariff = 'BASIC' | 'FAMILY' | 'RELATIVE' | 'WITH_MENTOR' | 'WITH_PSYCHOLOGIST' | 'INDIVIDUAL_PSYCHOLOGIST';
 
@@ -163,6 +164,7 @@ export function LessonDetailPage() {
   const { lessonId } = useParams<{ lessonId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [feedback, setFeedback] = useState('');
   
@@ -200,6 +202,18 @@ export function LessonDetailPage() {
   // User tariff state
   const [userTariff, setUserTariff] = useState<StudentTariff | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+
+  // Accordion state for mobile (sections collapsed by default on mobile)
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+    diary: false,
+    notes: false,
+    questions: false,
+  });
+  const [chatDataLoaded, setChatDataLoaded] = useState(false);
+
+  const toggleSection = useCallback((section: string) => {
+    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+  }, []);
   
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -317,29 +331,47 @@ export function LessonDetailPage() {
     }
   }, [user]);
 
+  const loadChatData = useCallback(async () => {
+    if (!lessonId || !user || chatDataLoaded) return;
+    setChatDataLoaded(true);
+    try {
+      const [questionsData, diaryData, notesData] = await Promise.all([
+        api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/notes`).catch(() => [] as StudentNoteFromAPI[]),
+        api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/diary`).catch(() => [] as StudentNoteFromAPI[]),
+        api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/personal-notes`).catch(() => [] as StudentNoteFromAPI[])
+      ]);
+
+      setChatHistory(parseNotesToMessages(questionsData, 'question'));
+      setDiaryHistory(parseNotesToMessages(diaryData, 'diary'));
+      setNotesHistory(parseNotesToMessages(notesData, 'notes'));
+    } catch (err) {
+      console.error('Error fetching chat data:', err);
+      setChatDataLoaded(false);
+    }
+  }, [lessonId, user, chatDataLoaded]);
+
   useEffect(() => {
-    let cancelled = false;
-    async function fetchChatData() {
-      if (!lessonId || !user) return;
-      try {
-        const [questionsData, diaryData, notesData] = await Promise.all([
-          api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/notes`).catch(() => [] as StudentNoteFromAPI[]),
-          api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/diary`).catch(() => [] as StudentNoteFromAPI[]),
-          api.get<StudentNoteFromAPI[]>(`/public/lessons/${lessonId}/personal-notes`).catch(() => [] as StudentNoteFromAPI[])
-        ]);
+    if (!isMobile && lessonId && user) {
+      loadChatData();
+    }
+  }, [isMobile, lessonId, user, loadChatData]);
 
-        if (cancelled) return;
-
-        setChatHistory(parseNotesToMessages(questionsData, 'question'));
-        setDiaryHistory(parseNotesToMessages(diaryData, 'diary'));
-        setNotesHistory(parseNotesToMessages(notesData, 'notes'));
-      } catch (err) {
-        console.error('Error fetching chat data:', err);
+  useEffect(() => {
+    if (isMobile && !chatDataLoaded) {
+      const anyOpen = openSections.diary || openSections.notes || openSections.questions;
+      if (anyOpen) {
+        loadChatData();
       }
     }
-    fetchChatData();
-    return () => { cancelled = true; };
-  }, [lessonId, user]);
+  }, [isMobile, openSections, chatDataLoaded, loadChatData]);
+
+  useEffect(() => {
+    setChatDataLoaded(false);
+    setChatHistory([]);
+    setDiaryHistory([]);
+    setNotesHistory([]);
+    setOpenSections({ diary: false, notes: false, questions: false });
+  }, [lessonId]);
 
   // Navigation helpers
   const currentLessonIndex = moduleLessons?.lessons.findIndex(l => l.id === lessonId) ?? -1;
@@ -755,7 +787,7 @@ export function LessonDetailPage() {
 
         {/* Контент урока (HTML) */}
         {lessonData.content && (
-          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/95 to-white/60 backdrop-blur-sm shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)]">
+          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-white/90 md:bg-gradient-to-br md:from-white/95 md:to-white/60 md:backdrop-blur-sm shadow-sm md:shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)]">
             <div 
               className="prose prose-lg max-w-none prose-headings:text-[#3a3a3a] prose-p:text-[#3d3527] prose-a:text-[var(--button-lavender-dark)] prose-ul:text-[#3d3527] prose-ol:text-[#3d3527] prose-li:text-[#3d3527] prose-strong:text-[#3a3a3a] prose-blockquote:border-l-[var(--button-lavender-dark)] prose-blockquote:text-[#3d3527]/80"
               dangerouslySetInnerHTML={{ __html: lessonData.content }}
@@ -765,7 +797,7 @@ export function LessonDetailPage() {
 
         {/* Прикрепленные файлы */}
         {lessonData.attachments.length > 0 && (
-          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm">
+          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-white/90 md:bg-gradient-to-br md:from-white/90 md:to-white/60 shadow-sm md:shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] md:backdrop-blur-sm">
             <div className="flex items-start gap-3 mb-5">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
                 <Paperclip className="w-5 h-5 text-[var(--icon-lavender)]" />
@@ -800,7 +832,7 @@ export function LessonDetailPage() {
         {/* Блок Задание/Рекомендация */}
         {lessonData.showTask && lessonData.taskContent && (
           (isAdmin || !lessonData.taskAllowedTariffs || lessonData.taskAllowedTariffs.length === 0 || (userTariff && lessonData.taskAllowedTariffs.includes(userTariff))) && (
-            <div className="mb-10 border border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/95 to-white/60 backdrop-blur-sm shadow-[0_4px_16px_var(--ethereal-shadow)]">
+            <div className="mb-10 border border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-white/90 md:bg-gradient-to-br md:from-white/95 md:to-white/60 md:backdrop-blur-sm shadow-sm md:shadow-[0_4px_16px_var(--ethereal-shadow)]">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-[var(--sky-light)]/30 flex items-center justify-center">
                   <FileText className="w-4 h-4 text-[#3d3527]/60" />
@@ -838,7 +870,7 @@ export function LessonDetailPage() {
 
         {/* Info message for basic tariffs */}
         {!isAdmin && !canAccessMentorFeatures(userTariff, isAdmin) && userTariff && (
-          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-[var(--sky-soft)]/30 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm">
+          <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-[var(--sky-soft)]/20 md:bg-gradient-to-br md:from-[var(--sky-soft)]/30 md:to-white/60 shadow-sm md:shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] md:backdrop-blur-sm">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
                 <Info className="w-5 h-5 text-[var(--icon-lavender)]" />
@@ -855,21 +887,31 @@ export function LessonDetailPage() {
 
         {/* Форма дневника с чатом */}
         {canAccessMentorFeatures(userTariff, isAdmin) && lessonData.showDiary !== false && (
-        <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
-          <div className="flex items-start gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
+        <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-white/80 md:bg-gradient-to-br md:from-white/90 md:to-white/60 shadow-sm md:shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] md:backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
+          <div 
+            className={`flex items-start gap-3 ${isMobile ? 'cursor-pointer select-none' : 'mb-5'}`}
+            onClick={() => isMobile && toggleSection('diary')}
+          >
+            <div className="w-10 h-10 rounded-xl bg-[var(--button-lavender-light)]/10 md:bg-gradient-to-br md:from-[var(--button-lavender-light)]/10 md:via-[var(--sky-blue)]/8 md:to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
               <FileText className="w-5 h-5 text-[var(--icon-lavender)]" />
             </div>
             <div className="flex-1">
-              <h3 className="mb-2 text-lg">Дневник к уроку</h3>
-              <div 
-                className="text-sm opacity-70 leading-relaxed prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ 
-                  __html: lessonData.diaryDescription || 'Запишите свои мысли, эмоции и впечатления от пройденного урока' 
-                }}
-              />
+              <h3 className="mb-1 md:mb-2 text-lg">Дневник к уроку</h3>
+              {(!isMobile || openSections.diary) && (
+                <div 
+                  className="text-sm opacity-70 leading-relaxed prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ 
+                    __html: lessonData.diaryDescription || 'Запишите свои мысли, эмоции и впечатления от пройденного урока' 
+                  }}
+                />
+              )}
             </div>
+            {isMobile && (
+              <ChevronDown className={`w-5 h-5 text-[var(--icon-lavender)] transition-transform duration-300 flex-shrink-0 mt-2 ${openSections.diary ? 'rotate-180' : ''}`} />
+            )}
           </div>
+
+          {(!isMobile || openSections.diary) && <div className={isMobile ? 'mt-4' : ''}>
 
           {/* Diary chat history */}
           {diaryHistory.length > 0 && (
@@ -1008,26 +1050,37 @@ export function LessonDetailPage() {
             <span className="relative z-10">Отправить запись</span>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
           </button>
+          </div>}
         </div>
         )}
 
         {/* Форма конспекта с чатом */}
         {canAccessMentorFeatures(userTariff, isAdmin) && lessonData.showNotes !== false && (
-        <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-gradient-to-br from-white/90 to-white/60 shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
-          <div className="flex items-start gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/10 via-[var(--sky-blue)]/8 to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
+        <div className="mb-10 border-2 border-[var(--sky-light)]/40 rounded-2xl p-4 md:p-6 lg:p-8 bg-white/80 md:bg-gradient-to-br md:from-white/90 md:to-white/60 shadow-sm md:shadow-[0_8px_24px_var(--ethereal-shadow),0_2px_8px_var(--book-shadow)] md:backdrop-blur-sm hover:border-[var(--button-lavender-dark)]/30 transition-all duration-300">
+          <div 
+            className={`flex items-start gap-3 ${isMobile ? 'cursor-pointer select-none' : 'mb-5'}`}
+            onClick={() => isMobile && toggleSection('notes')}
+          >
+            <div className="w-10 h-10 rounded-xl bg-[var(--button-lavender-light)]/10 md:bg-gradient-to-br md:from-[var(--button-lavender-light)]/10 md:via-[var(--sky-blue)]/8 md:to-[var(--button-lavender-dark)]/10 flex items-center justify-center flex-shrink-0 border border-[var(--sky-light)]/30">
               <NotebookPen className="w-5 h-5 text-[var(--icon-lavender)]" />
             </div>
             <div className="flex-1">
-              <h3 className="mb-2 text-lg">Конспект к уроку</h3>
-              <div 
-                className="text-sm opacity-70 leading-relaxed prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ 
-                  __html: lessonData.notesDescription || 'Запишите основные моменты урока, важные понятия и выводы' 
-                }}
-              />
+              <h3 className="mb-1 md:mb-2 text-lg">Конспект к уроку</h3>
+              {(!isMobile || openSections.notes) && (
+                <div 
+                  className="text-sm opacity-70 leading-relaxed prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ 
+                    __html: lessonData.notesDescription || 'Запишите основные моменты урока, важные понятия и выводы' 
+                  }}
+                />
+              )}
             </div>
+            {isMobile && (
+              <ChevronDown className={`w-5 h-5 text-[var(--icon-lavender)] transition-transform duration-300 flex-shrink-0 mt-2 ${openSections.notes ? 'rotate-180' : ''}`} />
+            )}
           </div>
+
+          {(!isMobile || openSections.notes) && <div className={isMobile ? 'mt-4' : ''}>
 
           {/* Notes chat history */}
           {notesHistory.length > 0 && (
@@ -1166,6 +1219,7 @@ export function LessonDetailPage() {
             <span className="relative z-10">Отправить запись</span>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
           </button>
+          </div>}
         </div>
         )}
 
@@ -1195,7 +1249,7 @@ export function LessonDetailPage() {
         </div>
 
         {/* Повал */}
-        <div className="mb-8 p-4 md:p-6 lg:p-8 bg-gradient-to-br from-[var(--sky-soft)]/25 to-white/60 border-2 border-[var(--sky-light)]/40 rounded-2xl shadow-[0_8px_24px_var(--ethereal-shadow)] text-center backdrop-blur-sm">
+        <div className="mb-8 p-4 md:p-6 lg:p-8 bg-[var(--sky-soft)]/15 md:bg-gradient-to-br md:from-[var(--sky-soft)]/25 md:to-white/60 border-2 border-[var(--sky-light)]/40 rounded-2xl shadow-sm md:shadow-[0_8px_24px_var(--ethereal-shadow)] text-center md:backdrop-blur-sm">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--button-lavender-light)]/20 to-[var(--button-lavender-dark)]/10 flex items-center justify-center mx-auto mb-4 border border-[var(--button-lavender-light)]/20">
             <HelpCircle className="w-6 h-6 text-[var(--button-lavender-dark)]" />
           </div>

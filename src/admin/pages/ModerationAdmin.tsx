@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../../lib/api';
-import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye, Paperclip, Image, File, Download, Mic, Square, Play, Pause } from 'lucide-react';
+import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye, Paperclip, Image, File, Download, Mic, Square, Play, Pause, Search, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -80,35 +80,48 @@ export function ModerationAdmin() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'answered'>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [studentFilter, setStudentFilter] = useState<string>('all');
+  const [miniGroupFilter, setMiniGroupFilter] = useState<string>('all');
   const [lessonFilter, setLessonFilter] = useState<string>('all');
+  const [emailSearch, setEmailSearch] = useState('');
+  const [emailSearchApplied, setEmailSearchApplied] = useState('');
+  const [miniGroups, setMiniGroups] = useState<{ id: string; title: string }[]>([]);
   const [selectedItem, setSelectedItem] = useState<ModerationItem | null>(null);
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const emailSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    loadMiniGroups();
+  }, []);
 
   useEffect(() => {
     loadItems();
-  }, [statusFilter, typeFilter, studentFilter, lessonFilter]);
+  }, [statusFilter, typeFilter, miniGroupFilter, lessonFilter, emailSearchApplied]);
 
   useEffect(() => {
-    if (statusFilter === 'all' && typeFilter === 'all' && studentFilter === 'all' && lessonFilter === 'all') {
+    if (statusFilter === 'all' && typeFilter === 'all' && miniGroupFilter === 'all' && lessonFilter === 'all' && !emailSearchApplied) {
       setAllItems(items);
     }
-  }, [items, statusFilter, typeFilter, studentFilter, lessonFilter]);
+  }, [items, statusFilter, typeFilter, miniGroupFilter, lessonFilter, emailSearchApplied]);
 
-  const uniqueStudents = React.useMemo(() => {
-    const studentMap = new Map<string, { id: string; name: string; email: string }>();
-    allItems.forEach(item => {
-      if (!studentMap.has(item.student.id)) {
-        studentMap.set(item.student.id, {
-          id: item.student.id,
-          name: item.student.user.name,
-          email: item.student.user.email
-        });
-      }
-    });
-    return Array.from(studentMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [allItems]);
+  const handleEmailSearch = useCallback((value: string) => {
+    setEmailSearch(value);
+    if (emailSearchTimerRef.current) {
+      clearTimeout(emailSearchTimerRef.current);
+    }
+    emailSearchTimerRef.current = setTimeout(() => {
+      setEmailSearchApplied(value.trim());
+    }, 600);
+  }, []);
+
+  async function loadMiniGroups() {
+    try {
+      const data = await api.get<{ id: string; title: string }[]>('/public/moderation/mini-groups');
+      setMiniGroups(data);
+    } catch (error) {
+      console.error('Failed to load mini-groups:', error);
+    }
+  }
 
   const uniqueLessons = React.useMemo(() => {
     const lessonMap = new Map<string, { id: string; title: string }>();
@@ -129,8 +142,9 @@ export function ModerationAdmin() {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (typeFilter !== 'all') params.append('type', typeFilter);
-      if (studentFilter !== 'all') params.append('studentId', studentFilter);
+      if (miniGroupFilter !== 'all') params.append('miniGroupId', miniGroupFilter);
       if (lessonFilter !== 'all') params.append('lessonId', lessonFilter);
+      if (emailSearchApplied) params.append('email', emailSearchApplied);
       
       const data = await api.get<ModerationItem[]>(`/public/moderation?${params.toString()}`);
       setItems(data);
@@ -258,14 +272,14 @@ export function ModerationAdmin() {
           <option value="report">Отчет</option>
         </select>
         <select
-          value={studentFilter}
-          onChange={(e) => setStudentFilter(e.target.value)}
+          value={miniGroupFilter}
+          onChange={(e) => setMiniGroupFilter(e.target.value)}
           className="px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base max-w-[200px]"
         >
-          <option value="all">Все ученики</option>
-          {uniqueStudents.map(student => (
-            <option key={student.id} value={student.id}>
-              {student.name || student.email}
+          <option value="all">Все мини-группы</option>
+          {miniGroups.map(group => (
+            <option key={group.id} value={group.id}>
+              {group.title}
             </option>
           ))}
         </select>
@@ -281,6 +295,24 @@ export function ModerationAdmin() {
             </option>
           ))}
         </select>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3d3527]/40" />
+          <input
+            type="text"
+            value={emailSearch}
+            onChange={(e) => handleEmailSearch(e.target.value)}
+            placeholder="Поиск по email..."
+            className="pl-9 pr-3 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base w-full sm:w-[250px]"
+          />
+          {emailSearch && (
+            <button
+              onClick={() => { setEmailSearch(''); setEmailSearchApplied(''); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[#3d3527]/40 hover:text-[#3d3527]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#d4c9b0]/30 overflow-hidden">

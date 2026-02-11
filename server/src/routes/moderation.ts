@@ -79,24 +79,70 @@ async function getMentorStudentIds(userId: string, role?: string): Promise<strin
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { status, type, studentId, lessonId } = req.query;
+    const { status, type, studentId, lessonId, miniGroupId, email } = req.query;
     const user = req.user!;
     
     let studentFilter: { studentId?: { in: string[] } | string } = {};
-    
-    if (user.role === 'MENTOR' || user.role === 'INTERN' || user.role === 'PSYCHOLOGIST') {
-      const studentIds = await getMentorStudentIds(user.id, user.role);
-      if (studentIds.length === 0) {
+
+    let targetStudentIds: string[] | null = null;
+
+    if (miniGroupId && typeof miniGroupId === 'string') {
+      const groupMembers = await prisma.miniGroupMember.findMany({
+        where: { miniGroupId },
+        select: { studentId: true }
+      });
+      targetStudentIds = groupMembers.map(m => m.studentId);
+      if (targetStudentIds.length === 0) {
         return res.json([]);
       }
-      if (studentId && typeof studentId === 'string') {
-        if (!studentIds.includes(studentId)) {
+    }
+
+    if (email && typeof email === 'string' && email.trim()) {
+      const foundUser = await prisma.user.findFirst({
+        where: { email: { equals: email.trim(), mode: 'insensitive' } },
+        select: { id: true }
+      });
+      if (!foundUser) {
+        return res.json([]);
+      }
+      const foundStudent = await prisma.student.findFirst({
+        where: { userId: foundUser.id },
+        select: { id: true }
+      });
+      if (!foundStudent) {
+        return res.json([]);
+      }
+      if (targetStudentIds) {
+        if (!targetStudentIds.includes(foundStudent.id)) {
+          return res.json([]);
+        }
+        targetStudentIds = [foundStudent.id];
+      } else {
+        targetStudentIds = [foundStudent.id];
+      }
+    }
+    
+    if (user.role === 'MENTOR' || user.role === 'INTERN' || user.role === 'PSYCHOLOGIST') {
+      const mentorStudentIds = await getMentorStudentIds(user.id, user.role);
+      if (mentorStudentIds.length === 0) {
+        return res.json([]);
+      }
+      if (targetStudentIds) {
+        const allowed = targetStudentIds.filter(id => mentorStudentIds.includes(id));
+        if (allowed.length === 0) return res.json([]);
+        studentFilter = { studentId: { in: allowed } };
+      } else if (studentId && typeof studentId === 'string') {
+        if (!mentorStudentIds.includes(studentId)) {
           return res.json([]);
         }
         studentFilter = { studentId: studentId };
       } else {
-        studentFilter = { studentId: { in: studentIds } };
+        studentFilter = { studentId: { in: mentorStudentIds } };
       }
+    } else if (targetStudentIds) {
+      studentFilter = targetStudentIds.length === 1
+        ? { studentId: targetStudentIds[0] }
+        : { studentId: { in: targetStudentIds } };
     } else if (studentId && typeof studentId === 'string') {
       studentFilter = { studentId: studentId };
     }
@@ -236,6 +282,39 @@ router.get('/count', async (req: AuthRequest, res: Response) => {
     res.json({ count: diaryCount + noteCount });
   } catch (error) {
     console.error('Get moderation count error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/mini-groups', async (req: AuthRequest, res: Response) => {
+  try {
+    const user = req.user!;
+    
+    if (user.role === 'MENTOR' || user.role === 'INTERN' || user.role === 'PSYCHOLOGIST') {
+      const allGroups = await prisma.miniGroup.findMany({
+        select: { id: true, title: true, chatLink: true },
+        orderBy: { title: 'asc' }
+      });
+      const userGroups = allGroups.filter(group => {
+        if (!group.chatLink) return false;
+        try {
+          const chatData = JSON.parse(group.chatLink);
+          const mentorIds: string[] = chatData.mentorIds || [];
+          return mentorIds.includes(user.id);
+        } catch {
+          return false;
+        }
+      });
+      res.json(userGroups.map(g => ({ id: g.id, title: g.title })));
+    } else {
+      const groups = await prisma.miniGroup.findMany({
+        select: { id: true, title: true },
+        orderBy: { title: 'asc' }
+      });
+      res.json(groups);
+    }
+  } catch (error) {
+    console.error('Get mini-groups for moderation error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

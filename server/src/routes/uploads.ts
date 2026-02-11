@@ -41,6 +41,8 @@ const upload = multer({
       'image/png',
       'image/gif',
       'image/webp',
+      'image/heic',
+      'image/heif',
       'audio/mpeg',
       'audio/wav',
       'video/mp4',
@@ -78,7 +80,7 @@ const avatarUpload = multer({
   storage: avatarStorage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {

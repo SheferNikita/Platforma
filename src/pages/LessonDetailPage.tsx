@@ -9,6 +9,7 @@ import { KinescopeMultiPlayer } from '../components/KinescopePlayer';
 import { useSettings } from '../lib/settings';
 import { useAuth } from '../lib/auth';
 import { useIsMobile } from '../lib/useIsMobile';
+import heic2any from 'heic2any';
 
 type StudentTariff = 'BASIC' | 'FAMILY' | 'RELATIVE' | 'WITH_MENTOR' | 'WITH_PSYCHOLOGIST' | 'INDIVIDUAL_PSYCHOLOGIST';
 
@@ -137,6 +138,30 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+const isHeicFile = (file: File): boolean => {
+  const name = file.name.toLowerCase();
+  return name.endsWith('.heic') || name.endsWith('.heif') || 
+    file.type === 'image/heic' || file.type === 'image/heif';
+};
+
+const convertHeicIfNeeded = async (file: File): Promise<File> => {
+  if (!isHeicFile(file)) return file;
+  try {
+    const blob = await (heic2any as any)({ blob: file, toType: 'image/jpeg', quality: 0.85 });
+    const resultBlob = Array.isArray(blob) ? blob[0] : blob;
+    const newName = file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg');
+    return new globalThis.File([resultBlob], newName, { type: 'image/jpeg' });
+  } catch (err) {
+    console.error('HEIC conversion failed:', err);
+    toast.error('Не удалось конвертировать фото из формата HEIC. Попробуйте сохранить фото как JPEG.');
+    return file;
+  }
+};
+
+const processFiles = async (files: File[]): Promise<File[]> => {
+  return Promise.all(files.map(convertHeicIfNeeded));
+};
+
 function SupportButton() {
   const { settings } = useSettings();
   const navigate = useNavigate();
@@ -199,6 +224,8 @@ export function LessonDetailPage() {
   // Image modal state
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+
   // User tariff state
   const [userTariff, setUserTariff] = useState<StudentTariff | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -423,8 +450,20 @@ export function LessonDetailPage() {
     if (!lessonId) return;
 
     try {
+      let processedFiles = diaryFiles;
+      if (diaryFiles.length > 0) {
+        const hasHeic = diaryFiles.some(isHeicFile);
+        if (hasHeic) {
+          setUploadStatus('Конвертация изображений...');
+        }
+        processedFiles = await processFiles(diaryFiles);
+        setUploadStatus('Отправка...');
+      } else {
+        setUploadStatus('Отправка...');
+      }
+
       const attachments = await Promise.all(
-        diaryFiles.map(async (file) => ({
+        processedFiles.map(async (file) => ({
           filename: `${Date.now()}_${file.name}`,
           originalName: file.name,
           mimeType: file.type,
@@ -443,7 +482,7 @@ export function LessonDetailPage() {
         text: diary.trim(),
         author: 'student',
         timestamp: new Date(),
-        files: diaryFiles.map(f => ({ 
+        files: processedFiles.map(f => ({ 
           name: f.name, 
           type: f.type,
           url: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined
@@ -457,6 +496,8 @@ export function LessonDetailPage() {
       console.error('Save diary error:', error);
       const errorMessage = error?.message || 'Ошибка при сохранении дневника';
       toast.error(errorMessage);
+    } finally {
+      setUploadStatus(null);
     }
   };
 
@@ -468,8 +509,20 @@ export function LessonDetailPage() {
     if (!lessonId) return;
 
     try {
+      let processedFiles = notesFiles;
+      if (notesFiles.length > 0) {
+        const hasHeic = notesFiles.some(isHeicFile);
+        if (hasHeic) {
+          setUploadStatus('Конвертация изображений...');
+        }
+        processedFiles = await processFiles(notesFiles);
+        setUploadStatus('Отправка...');
+      } else {
+        setUploadStatus('Отправка...');
+      }
+
       const attachments = await Promise.all(
-        notesFiles.map(async (file) => ({
+        processedFiles.map(async (file) => ({
           filename: `${Date.now()}_${file.name}`,
           originalName: file.name,
           mimeType: file.type,
@@ -488,7 +541,7 @@ export function LessonDetailPage() {
         text: notes.trim(),
         author: 'student',
         timestamp: new Date(),
-        files: notesFiles.map(f => ({ 
+        files: processedFiles.map(f => ({ 
           name: f.name, 
           type: f.type,
           url: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined
@@ -501,12 +554,14 @@ export function LessonDetailPage() {
     } catch (error: any) {
       console.error('Save notes error:', error);
       toast.error(error.response?.data?.error || 'Ошибка при сохранении конспекта');
+    } finally {
+      setUploadStatus(null);
     }
   };
 
   const handleSubmitFeedback = async () => {
-    if (!feedback.trim()) {
-      toast.error('Пожалуйста, напишите вопрос');
+    if (!feedback.trim() && attachedFiles.length === 0) {
+      toast.error('Пожалуйста, напишите что-нибудь или прикрепите файл');
       return;
     }
 
@@ -516,8 +571,20 @@ export function LessonDetailPage() {
     }
 
     try {
+      let processedFiles = attachedFiles;
+      if (attachedFiles.length > 0) {
+        const hasHeic = attachedFiles.some(isHeicFile);
+        if (hasHeic) {
+          setUploadStatus('Конвертация изображений...');
+        }
+        processedFiles = await processFiles(attachedFiles);
+        setUploadStatus('Отправка...');
+      } else {
+        setUploadStatus('Отправка...');
+      }
+
       const attachments = await Promise.all(
-        attachedFiles.map(async (file) => ({
+        processedFiles.map(async (file) => ({
           filename: `${Date.now()}_${file.name}`,
           originalName: file.name,
           mimeType: file.type,
@@ -532,13 +599,12 @@ export function LessonDetailPage() {
         attachments: attachments.length > 0 ? attachments : undefined
       });
 
-      // Add message to chat history for UI
       const newMessage: ChatMessage = {
         id: newNote.id,
         text: feedback,
         author: 'student',
         timestamp: new Date(),
-        files: attachedFiles.map(f => ({ 
+        files: processedFiles.map(f => ({ 
           name: f.name, 
           type: f.type,
           url: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined
@@ -554,13 +620,14 @@ export function LessonDetailPage() {
       setAudioBlob(null);
       setRecordingTime(0);
       
-      // Auto scroll to new message
       setTimeout(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 100);
     } catch (error: any) {
       console.error('Submit question error:', error);
       toast.error(error.response?.data?.error || 'Ошибка при отправке вопроса');
+    } finally {
+      setUploadStatus(null);
     }
   };
 
@@ -719,6 +786,15 @@ export function LessonDetailPage() {
 
   return (
     <PageWrapper>
+      {uploadStatus && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4 mx-4 max-w-sm w-full">
+            <Loader2 className="w-10 h-10 text-[var(--button-lavender-dark)] animate-spin" />
+            <p className="text-lg font-medium text-gray-700 text-center">{uploadStatus}</p>
+            <p className="text-sm text-gray-400 text-center">Пожалуйста, не закрывайте страницу</p>
+          </div>
+        </div>
+      )}
       <div className="animate-fade-in max-w-5xl mx-auto">
         {/* Шапка с нвигацией */}
         <div className="mb-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

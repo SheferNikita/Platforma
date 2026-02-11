@@ -80,6 +80,128 @@ router.get('/mentors', async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.get('/export-staff', async (req: AuthRequest, res: Response) => {
+  try {
+    const staffUsers = await prisma.user.findMany({
+      where: {
+        role: { in: ['MENTOR', 'PSYCHOLOGIST', 'INTERN'] },
+        isActive: true
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true
+      },
+      orderBy: [{ role: 'asc' }, { name: 'asc' }]
+    });
+
+    const allGroups = await prisma.miniGroup.findMany({
+      select: {
+        id: true,
+        chatLink: true,
+        members: {
+          select: {
+            student: {
+              select: {
+                id: true,
+                phone: true,
+                user: { select: { name: true, email: true } }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const psychStudents = await prisma.student.findMany({
+      where: { assignedPsychologistId: { not: null } },
+      select: {
+        id: true,
+        phone: true,
+        assignedPsychologistId: true,
+        user: { select: { name: true, email: true } }
+      }
+    });
+
+    const roleLabels: Record<string, string> = {
+      MENTOR: 'Наставник',
+      PSYCHOLOGIST: 'Психолог',
+      INTERN: 'Помощник'
+    };
+
+    const csvRows: string[] = [];
+    const header = ['Роль', 'Имя сотрудника', 'Email сотрудника', 'Имя ученика', 'Email ученика', 'Телефон ученика'];
+    csvRows.push(header.join(';'));
+
+    for (const staff of staffUsers) {
+      const students: { name: string; email: string; phone: string }[] = [];
+      const seen = new Set<string>();
+
+      const mentorGroups = allGroups.filter(g => {
+        if (!g.chatLink) return false;
+        try {
+          const data = JSON.parse(g.chatLink);
+          return (data.mentorIds || []).includes(staff.id);
+        } catch { return false; }
+      });
+      for (const group of mentorGroups) {
+        for (const member of group.members) {
+          if (!seen.has(member.student.id)) {
+            seen.add(member.student.id);
+            students.push({
+              name: member.student.user.name,
+              email: member.student.user.email,
+              phone: member.student.phone || ''
+            });
+          }
+        }
+      }
+
+      for (const s of psychStudents) {
+        if (s.assignedPsychologistId === staff.id && !seen.has(s.id)) {
+          seen.add(s.id);
+          students.push({
+            name: s.user.name,
+            email: s.user.email,
+            phone: s.phone || ''
+          });
+        }
+      }
+
+      if (students.length === 0) {
+        const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+        csvRows.push([
+          escape(roleLabels[staff.role] || staff.role),
+          escape(staff.name),
+          escape(staff.email),
+          '', '', ''
+        ].join(';'));
+      } else {
+        students.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+        for (let i = 0; i < students.length; i++) {
+          const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+          csvRows.push([
+            i === 0 ? escape(roleLabels[staff.role] || staff.role) : '',
+            i === 0 ? escape(staff.name) : '',
+            i === 0 ? escape(staff.email) : '',
+            escape(students[i].name),
+            escape(students[i].email),
+            escape(students[i].phone)
+          ].join(';'));
+        }
+      }
+    }
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=staff-export.csv');
+    res.send('\uFEFF' + csvRows.join('\n'));
+  } catch (error) {
+    console.error('Export staff error:', error);
+    res.status(500).json({ error: 'Ошибка экспорта' });
+  }
+});
+
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
     const data = createAdminSchema.parse(req.body);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, Shield, User, Shuffle, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Shield, User, Shuffle, X, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../../lib/auth';
 
@@ -78,6 +78,32 @@ export function AdminsAdmin() {
   const isAdmin = user?.role === 'ADMIN';
   const isCurator = user?.role === 'CURATOR';
   
+  const [exporting, setExporting] = useState(false);
+
+  async function exportStaff() {
+    setExporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/export-staff', {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Ошибка экспорта');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'staff-export.csv';
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success('Файл экспортирован');
+    } catch (error: any) {
+      toast.error(error.message || 'Ошибка экспорта');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const curatorAllowedRoles = ['MENTOR', 'PSYCHOLOGIST', 'INTERN'];
   const canEditAdmin = (adminRole: string) => {
     if (isSuperAdmin) return true;
@@ -106,12 +132,22 @@ export function AdminsAdmin() {
           <h1 className="text-2xl md:text-3xl font-bold text-[#3d3527]">Администраторы</h1>
           <p className="text-[#3d3527]/60 mt-1">Управление администраторами и ролями</p>
         </div>
-        <button
-          onClick={() => { setEditingAdmin(null); setShowModal(true); }}
-          className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow w-full sm:w-auto"
-        >
-          <Plus className="w-5 h-5" /> Добавить админа
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <button
+            onClick={exportStaff}
+            disabled={exporting}
+            className="flex items-center justify-center gap-2 px-4 py-2 border border-[#a67c52] text-[#a67c52] rounded-xl hover:bg-[#a67c52]/10 transition-colors w-full sm:w-auto disabled:opacity-50"
+          >
+            <Download className="w-5 h-5" />
+            {exporting ? 'Экспорт...' : 'Экспорт наставников'}
+          </button>
+          <button
+            onClick={() => { setEditingAdmin(null); setShowModal(true); }}
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-shadow w-full sm:w-auto"
+          >
+            <Plus className="w-5 h-5" /> Добавить админа
+          </button>
+        </div>
       </div>
 
       {/* Mobile card view */}

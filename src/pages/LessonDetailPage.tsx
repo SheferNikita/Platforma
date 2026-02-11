@@ -138,16 +138,61 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MAX_TOTAL_SIZE = 30 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 1920;
+const IMAGE_QUALITY = 0.8;
+
 const isHeicFile = (file: File): boolean => {
   const name = file.name.toLowerCase();
   return name.endsWith('.heic') || name.endsWith('.heif') || 
     file.type === 'image/heic' || file.type === 'image/heif';
 };
 
+const isImageFile = (file: File): boolean => {
+  return file.type.startsWith('image/') || isHeicFile(file);
+};
+
+const compressImage = (file: File): Promise<File> => {
+  if (file.size < 500 * 1024) return Promise.resolve(file);
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      const needsResize = width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION;
+      if (!needsResize && file.size < 2 * 1024 * 1024) { resolve(file); return; }
+      if (needsResize) {
+        if (width > height) {
+          height = Math.round(height * (MAX_IMAGE_DIMENSION / width));
+          width = MAX_IMAGE_DIMENSION;
+        } else {
+          width = Math.round(width * (MAX_IMAGE_DIMENSION / height));
+          height = MAX_IMAGE_DIMENSION;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { resolve(file); return; }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => {
+        if (!blob || blob.size >= file.size) { resolve(file); return; }
+        const newName = file.name.replace(/\.[^.]+$/, '.jpg');
+        resolve(new globalThis.File([blob], newName, { type: 'image/jpeg' }));
+      }, 'image/jpeg', IMAGE_QUALITY);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+};
+
 const convertHeicIfNeeded = async (file: File): Promise<File> => {
   if (!isHeicFile(file)) return file;
   try {
-    const blob = await (heic2any as any)({ blob: file, toType: 'image/jpeg', quality: 0.85 });
+    const blob = await (heic2any as any)({ blob: file, toType: 'image/jpeg', quality: IMAGE_QUALITY });
     const resultBlob = Array.isArray(blob) ? blob[0] : blob;
     const newName = file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg');
     return new globalThis.File([resultBlob], newName, { type: 'image/jpeg' });
@@ -159,7 +204,26 @@ const convertHeicIfNeeded = async (file: File): Promise<File> => {
 };
 
 const processFiles = async (files: File[]): Promise<File[]> => {
-  return Promise.all(files.map(convertHeicIfNeeded));
+  const results: File[] = [];
+  let totalSize = 0;
+  for (const file of files) {
+    let processed = await convertHeicIfNeeded(file);
+    if (isImageFile(processed)) {
+      processed = await compressImage(processed);
+    }
+    if (processed.size > MAX_FILE_SIZE) {
+      toast.error(`Файл "${file.name}" слишком большой (${(processed.size / 1024 / 1024).toFixed(1)} МБ). Максимум — ${MAX_FILE_SIZE / 1024 / 1024} МБ.`);
+      continue;
+    }
+    const base64Size = Math.ceil(processed.size * 1.37);
+    if (totalSize + base64Size > MAX_TOTAL_SIZE) {
+      toast.error('Суммарный размер файлов слишком большой. Попробуйте прикрепить меньше файлов.');
+      break;
+    }
+    totalSize += base64Size;
+    results.push(processed);
+  }
+  return results;
 };
 
 function SupportButton() {
@@ -450,18 +514,19 @@ export function LessonDetailPage() {
     if (!lessonId) return;
 
     try {
-      let processedFiles = diaryFiles;
+      let processedFiles: File[] = [];
       if (diaryFiles.length > 0) {
-        const hasHeic = diaryFiles.some(isHeicFile);
-        if (hasHeic) {
-          setUploadStatus('Конвертация изображений...');
-        }
+        setUploadStatus('Подготовка файлов...');
         processedFiles = await processFiles(diaryFiles);
-        setUploadStatus('Отправка...');
-      } else {
-        setUploadStatus('Отправка...');
       }
 
+      if (!diary.trim() && processedFiles.length === 0) {
+        setUploadStatus(null);
+        toast.error('Не удалось обработать файлы. Попробуйте другие файлы или уменьшите их размер.');
+        return;
+      }
+
+      setUploadStatus('Отправка...');
       const attachments = await Promise.all(
         processedFiles.map(async (file) => ({
           filename: `${Date.now()}_${file.name}`,
@@ -494,8 +559,11 @@ export function LessonDetailPage() {
       toast.success('Запись в дневнике сохранена!');
     } catch (error: any) {
       console.error('Save diary error:', error);
-      const errorMessage = error?.message || 'Ошибка при сохранении дневника';
-      toast.error(errorMessage);
+      if (error?.response?.status === 413) {
+        toast.error('Файлы слишком большие. Попробуйте уменьшить размер или количество файлов.');
+      } else {
+        toast.error(error?.response?.data?.error || 'Ошибка при сохранении дневника. Попробуйте ещё раз.');
+      }
     } finally {
       setUploadStatus(null);
     }
@@ -509,18 +577,19 @@ export function LessonDetailPage() {
     if (!lessonId) return;
 
     try {
-      let processedFiles = notesFiles;
+      let processedFiles: File[] = [];
       if (notesFiles.length > 0) {
-        const hasHeic = notesFiles.some(isHeicFile);
-        if (hasHeic) {
-          setUploadStatus('Конвертация изображений...');
-        }
+        setUploadStatus('Подготовка файлов...');
         processedFiles = await processFiles(notesFiles);
-        setUploadStatus('Отправка...');
-      } else {
-        setUploadStatus('Отправка...');
       }
 
+      if (!notes.trim() && processedFiles.length === 0) {
+        setUploadStatus(null);
+        toast.error('Не удалось обработать файлы. Попробуйте другие файлы или уменьшите их размер.');
+        return;
+      }
+
+      setUploadStatus('Отправка...');
       const attachments = await Promise.all(
         processedFiles.map(async (file) => ({
           filename: `${Date.now()}_${file.name}`,
@@ -553,7 +622,11 @@ export function LessonDetailPage() {
       toast.success('Конспект сохранен!');
     } catch (error: any) {
       console.error('Save notes error:', error);
-      toast.error(error.response?.data?.error || 'Ошибка при сохранении конспекта');
+      if (error?.response?.status === 413) {
+        toast.error('Файлы слишком большие. Попробуйте уменьшить размер или количество файлов.');
+      } else {
+        toast.error(error?.response?.data?.error || 'Ошибка при сохранении конспекта. Попробуйте ещё раз.');
+      }
     } finally {
       setUploadStatus(null);
     }
@@ -571,18 +644,19 @@ export function LessonDetailPage() {
     }
 
     try {
-      let processedFiles = attachedFiles;
+      let processedFiles: File[] = [];
       if (attachedFiles.length > 0) {
-        const hasHeic = attachedFiles.some(isHeicFile);
-        if (hasHeic) {
-          setUploadStatus('Конвертация изображений...');
-        }
+        setUploadStatus('Подготовка файлов...');
         processedFiles = await processFiles(attachedFiles);
-        setUploadStatus('Отправка...');
-      } else {
-        setUploadStatus('Отправка...');
       }
 
+      if (!feedback.trim() && processedFiles.length === 0) {
+        setUploadStatus(null);
+        toast.error('Не удалось обработать файлы. Попробуйте другие файлы или уменьшите их размер.');
+        return;
+      }
+
+      setUploadStatus('Отправка...');
       const attachments = await Promise.all(
         processedFiles.map(async (file) => ({
           filename: `${Date.now()}_${file.name}`,
@@ -625,7 +699,11 @@ export function LessonDetailPage() {
       }, 100);
     } catch (error: any) {
       console.error('Submit question error:', error);
-      toast.error(error.response?.data?.error || 'Ошибка при отправке вопроса');
+      if (error?.response?.status === 413) {
+        toast.error('Файлы слишком большие. Попробуйте уменьшить размер или количество файлов.');
+      } else {
+        toast.error(error?.response?.data?.error || 'Ошибка при отправке вопроса. Попробуйте ещё раз.');
+      }
     } finally {
       setUploadStatus(null);
     }

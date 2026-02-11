@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
 import { Plus, Search, Edit, Trash2, User, Info, Filter, Lock, Unlock, Calendar, Users2, X, ListChecks, Shuffle, TrendingUp, BarChart3, UserCheck, UserX, Mail, Key, Eye, EyeOff, Download, ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react';
 import { toast } from 'sonner';
@@ -76,6 +76,7 @@ export function StudentsAdmin() {
   const [stats, setStats] = useState<StudentsStats | null>(null);
   const [showDashboard, setShowDashboard] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -92,14 +93,24 @@ export function StudentsAdmin() {
   const [perPage, setPerPage] = useState<string>('20');
   const [totalStudents, setTotalStudents] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadRequestRef = useRef(0);
+
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current); };
+  }, [search]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, filterDistributed, filterSurvey, perPage]);
+  }, [debouncedSearch, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, filterDistributed, filterSurvey, perPage]);
 
   useEffect(() => {
     loadStudents();
-  }, [search, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, filterDistributed, filterSurvey, currentPage, perPage]);
+  }, [debouncedSearch, filterStatus, filterMiniGroup, filterTariff, filterPrepayment, filterDistributed, filterSurvey, currentPage, perPage]);
 
   useEffect(() => {
     Promise.all([
@@ -123,10 +134,11 @@ export function StudentsAdmin() {
   }
 
   async function loadStudents() {
+    const requestId = ++loadRequestRef.current;
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (search) params.set('search', search);
+      if (debouncedSearch) params.set('search', debouncedSearch);
       params.set('page', String(currentPage));
       params.set('limit', perPage);
       if (filterStatus !== 'all') params.set('status', filterStatus);
@@ -138,16 +150,20 @@ export function StudentsAdmin() {
 
       const { students: data, pagination } = await api.get<{ students: Student[]; pagination: { page: number; limit: number; total: number; pages: number } }>(`/students?${params.toString()}`);
       
+      if (requestId !== loadRequestRef.current) return;
       setStudents(data);
       setTotalStudents(pagination.total);
       setTotalPages(pagination.pages);
     } catch (error) {
+      if (requestId !== loadRequestRef.current) return;
       setStudents([]);
       setTotalStudents(0);
       setTotalPages(0);
       toast.error('Ошибка загрузки');
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestRef.current) {
+        setLoading(false);
+      }
     }
   }
 

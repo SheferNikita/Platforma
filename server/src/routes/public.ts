@@ -298,14 +298,23 @@ router.get('/library', async (req, res) => {
 
 router.get('/schedule', async (req, res) => {
   try {
-    const events = await prisma.scheduleEvent.findMany({
-      where: {
-        isPublished: true,
-        miniGroupId: null
-      },
-      orderBy: { date: 'asc' }
+    const studentTariff = (req as any).user?.student?.tariff || null;
+    const events: any[] = await prisma.$queryRaw`
+      SELECT id, title, description, date, time, location, "isOnline", link, "miniGroupId", "isPublished",
+             COALESCE("allowedTariffs", '{}') as "allowedTariffs",
+             "createdAt", "updatedAt"
+      FROM "ScheduleEvent"
+      WHERE "isPublished" = true AND "miniGroupId" IS NULL
+      ORDER BY date ASC
+    `;
+    const filtered = events.filter(e => {
+      const tariffs = e.allowedTariffs || [];
+      if (tariffs.length === 0) return true;
+      if (!studentTariff) return false;
+      return tariffs.includes(studentTariff);
     });
-    res.json(events);
+    const result = filtered.map(({ allowedTariffs, ...rest }) => rest);
+    res.json(result);
   } catch (error) {
     console.error('Get public schedule error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

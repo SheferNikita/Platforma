@@ -392,11 +392,30 @@ router.delete('/library/:id', moderatorRoles, async (req: AuthRequest & Request<
 
 router.get('/schedule', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
-    const events = await prisma.scheduleEvent.findMany({
-      orderBy: { date: 'asc' },
-      include: { miniGroup: true }
-    });
-    res.json(events);
+    const events = await prisma.$queryRaw`
+      SELECT se.*, mg.id as "miniGroupId_ref", mg.title as "miniGroupTitle",
+             COALESCE(se."allowedTariffs", '{}') as "allowedTariffs"
+      FROM "ScheduleEvent" se
+      LEFT JOIN "MiniGroup" mg ON se."miniGroupId" = mg.id
+      ORDER BY se.date ASC
+    `;
+    const result = (events as any[]).map(e => ({
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      date: e.date,
+      time: e.time,
+      location: e.location,
+      isOnline: e.isOnline,
+      link: e.link,
+      miniGroupId: e.miniGroupId,
+      isPublished: e.isPublished,
+      allowedTariffs: e.allowedTariffs || [],
+      createdAt: e.createdAt,
+      updatedAt: e.updatedAt,
+      miniGroup: e.miniGroupId_ref ? { id: e.miniGroupId_ref, title: e.miniGroupTitle } : null
+    }));
+    res.json(result);
   } catch (error) {
     console.error('Get schedule error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -405,16 +424,23 @@ router.get('/schedule', moderatorRoles, async (req: AuthRequest, res: Response) 
 
 router.post('/schedule', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
-    const { date, ...rest } = req.body;
+    const { date, allowedTariffs, ...rest } = req.body;
     const isoDate = date ? new Date(date).toISOString() : new Date().toISOString();
+    const tariffs = Array.isArray(allowedTariffs) ? allowedTariffs : [];
     const event = await prisma.scheduleEvent.create({ 
       data: { ...rest, date: isoDate, isPublished: true },
       include: { miniGroup: true }
     });
 
+    if (tariffs.length > 0) {
+      await prisma.$executeRaw`UPDATE "ScheduleEvent" SET "allowedTariffs" = ${tariffs}::TEXT[] WHERE id = ${event.id}`;
+    }
+
+    const eventWithTariffs = { ...event, allowedTariffs: tariffs };
+
     await prisma.$executeRaw`
       INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "newData", "createdAt")
-      VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'SCHEDULE', ${event.id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(event)}::jsonb, NOW())
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'SCHEDULE', ${event.id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(eventWithTariffs)}::jsonb, NOW())
     `;
 
     const activeStudents = await prisma.student.findMany({
@@ -427,7 +453,7 @@ router.post('/schedule', moderatorRoles, async (req: AuthRequest, res: Response)
       )
     );
 
-    res.status(201).json(event);
+    res.status(201).json(eventWithTariffs);
   } catch (error) {
     console.error('Create schedule event error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -437,21 +463,31 @@ router.post('/schedule', moderatorRoles, async (req: AuthRequest, res: Response)
 router.put('/schedule/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
-    const oldEvent = await prisma.scheduleEvent.findUnique({ where: { id } });
-    const { date, ...rest } = req.body;
+    const prismaOldEvent = await prisma.scheduleEvent.findUnique({ where: { id } });
+    const [oldTariffRow] = await prisma.$queryRaw<any[]>`SELECT "allowedTariffs" FROM "ScheduleEvent" WHERE id = ${id}`;
+    const oldEvent = { ...prismaOldEvent, allowedTariffs: oldTariffRow?.allowedTariffs || [] };
+    const { date, allowedTariffs, ...rest } = req.body;
     const data = date ? { ...rest, date: new Date(date).toISOString() } : rest;
     const event = await prisma.scheduleEvent.update({ 
       where: { id }, 
       data,
       include: { miniGroup: true }
     });
+
+    if (allowedTariffs !== undefined) {
+      const tariffs = Array.isArray(allowedTariffs) ? allowedTariffs : [];
+      await prisma.$executeRaw`UPDATE "ScheduleEvent" SET "allowedTariffs" = ${tariffs}::TEXT[] WHERE id = ${id}`;
+    }
+
+    const [updated] = await prisma.$queryRaw<any[]>`SELECT "allowedTariffs" FROM "ScheduleEvent" WHERE id = ${id}`;
+    const eventWithTariffs = { ...event, allowedTariffs: updated?.allowedTariffs || [] };
     
     await prisma.$executeRaw`
       INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
-      VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'SCHEDULE', ${id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(oldEvent)}::jsonb, ${JSON.stringify(event)}::jsonb, NOW())
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'SCHEDULE', ${id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(oldEvent)}::jsonb, ${JSON.stringify(eventWithTariffs)}::jsonb, NOW())
     `;
     
-    res.json(event);
+    res.json(eventWithTariffs);
   } catch (error) {
     console.error('Update schedule event error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

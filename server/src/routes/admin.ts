@@ -1315,8 +1315,12 @@ router.post('/audit-logs/rollback/:id', auditRoles, async (req: AuthRequest, res
           await prisma.libraryItem.update({ where: { id: entry.entityId! }, data });
         },
         'SCHEDULE': async () => {
-          const { id: _, createdAt, updatedAt, ...data } = entry.oldData!;
+          const { id: _, createdAt, updatedAt, allowedTariffs, ...data } = entry.oldData! as any;
           await prisma.scheduleEvent.update({ where: { id: entry.entityId! }, data });
+          if (allowedTariffs) {
+            const tariffs = Array.isArray(allowedTariffs) ? allowedTariffs : [];
+            await prisma.$executeRaw`UPDATE "ScheduleEvent" SET "allowedTariffs" = ${tariffs}::TEXT[] WHERE id = ${entry.entityId!}`;
+          }
         },
         'COMMUNITY': async () => {
           const { id: _, createdAt, updatedAt, ...data } = entry.oldData!;
@@ -1363,7 +1367,11 @@ router.post('/audit-logs/rollback/:id', auditRoles, async (req: AuthRequest, res
           await prisma.libraryItem.create({ data: entry.oldData! as any });
         },
         'SCHEDULE': async () => {
-          await prisma.scheduleEvent.create({ data: entry.oldData! as any });
+          const { allowedTariffs, ...rest } = entry.oldData! as any;
+          await prisma.scheduleEvent.create({ data: rest as any });
+          if (allowedTariffs && Array.isArray(allowedTariffs) && allowedTariffs.length > 0) {
+            await prisma.$executeRaw`UPDATE "ScheduleEvent" SET "allowedTariffs" = ${allowedTariffs}::TEXT[] WHERE id = ${rest.id}`;
+          }
         },
         'COMMUNITY': async () => {
           await prisma.community.create({ data: entry.oldData! as any });

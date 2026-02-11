@@ -13,3 +13,11 @@ export const prisma = new PrismaClient({
     },
   },
 });
+
+async function runMigrations() {
+  try {
+    await prisma.$executeRaw`ALTER TABLE "ScheduleEvent" ADD COLUMN IF NOT EXISTS "allowedTariffs" TEXT[] DEFAULT '{}'`;
+  } catch (e) {
+  }
+}
+runMigrations();

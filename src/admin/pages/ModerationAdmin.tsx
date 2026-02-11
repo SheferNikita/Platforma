@@ -74,6 +74,26 @@ const typeConfig = {
   personal: { label: 'Конспект', icon: FileText, color: 'bg-teal-100 text-teal-700' }
 };
 
+function getAttachmentTypeLabel(mimeType: string): string {
+  if (mimeType.startsWith('image/')) return 'Фото';
+  if (mimeType.startsWith('video/')) return 'Видео';
+  if (mimeType.startsWith('audio/')) return 'Аудио';
+  if (mimeType.includes('pdf')) return 'PDF-документ';
+  if (mimeType.includes('word') || mimeType.includes('document')) return 'Документ';
+  if (mimeType.includes('sheet') || mimeType.includes('excel')) return 'Таблица';
+  return 'Файл';
+}
+
+function getContentPreview(item: ModerationItem): string {
+  if (item.content && item.content.trim()) return item.content;
+  if (item.attachments && item.attachments.length > 0) {
+    const types = item.attachments.map(a => getAttachmentTypeLabel(a.mimeType));
+    const unique = [...new Set(types)];
+    return `📎 ${unique.join(', ')} (${item.attachments.length})`;
+  }
+  return 'Без содержания';
+}
+
 export function ModerationAdmin() {
   const [items, setItems] = useState<ModerationItem[]>([]);
   const [allItems, setAllItems] = useState<ModerationItem[]>([]);
@@ -368,7 +388,7 @@ export function ModerationAdmin() {
                       </div>
                     </div>
                     <p className="text-xs text-[#3d3527]/60 truncate">{item.lesson.title}</p>
-                    <p className="text-sm text-[#3d3527] line-clamp-2">{item.content}</p>
+                    <p className="text-sm text-[#3d3527] line-clamp-2">{getContentPreview(item)}</p>
                     <p className="text-xs text-[#3d3527]/50">{format(new Date(item.createdAt), 'd MMM yyyy', { locale: ru })}</p>
                   </div>
                 );
@@ -425,7 +445,7 @@ export function ModerationAdmin() {
                           </div>
                         </td>
                         <td className="p-4 text-sm text-[#3d3527]">{item.lesson.title}</td>
-                        <td className="p-4 text-sm text-[#3d3527] max-w-xs truncate">{item.content}</td>
+                        <td className="p-4 text-sm text-[#3d3527] max-w-xs truncate">{getContentPreview(item)}</td>
                         <td className="p-4 text-sm text-[#3d3527]/60">
                           {format(new Date(item.createdAt), 'd MMM yyyy', { locale: ru })}
                         </td>
@@ -606,7 +626,16 @@ function ChatDialog({
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <div className="flex items-center gap-2 mr-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-white" />
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-medium text-[#3d3527]">{item.student.user.name}</p>
+              <p className="text-xs text-[#3d3527]/60">{item.student.user.email}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg flex-shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>

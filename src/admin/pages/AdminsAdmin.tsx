@@ -83,9 +83,11 @@ export function AdminsAdmin() {
   async function exportStaff() {
     setExporting(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('auth_token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const response = await fetch('/api/admin/export-staff', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers,
         credentials: 'include'
       });
       if (!response.ok) throw new Error('Ошибка экспорта');

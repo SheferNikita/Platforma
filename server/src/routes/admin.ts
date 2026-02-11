@@ -147,11 +147,12 @@ router.get('/export-staff', async (req: AuthRequest, res: Response) => {
       });
       for (const group of mentorGroups) {
         for (const member of group.members) {
+          if (!member.student || !member.student.user) continue;
           if (!seen.has(member.student.id)) {
             seen.add(member.student.id);
             students.push({
-              name: member.student.user.name,
-              email: member.student.user.email,
+              name: member.student.user.name || '',
+              email: member.student.user.email || '',
               phone: member.student.phone || ''
             });
           }
@@ -159,11 +160,12 @@ router.get('/export-staff', async (req: AuthRequest, res: Response) => {
       }
 
       for (const s of psychStudents) {
+        if (!s.user) continue;
         if (s.assignedPsychologistId === staff.id && !seen.has(s.id)) {
           seen.add(s.id);
           students.push({
-            name: s.user.name,
-            email: s.user.email,
+            name: s.user.name || '',
+            email: s.user.email || '',
             phone: s.phone || ''
           });
         }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, ArrowUp, ArrowDown, Move, Check, X, Video, FileText, Upload, File, Clock, Calendar, Link2 } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, ChevronDown, ChevronUp, Eye, EyeOff, ArrowUp, ArrowDown, Move, Check, X, Video, FileText, Upload, File, Clock, Calendar, Link2, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { RichTextEditor } from '../../components/RichTextEditor';
 import { KinescopePlayer } from '../../components/KinescopePlayer';
@@ -67,6 +67,9 @@ export function LessonsAdmin() {
   const [reorderingLessons, setReorderingLessons] = useState<string | null>(null);
   const [savingModules, setSavingModules] = useState(false);
   const [savingLessons, setSavingLessons] = useState(false);
+  const [copyLesson, setCopyLesson] = useState<{ lessonId: string; lessonTitle: string; currentModuleId: string } | null>(null);
+  const [copyTargetModuleId, setCopyTargetModuleId] = useState('');
+  const [copying, setCopying] = useState(false);
   const originalModulesRef = useRef<Module[]>([]);
   const originalLessonsRef = useRef<Record<string, Lesson[]>>({});
 
@@ -140,6 +143,26 @@ export function LessonsAdmin() {
       loadModules();
     } catch (error) {
       toast.error('Ошибка удаления');
+    }
+  }
+
+  function openCopyModal(lessonId: string, lessonTitle: string, currentModuleId: string) {
+    setCopyLesson({ lessonId, lessonTitle, currentModuleId });
+    setCopyTargetModuleId(currentModuleId);
+  }
+
+  async function handleCopyLesson() {
+    if (!copyLesson || !copyTargetModuleId) return;
+    setCopying(true);
+    try {
+      await api.post(`/content/lessons/${copyLesson.lessonId}/copy`, { targetModuleId: copyTargetModuleId });
+      toast.success('Урок скопирован');
+      setCopyLesson(null);
+      loadModules();
+    } catch (error) {
+      toast.error('Ошибка копирования');
+    } finally {
+      setCopying(false);
     }
   }
 
@@ -453,14 +476,23 @@ export function LessonsAdmin() {
                       {canEdit && (
                         <>
                           <button
+                            onClick={() => openCopyModal(lesson.id, lesson.title, module.id)}
+                            className="p-1.5 md:p-2 hover:bg-white rounded-lg"
+                            title="Копировать урок"
+                          >
+                            <Copy className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#3d3527]" />
+                          </button>
+                          <button
                             onClick={() => { setEditingLesson({ lesson, moduleId: module.id }); setShowLessonModal(true); }}
                             className="p-1.5 md:p-2 hover:bg-white rounded-lg"
+                            title="Редактировать"
                           >
                             <Edit className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#3d3527]" />
                           </button>
                           <button
                             onClick={() => deleteLesson(lesson.id)}
                             className="p-1.5 md:p-2 hover:bg-red-50 rounded-lg"
+                            title="Удалить"
                           >
                             <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-red-500" />
                           </button>
@@ -497,6 +529,51 @@ export function LessonsAdmin() {
           onSave={saveLesson}
           onClose={() => { setShowLessonModal(false); setEditingLesson(null); }}
         />
+      )}
+
+      {copyLesson && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-4 md:p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-[#3d3527]">Копировать урок</h2>
+              <button onClick={() => setCopyLesson(null)} className="p-2 hover:bg-gray-100 rounded-lg" title="Закрыть">
+                <X className="w-5 h-5 text-[#3d3527]" />
+              </button>
+            </div>
+            <p className="text-sm text-[#3d3527]/70 mb-4">
+              Урок «{copyLesson.lessonTitle}» будет скопирован со всеми видео и вложениями как черновик.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-[#3d3527] mb-1">Целевой модуль</label>
+              <select
+                value={copyTargetModuleId}
+                onChange={(e) => setCopyTargetModuleId(e.target.value)}
+                className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52]"
+              >
+                {modules.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.title}{m.id === copyLesson.currentModuleId ? ' (текущий)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setCopyLesson(null)}
+                className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleCopyLesson}
+                disabled={copying}
+                className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl disabled:opacity-50"
+              >
+                {copying ? 'Копирование...' : 'Копировать'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

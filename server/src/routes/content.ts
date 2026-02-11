@@ -316,6 +316,92 @@ router.delete('/lessons/:id', moderatorRoles, async (req: AuthRequest & Request<
   }
 });
 
+router.post('/lessons/:id/copy', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { targetModuleId } = req.body;
+
+    if (!targetModuleId) {
+      return res.status(400).json({ error: 'Не указан целевой модуль' });
+    }
+
+    const targetModule = await prisma.module.findUnique({ where: { id: targetModuleId } });
+    if (!targetModule) {
+      return res.status(404).json({ error: 'Целевой модуль не найден' });
+    }
+
+    const original = await prisma.lesson.findUnique({
+      where: { id },
+      include: {
+        videos: { orderBy: { order: 'asc' } },
+        attachments: true
+      }
+    });
+
+    if (!original) {
+      return res.status(404).json({ error: 'Урок не найден' });
+    }
+
+    const maxOrder = await prisma.lesson.aggregate({
+      where: { moduleId: targetModuleId },
+      _max: { order: true }
+    });
+    const newOrder = (maxOrder._max.order ?? 0) + 1;
+
+    const copy = await prisma.lesson.create({
+      data: {
+        moduleId: targetModuleId,
+        title: original.title + ' (копия)',
+        description: original.description,
+        content: original.content,
+        duration: original.duration,
+        order: newOrder,
+        isPublished: false,
+        isTextOnly: original.isTextOnly,
+        showDiary: original.showDiary,
+        showNotes: original.showNotes,
+        diaryDescription: original.diaryDescription,
+        notesDescription: original.notesDescription,
+        showTask: original.showTask,
+        taskContent: original.taskContent,
+        taskAllowedTariffs: original.taskAllowedTariffs,
+        videos: original.videos.length > 0 ? {
+          create: original.videos.map((v, i) => ({
+            title: v.title || null,
+            url: v.url,
+            order: v.order ?? i
+          }))
+        } : undefined,
+        attachments: original.attachments.length > 0 ? {
+          create: original.attachments.map(a => ({
+            filename: a.filename,
+            originalName: a.originalName,
+            mimeType: a.mimeType,
+            size: a.size,
+            url: a.url
+          }))
+        } : undefined
+      },
+      include: {
+        videos: { orderBy: { order: 'asc' } },
+        attachments: true
+      }
+    });
+
+    invalidateModulesCache();
+
+    await prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'LESSON', ${copy.id}, ${JSON.stringify({ title: copy.title, copiedFrom: original.id })}::jsonb, ${JSON.stringify(copy)}::jsonb, NOW())
+    `;
+
+    res.status(201).json(copy);
+  } catch (error) {
+    console.error('Copy lesson error:', error);
+    res.status(500).json({ error: 'Ошибка копирования урока' });
+  }
+});
+
 router.get('/library', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const items = await prisma.libraryItem.findMany({

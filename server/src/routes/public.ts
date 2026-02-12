@@ -6,6 +6,7 @@ import ordersRouter from './orders';
 import moderationRouter from './moderation';
 import auditRouter from './audit';
 import distributionRouter from './distribution';
+import { optionalAuthenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -296,9 +297,20 @@ router.get('/library', async (req, res) => {
   }
 });
 
-router.get('/schedule', async (req, res) => {
+router.get('/schedule', optionalAuthenticate, async (req: AuthRequest, res) => {
   try {
-    const studentTariff = (req as any).user?.student?.tariff || null;
+    let studentTariff: string | null = null;
+
+    if (req.user) {
+      const student = await prisma.student.findFirst({
+        where: { userId: req.user.id },
+        select: { tariff: true }
+      });
+      if (student) {
+        studentTariff = student.tariff;
+      }
+    }
+
     const events: any[] = await prisma.$queryRaw`
       SELECT id, title, description, date, time, location, "isOnline", link, "miniGroupId", "isPublished",
              COALESCE("allowedTariffs", '{}') as "allowedTariffs",

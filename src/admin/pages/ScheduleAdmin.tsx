@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, Calendar, Eye, EyeOff, Video, MapPin, Users2, X, Copy, Shield } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, Eye, EyeOff, Video, MapPin, Users2, X, Copy, Shield, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+
+function isEventPast(dateStr: string, timeStr: string): boolean {
+  const datePart = dateStr.split('T')[0];
+  const timePart = timeStr || '23:59';
+  const mskDateStr = `${datePart}T${timePart}:00+03:00`;
+  const eventDate = new Date(mskDateStr);
+  return eventDate.getTime() < Date.now();
+}
 
 const TARIFF_OPTIONS = [
   { value: 'BASIC', label: 'Базовый' },
@@ -131,14 +139,24 @@ export function ScheduleAdmin() {
         ) : (
           <>
             <div className="md:hidden divide-y divide-[#d4c9b0]/30">
-              {events.map((event) => (
-                <div key={event.id} className="p-3">
+              {events.map((event) => {
+                const past = isEventPast(event.date, event.time);
+                return (
+                <div key={event.id} className={`p-3 ${past ? 'opacity-60' : ''}`}>
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center shrink-0">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${past ? 'bg-gray-400' : 'bg-gradient-to-br from-[#a67c52] to-[#c4a57b]'}`}>
                       <Calendar className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-[#3d3527] text-sm">{event.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-[#3d3527] text-sm">{event.title}</p>
+                        {past && (
+                          <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-[10px] whitespace-nowrap">
+                            <Clock className="w-2.5 h-2.5" />
+                            Уже прошло
+                          </span>
+                        )}
+                      </div>
                       <div className="flex flex-wrap items-center gap-1 text-xs text-[#3d3527]/60 mt-1">
                         <span>{new Date(event.date).toLocaleDateString('ru')}</span>
                         {event.time && <span>• {event.time}</span>}
@@ -173,17 +191,27 @@ export function ScheduleAdmin() {
                     </button>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
             <div className="hidden md:block divide-y divide-[#d4c9b0]/30">
-              {events.map((event) => (
-                <div key={event.id} className="flex items-center justify-between p-4 hover:bg-[#f5f3ed]/50">
+              {events.map((event) => {
+                const pastDesktop = isEventPast(event.date, event.time);
+                return (
+                <div key={event.id} className={`flex items-center justify-between p-4 hover:bg-[#f5f3ed]/50 ${pastDesktop ? 'opacity-60' : ''}`}>
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${pastDesktop ? 'bg-gray-400' : 'bg-gradient-to-br from-[#a67c52] to-[#c4a57b]'}`}>
                       <Calendar className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="font-medium text-[#3d3527]">{event.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-[#3d3527]">{event.title}</p>
+                        {pastDesktop && (
+                          <span className="flex items-center gap-1 px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full text-xs whitespace-nowrap">
+                            <Clock className="w-3 h-3" />
+                            Уже прошло
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-sm text-[#3d3527]/60">
                         <span>{new Date(event.date).toLocaleDateString('ru')}</span>
                         {event.time && <span>• {event.time}</span>}
@@ -218,7 +246,7 @@ export function ScheduleAdmin() {
                     </button>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </>
         )}

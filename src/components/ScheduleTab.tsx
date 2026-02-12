@@ -1,6 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Calendar, Clock, MapPin, Users, Loader2, ExternalLink } from 'lucide-react';
 import { api } from '../lib/api';
+
+function isEventPast(dateStr: string, timeStr: string | null): boolean {
+  const datePart = dateStr.split('T')[0];
+  const timePart = timeStr || '23:59';
+  const mskDateStr = `${datePart}T${timePart}:00+03:00`;
+  const eventDate = new Date(mskDateStr);
+  return eventDate.getTime() < Date.now();
+}
 
 interface ScheduleEvent {
   id: string;
@@ -58,6 +66,10 @@ export function ScheduleTab() {
     return colors[type] || 'bg-gray-100 text-gray-800';
   };
 
+  const upcomingEvents = useMemo(() => {
+    return events.filter(e => !isEventPast(e.date, e.time));
+  }, [events]);
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const options: Intl.DateTimeFormatOptions = { 
@@ -93,7 +105,7 @@ export function ScheduleTab() {
     );
   }
 
-  if (events.length === 0) {
+  if (upcomingEvents.length === 0) {
     return (
       <div className="text-center py-20">
         <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-300" />
@@ -114,7 +126,7 @@ export function ScheduleTab() {
       </div>
 
       <div className="space-y-5">
-        {events.map((event, index) => (
+        {upcomingEvents.map((event, index) => (
           <div
             key={event.id}
             className="border-2 rounded-2xl p-4 md:p-7 transition-all duration-300 transform hover:-translate-y-1 animate-slide-up border-[var(--button-lavender-dark)]/40 bg-gradient-to-br from-white/80 to-white/40 shadow-[0_4px_16px_var(--book-shadow)] hover:shadow-[0_8px_24px_var(--book-shadow-strong)]"

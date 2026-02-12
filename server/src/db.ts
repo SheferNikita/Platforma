@@ -21,3 +21,10 @@ async function runMigrations() {
   }
 }
 runMigrations();
+
+setInterval(async () => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch (e) {
+  }
+}, 60000);

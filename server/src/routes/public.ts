@@ -264,6 +264,114 @@ router.get('/lessons/:id', async (req: Request, res: Response) => {
   }
 });
 
+router.get('/lesson-page/:id', async (req: Request, res: Response) => {
+  try {
+    const startTime = Date.now();
+    const id = req.params.id as string;
+    const isMobile = req.query.mobile === 'true';
+
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '') || req.cookies?.token;
+
+    let decoded: DecodedToken | null = null;
+    let studentId: string | null = null;
+    let userRole: string | null = null;
+
+    if (token) {
+      try {
+        decoded = jwt.verify(token, JWT_SECRET) as DecodedToken;
+        userRole = decoded.role || null;
+      } catch {}
+    }
+
+    const lessonPromise = prisma.lesson.findFirst({
+      where: { id, isPublished: true },
+      include: {
+        module: { select: { id: true, title: true } },
+        videos: { orderBy: { order: 'asc' } },
+        attachments: true
+      }
+    });
+
+    const userPromise = decoded
+      ? prisma.user.findUnique({
+          where: { id: decoded.id },
+          include: { student: true }
+        })
+      : Promise.resolve(null);
+
+    const modulesPromise = isMobile ? Promise.resolve(null) : getCachedModules();
+
+    const [lesson, user, modules] = await Promise.all([
+      lessonPromise,
+      userPromise,
+      modulesPromise
+    ]);
+
+    if (!lesson) {
+      return res.status(404).json({ error: 'Урок не найден' });
+    }
+
+    if (user?.student) {
+      studentId = user.student.id;
+    }
+
+    const isAdmin = isAdminRole(userRole);
+
+    let lessonAccess: any = null;
+    let completedLessonIds: string[] = [];
+    let accessMap = new Map<string, any>();
+
+    if (studentId) {
+      const [moduleAccessList, lessonModuleAccess, progress] = await Promise.all([
+        modules ? prisma.moduleAccess.findMany({ where: { studentId } }) : Promise.resolve([]),
+        prisma.moduleAccess.findUnique({
+          where: { studentId_moduleId: { studentId, moduleId: lesson.moduleId } }
+        }),
+        prisma.lessonProgress.findMany({
+          where: { studentId, isCompleted: true },
+          select: { lessonId: true }
+        })
+      ]);
+      lessonAccess = lessonModuleAccess;
+      completedLessonIds = progress.map(p => p.lessonId);
+      accessMap = new Map(moduleAccessList.map(a => [a.moduleId, a]));
+    }
+
+    const lessonData = {
+      ...lesson,
+      hasAccess: studentId ? true : isAdmin ? true : false,
+      accessFrom: lessonAccess?.accessFrom ?? null,
+      accessExpiresAt: lessonAccess?.expiresAt ?? null
+    };
+
+    let modulesData = null;
+    if (modules) {
+      modulesData = modules.map(m => {
+        const access = accessMap.get(m.id);
+        return {
+          ...m,
+          hasAccess: studentId ? true : isAdmin ? true : false,
+          accessExpiresAt: access?.expiresAt ?? null,
+          accessFrom: access?.accessFrom ?? null
+        };
+      });
+    }
+
+    console.log(`[Perf] GET /lesson-page/${id}: total=${Date.now() - startTime}ms, mobile=${isMobile}, auth=${!!decoded}`);
+
+    res.json({
+      lesson: lessonData,
+      modules: modulesData,
+      completedLessonIds,
+      isCompleted: completedLessonIds.includes(id)
+    });
+  } catch (error) {
+    console.error('Get lesson-page error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 router.get('/library', async (req, res) => {
   try {
     const items = await prisma.libraryItem.findMany({

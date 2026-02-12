@@ -370,29 +370,26 @@ export function LessonDetailPage() {
     setLoading(true);
     setError(null);
     try {
-      const lessonResult = await api.get<LessonData>(`/public/lessons/${id}`);
+      const isMobileView = window.innerWidth < 768;
+      const result = await api.get<{
+        lesson: LessonData;
+        modules: ModuleWithLessons[] | null;
+        completedLessonIds: string[];
+        isCompleted: boolean;
+      }>(`/public/lesson-page/${id}?mobile=${isMobileView}`);
       
       if (cancelledRef.current) return;
 
-      const isMobileView = window.innerWidth < 768;
+      setLessonData(result.lesson);
 
-      const [modules, progress] = await Promise.all([
-        isMobileView ? Promise.resolve([] as ModuleWithLessons[]) : api.get<ModuleWithLessons[]>('/public/modules').catch(() => [] as ModuleWithLessons[]),
-        user ? api.get<string[]>('/public/progress').catch(() => [] as string[]) : Promise.resolve([] as string[]),
-      ]);
-
-      if (cancelledRef.current) return;
-
-      setLessonData(lessonResult);
-
-      if (!isMobileView) {
-        const currentModule = modules.find(m => m.id === lessonResult.module.id);
+      if (!isMobileView && result.modules) {
+        const currentModule = result.modules.find(m => m.id === result.lesson.module.id);
         if (currentModule) {
           setModuleLessons(currentModule);
         }
       }
 
-      setIsLessonCompleted(progress.includes(id));
+      setIsLessonCompleted(result.isCompleted);
     } catch (err: any) {
       if (cancelledRef.current) return;
       console.error('Error fetching lesson:', err);

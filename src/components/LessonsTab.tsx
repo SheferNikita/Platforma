@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookOpen, Lock, CheckCircle, PlayCircle, Book, FileText, Loader2, Clock } from 'lucide-react';
 import { api } from '../lib/api';
+
+const SORT_KEY = 'lessons_sort_order';
+type SortOrder = 'oldest' | 'newest';
 
 interface Lesson {
   id: string;
@@ -29,6 +32,22 @@ export function LessonsTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
+  const [sortOrder, setSortOrder] = useState<SortOrder>(() => {
+    return (localStorage.getItem(SORT_KEY) as SortOrder) || 'oldest';
+  });
+
+  const sortedModules = useMemo(() => {
+    const sorted = modules.map(m => ({
+      ...m,
+      lessons: sortOrder === 'newest' ? [...m.lessons].reverse() : m.lessons
+    }));
+    return sortOrder === 'newest' ? [...sorted].reverse() : sorted;
+  }, [modules, sortOrder]);
+
+  const handleSortChange = (order: SortOrder) => {
+    setSortOrder(order);
+    localStorage.setItem(SORT_KEY, order);
+  };
 
   useEffect(() => {
     loadData();
@@ -118,14 +137,40 @@ export function LessonsTab() {
       <div className="mb-12 border-b border-[var(--sky-blue)]/20 pb-8 relative">
         <div className="absolute -top-2 left-0 w-20 h-1 bg-gradient-to-r from-[var(--button-lavender-dark)] via-[var(--button-lavender-light)] to-transparent rounded-full"></div>
         
-        <h2 className="text-[#3a3a3a] mb-4">Программа обучения</h2>
-        <p className="opacity-70 leading-relaxed max-w-3xl">
-          Последовательный курс занятий для людей, которые столкнулись с проблемой зависимости у себя или у близкого
-        </p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-[#3a3a3a] mb-4">Программа обучения</h2>
+            <p className="opacity-70 leading-relaxed max-w-3xl">
+              Последовательный курс занятий для людей, которые столкнулись с проблемой зависимости у себя или у близкого
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 bg-white/70 border border-[var(--sky-light)]/40 rounded-xl p-1 shadow-sm flex-shrink-0">
+            <button
+              onClick={() => handleSortChange('oldest')}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
+                sortOrder === 'oldest'
+                  ? 'bg-[var(--button-lavender-dark)] text-white shadow-sm'
+                  : 'text-[var(--book-text)] hover:bg-[var(--button-lavender)]/10'
+              }`}
+            >
+              Сначала старые
+            </button>
+            <button
+              onClick={() => handleSortChange('newest')}
+              className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
+                sortOrder === 'newest'
+                  ? 'bg-[var(--button-lavender-dark)] text-white shadow-sm'
+                  : 'text-[var(--book-text)] hover:bg-[var(--button-lavender)]/10'
+              }`}
+            >
+              Сначала новые
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-6">
-        {modules.map((module, moduleIndex) => (
+        {sortedModules.map((module, moduleIndex) => (
           <div key={module.id} className="animate-slide-up" style={{ animationDelay: `${moduleIndex * 0.05}s` }}>
             <div className="flex items-center gap-3 mb-4">
               <h3 className="text-[var(--book-text)] font-bold">{module.title}</h3>

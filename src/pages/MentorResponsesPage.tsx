@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PageWrapper } from '../components/PageWrapper';
 import { MessageCircle, BookOpen, FileText, ArrowLeft, ChevronDown, ChevronUp, Loader2, User, Volume2, Send, Mic, StopCircle, Paperclip, X, Image, File } from 'lucide-react';
+import AudioPlayer from '../components/AudioPlayer';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { toast } from 'sonner';
@@ -110,7 +111,6 @@ export function MentorResponsesPage() {
   const [error, setError] = useState<string | null>(null);
   const [expandedLesson, setExpandedLesson] = useState<string | null>(null);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
-  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   
   const [replyingTo, setReplyingTo] = useState<{ id: string; type: 'diary' | 'note' } | null>(null);
   const [replyText, setReplyText] = useState('');
@@ -167,20 +167,6 @@ export function MentorResponsesPage() {
     setExpandedItem(expandedItem === itemId ? null : itemId);
   };
 
-  const playAudio = (audioData: string, itemId: string, mimeType?: string) => {
-    if (playingAudio === itemId) {
-      setPlayingAudio(null);
-      return;
-    }
-    try {
-      const audio = new Audio(`data:${mimeType || 'audio/webm'};base64,${audioData}`);
-      audio.onended = () => setPlayingAudio(null);
-      audio.play();
-      setPlayingAudio(itemId);
-    } catch (e) {
-      console.error('Error playing audio:', e);
-    }
-  };
 
   const countReplies = (item: DialogItem): number => {
     const replies = parseReply(item.reply);
@@ -527,19 +513,14 @@ export function MentorResponsesPage() {
                                   </div>
                                   
                                   {reply.audioData && (
-                                    <button
-                                      onClick={() => playAudio(reply.audioData!, `${item.id}-${idx}`, reply.audioMimeType)}
-                                      className={`flex items-center gap-2 mb-2 px-3 py-1.5 rounded-full text-sm transition-colors ${
-                                        playingAudio === `${item.id}-${idx}`
-                                          ? 'bg-[var(--button-lavender)] text-white'
-                                          : 'bg-white border border-[var(--button-lavender)]/30 text-[var(--button-lavender)]'
-                                      }`}
-                                    >
-                                      <Volume2 className="w-4 h-4" />
-                                      <span>
-                                        {playingAudio === `${item.id}-${idx}` ? 'Воспроизводится...' : 'Голосовое сообщение'}
-                                      </span>
-                                    </button>
+                                    <div className="mb-2">
+                                      <AudioPlayer
+                                        audioData={reply.audioData}
+                                        mimeType={reply.audioMimeType}
+                                        duration={reply.audioDuration}
+                                        variant="light"
+                                      />
+                                    </div>
                                   )}
                                   
                                   {reply.text && (

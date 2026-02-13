@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../../lib/api';
 import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye, Paperclip, Image, File, Download, Mic, Square, Play, Pause, Search, Users } from 'lucide-react';
+import AudioPlayer from '../../components/AudioPlayer';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -854,18 +855,12 @@ function ChatDialog({
                     <div className="max-w-[85%] md:max-w-[75%]">
                       <div className="bg-gradient-to-br from-[#a67c52] to-[#c4a57b] text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-sm">
                         {msg.audioData ? (
-                          <div className="flex items-center gap-2">
-                            <audio
-                              src={`data:${msg.audioMimeType || 'audio/webm'};base64,${msg.audioData}`}
-                              controls
-                              className="h-8 max-w-[200px]"
-                            />
-                            {msg.audioDuration && (
-                              <span className="text-xs opacity-80">
-                                {Math.floor(msg.audioDuration / 60)}:{(msg.audioDuration % 60).toString().padStart(2, '0')}
-                              </span>
-                            )}
-                          </div>
+                          <AudioPlayer
+                            audioData={msg.audioData}
+                            mimeType={msg.audioMimeType}
+                            duration={msg.audioDuration}
+                            variant="dark"
+                          />
                         ) : (
                           <p className="whitespace-pre-wrap text-sm md:text-base">{msg.text}</p>
                         )}

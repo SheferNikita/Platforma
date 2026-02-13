@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { PageWrapper } from '../components/PageWrapper';
 import { ArrowLeft, ArrowRight, List, CheckCircle, ArrowUp, MessageCircle, HelpCircle, BookOpen, Mic, Paperclip, Image, Video, File, X, StopCircle, FileText, NotebookPen, Download, Loader2, Info, ChevronDown } from 'lucide-react';
+import AudioPlayer from '../components/AudioPlayer';
 import { toast } from 'sonner';
 import { api } from '../lib/api';
 import { KinescopeMultiPlayer } from '../components/KinescopePlayer';
@@ -1089,18 +1090,12 @@ export function LessonDetailPage() {
                     } shadow-sm`}
                   >
                     {message.audioData ? (
-                      <div className="flex items-center gap-2">
-                        <audio 
-                          src={`data:${message.audioMimeType || 'audio/webm'};base64,${message.audioData}`} 
-                          controls 
-                          className="h-8 max-w-full"
-                        />
-                        {message.audioDuration && (
-                          <span className="text-[10px] opacity-60">
-                            {Math.floor(message.audioDuration / 60)}:{(message.audioDuration % 60).toString().padStart(2, '0')}
-                          </span>
-                        )}
-                      </div>
+                      <AudioPlayer
+                        audioData={message.audioData}
+                        mimeType={message.audioMimeType}
+                        duration={message.audioDuration}
+                        variant={message.author === 'student' ? 'dark' : 'light'}
+                      />
                     ) : (
                       <p className={`text-xs md:text-sm leading-snug ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
                         {message.text}
@@ -1262,18 +1257,12 @@ export function LessonDetailPage() {
                     } shadow-sm`}
                   >
                     {message.audioData ? (
-                      <div className="flex items-center gap-2">
-                        <audio 
-                          src={`data:${message.audioMimeType || 'audio/webm'};base64,${message.audioData}`} 
-                          controls 
-                          className="h-8 max-w-full"
-                        />
-                        {message.audioDuration && (
-                          <span className="text-[10px] opacity-60">
-                            {Math.floor(message.audioDuration / 60)}:{(message.audioDuration % 60).toString().padStart(2, '0')}
-                          </span>
-                        )}
-                      </div>
+                      <AudioPlayer
+                        audioData={message.audioData}
+                        mimeType={message.audioMimeType}
+                        duration={message.audioDuration}
+                        variant={message.author === 'student' ? 'dark' : 'light'}
+                      />
                     ) : (
                       <p className={`text-xs md:text-sm leading-snug ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
                         {message.text}

@@ -153,8 +153,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const { status, type, studentId, lessonId, miniGroupId, email, limit: limitStr, offset: offsetStr } = req.query;
     const user = req.user!;
-    const limit = Math.min(parseInt(limitStr as string) || 50, 100);
-    const offset = parseInt(offsetStr as string) || 0;
+    const limit = Math.max(1, Math.min(parseInt(limitStr as string) || 50, 100));
+    const offset = Math.max(0, parseInt(offsetStr as string) || 0);
 
     const studentFilter = await buildStudentFilter(user, {
       studentId: studentId as string | undefined,
@@ -165,121 +165,140 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       return res.json({ dialogs: [], total: 0, hasMore: false });
     }
 
-    const lessonFilter = lessonId && typeof lessonId === 'string'
-      ? { lessonId }
-      : {};
+    const allowedStudentIds: string[] | null =
+      studentFilter.studentId
+        ? typeof studentFilter.studentId === 'string'
+          ? [studentFilter.studentId]
+          : (studentFilter.studentId as { in: string[] }).in
+        : null;
 
-    const replyFilter = status === 'answered'
-      ? { NOT: { reply: null } }
-      : status === 'pending'
-      ? { reply: null }
-      : {};
+    const params: any[] = [];
+    let paramIdx = 1;
 
-    const diaries = (type === 'question' || type === 'report') ? [] :
-      await prisma.diary.findMany({
-        where: { ...studentFilter, ...lessonFilter, ...replyFilter },
-        select: {
-          id: true,
-          studentId: true,
-          lessonId: true,
-          content: true,
-          reply: true,
-          createdAt: true,
-          lesson: { select: { id: true, title: true } },
-          student: { include: { user: { select: { name: true, email: true } } } },
-          attachments: { select: { id: true, mimeType: true } }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
+    const diaryWhere: string[] = [];
+    const noteWhere: string[] = ['1=1'];
 
-    const studentNotes = (type === 'diary') ? [] :
-      await prisma.studentNote.findMany({
-        where: {
-          ...studentFilter,
-          ...lessonFilter,
-          ...replyFilter,
-          ...(type ? { noteType: type as string } : {})
-        },
-        select: {
-          id: true,
-          studentId: true,
-          lessonId: true,
-          noteType: true,
-          content: true,
-          reply: true,
-          createdAt: true,
-          lesson: { select: { id: true, title: true } },
-          student: { include: { user: { select: { name: true, email: true } } } },
-          attachments: { select: { id: true, mimeType: true } }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
-
-    const dialogMap = new Map<string, DialogSummary>();
-
-    for (const d of diaries) {
-      const key = `${d.studentId}__${d.lessonId}__diary`;
-      const existing = dialogMap.get(key);
-      if (!existing) {
-        dialogMap.set(key, {
-          studentId: d.studentId,
-          lessonId: d.lessonId,
-          type: 'diary',
-          student: d.student,
-          lesson: d.lesson,
-          totalCount: 1,
-          unansweredCount: d.reply ? 0 : 1,
-          latestContent: d.content || '',
-          latestDate: d.createdAt.toISOString(),
-          hasAttachments: d.attachments.length > 0
-        });
-      } else {
-        existing.totalCount++;
-        if (!d.reply) existing.unansweredCount++;
-        if (new Date(d.createdAt) > new Date(existing.latestDate)) {
-          existing.latestDate = d.createdAt.toISOString();
-          existing.latestContent = d.content || '';
-        }
-        if (d.attachments.length > 0) existing.hasAttachments = true;
-      }
+    if (allowedStudentIds) {
+      diaryWhere.push(`d."studentId" = ANY($${paramIdx})`);
+      noteWhere.push(`sn."studentId" = ANY($${paramIdx})`);
+      params.push(allowedStudentIds);
+      paramIdx++;
+    }
+    if (lessonId && typeof lessonId === 'string') {
+      diaryWhere.push(`d."lessonId" = $${paramIdx}`);
+      noteWhere.push(`sn."lessonId" = $${paramIdx}`);
+      params.push(lessonId);
+      paramIdx++;
+    }
+    if (status === 'answered') {
+      diaryWhere.push(`d.reply IS NOT NULL`);
+      noteWhere.push(`sn.reply IS NOT NULL`);
+    } else if (status === 'pending') {
+      diaryWhere.push(`d.reply IS NULL`);
+      noteWhere.push(`sn.reply IS NULL`);
     }
 
-    for (const n of studentNotes) {
-      const noteType = n.noteType || 'question';
-      const key = `${n.studentId}__${n.lessonId}__${noteType}`;
-      const existing = dialogMap.get(key);
-      if (!existing) {
-        dialogMap.set(key, {
-          studentId: n.studentId,
-          lessonId: n.lessonId,
-          type: noteType,
-          student: n.student,
-          lesson: n.lesson,
-          totalCount: 1,
-          unansweredCount: n.reply ? 0 : 1,
-          latestContent: n.content || '',
-          latestDate: n.createdAt.toISOString(),
-          hasAttachments: n.attachments.length > 0
-        });
-      } else {
-        existing.totalCount++;
-        if (!n.reply) existing.unansweredCount++;
-        if (new Date(n.createdAt) > new Date(existing.latestDate)) {
-          existing.latestDate = n.createdAt.toISOString();
-          existing.latestContent = n.content || '';
-        }
-        if (n.attachments.length > 0) existing.hasAttachments = true;
-      }
+    const includeDiary = type !== 'question' && type !== 'report';
+    const includeNotes = type !== 'diary';
+
+    if (type && type !== 'all' && type !== 'diary' && includeNotes) {
+      noteWhere.push(`sn."noteType" = $${paramIdx}`);
+      params.push(type);
+      paramIdx++;
     }
 
-    const allDialogs = Array.from(dialogMap.values())
-      .sort((a, b) => new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime());
+    const unions: string[] = [];
+    if (includeDiary) {
+      const dWhere = diaryWhere.length > 0 ? `WHERE ${diaryWhere.join(' AND ')}` : '';
+      unions.push(`
+        SELECT d."studentId", d."lessonId", 'diary'::text as type, d.content, d.reply, d."createdAt",
+               EXISTS(SELECT 1 FROM "DiaryAttachment" da WHERE da."diaryId" = d.id) as "hasAtt"
+        FROM "Diary" d ${dWhere}
+      `);
+    }
+    if (includeNotes) {
+      unions.push(`
+        SELECT sn."studentId", sn."lessonId", COALESCE(sn."noteType", 'question')::text as type, sn.content, sn.reply, sn."createdAt",
+               EXISTS(SELECT 1 FROM "NoteAttachment" na WHERE na."noteId" = sn.id) as "hasAtt"
+        FROM "StudentNote" sn WHERE ${noteWhere.join(' AND ')}
+      `);
+    }
 
-    const total = allDialogs.length;
-    const paginated = allDialogs.slice(offset, offset + limit);
+    if (unions.length === 0) {
+      return res.json({ dialogs: [], total: 0, hasMore: false });
+    }
+
+    const combinedCte = `combined AS (${unions.join(' UNION ALL ')})`;
+
+    const sql = `
+      WITH ${combinedCte},
+      grouped AS (
+        SELECT
+          c."studentId",
+          c."lessonId",
+          c.type,
+          COUNT(*)::int as "totalCount",
+          COUNT(*) FILTER (WHERE c.reply IS NULL)::int as "unansweredCount",
+          MAX(c."createdAt") as "latestDate",
+          BOOL_OR(c."hasAtt") as "hasAttachments"
+        FROM combined c
+        GROUP BY c."studentId", c."lessonId", c.type
+      ),
+      total_count AS (
+        SELECT COUNT(*)::int as cnt FROM grouped
+      )
+      SELECT
+        g."studentId",
+        g."lessonId",
+        g.type,
+        g."totalCount",
+        g."unansweredCount",
+        g."latestDate",
+        g."hasAttachments",
+        u.name as "studentName",
+        u.email as "studentEmail",
+        l.title as "lessonTitle",
+        tc.cnt as "totalDialogs",
+        COALESCE(
+          CASE WHEN g.type = 'diary' THEN
+            (SELECT d2.content FROM "Diary" d2 WHERE d2."studentId" = g."studentId" AND d2."lessonId" = g."lessonId"${status === 'pending' ? ' AND d2.reply IS NULL' : status === 'answered' ? ' AND d2.reply IS NOT NULL' : ''} ORDER BY d2."createdAt" DESC LIMIT 1)
+          ELSE
+            (SELECT sn2.content FROM "StudentNote" sn2 WHERE sn2."studentId" = g."studentId" AND sn2."lessonId" = g."lessonId" AND COALESCE(sn2."noteType",'question') = g.type${status === 'pending' ? ' AND sn2.reply IS NULL' : status === 'answered' ? ' AND sn2.reply IS NOT NULL' : ''} ORDER BY sn2."createdAt" DESC LIMIT 1)
+          END,
+          ''
+        ) as "latestContent"
+      FROM grouped g
+      JOIN "Student" s ON s.id = g."studentId"
+      JOIN "User" u ON u.id = s."userId"
+      JOIN "Lesson" l ON l.id = g."lessonId"
+      CROSS JOIN total_count tc
+      ORDER BY g."latestDate" DESC
+      LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
+    `;
+    params.push(limit, offset);
+
+    const dialogRows = await prisma.$queryRawUnsafe<any[]>(sql, ...params);
+
+    const total = dialogRows.length > 0 ? dialogRows[0].totalDialogs : 0;
+
+    const dialogs: DialogSummary[] = dialogRows.map(row => ({
+      studentId: row.studentId,
+      lessonId: row.lessonId,
+      type: row.type,
+      student: {
+        id: row.studentId,
+        user: { name: row.studentName, email: row.studentEmail }
+      },
+      lesson: { id: row.lessonId, title: row.lessonTitle },
+      totalCount: row.totalCount,
+      unansweredCount: row.unansweredCount,
+      latestContent: row.latestContent || '',
+      latestDate: row.latestDate instanceof Date ? row.latestDate.toISOString() : String(row.latestDate),
+      hasAttachments: row.hasAttachments || false
+    }));
 
     res.json({
-      dialogs: paginated,
+      dialogs,
       total,
       hasMore: offset + limit < total
     });

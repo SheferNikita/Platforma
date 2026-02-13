@@ -261,13 +261,14 @@ export function ModerationAdmin() {
     }
   }
 
-  function getLastUnansweredItem(): ModerationItem | null {
+  function getTargetItem(): ModerationItem | null {
     const unanswered = dialogItems.filter(i => !i.reply);
-    return unanswered.length > 0 ? unanswered[unanswered.length - 1] : null;
+    if (unanswered.length > 0) return unanswered[unanswered.length - 1];
+    return dialogItems.length > 0 ? dialogItems[dialogItems.length - 1] : null;
   }
 
   async function submitReply() {
-    const targetItem = getLastUnansweredItem();
+    const targetItem = getTargetItem();
     if (!targetItem || !replyText.trim()) return;
 
     setSubmitting(true);
@@ -289,7 +290,7 @@ export function ModerationAdmin() {
   }
 
   async function submitAudioReply(audioData: string, duration: number, mimeType?: string) {
-    const targetItem = getLastUnansweredItem();
+    const targetItem = getTargetItem();
     if (!targetItem) return;
 
     setSubmitting(true);
@@ -315,7 +316,7 @@ export function ModerationAdmin() {
   }
 
   async function markAsViewed() {
-    const targetItem = getLastUnansweredItem();
+    const targetItem = getTargetItem();
     if (!targetItem) return;
 
     setSubmitting(true);
@@ -925,7 +926,7 @@ function ChatDialog({
           )}
 
           {/* Text Input */}
-          {!audioUrl && !isRecording && hasUnanswered && (
+          {!audioUrl && !isRecording && (
             <div className="flex items-end gap-3">
               <div className="flex-1">
                 <textarea

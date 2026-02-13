@@ -1711,13 +1711,12 @@ router.post('/diary/:id/student-reply', async (req: Request, res: Response) => {
     }
 
     const { id } = req.params;
-    const { reply, audioData, audioDuration, attachments } = req.body;
+    const { reply, audioData, audioDuration, audioMimeType, attachments } = req.body;
 
     if (!reply?.trim() && !audioData) {
       return res.status(400).json({ error: 'Необходим текст или голосовое сообщение' });
     }
 
-    // Verify diary belongs to student
     const diary = await prisma.diary.findFirst({
       where: { id, studentId: student.studentId },
       select: { reply: true }
@@ -1727,7 +1726,6 @@ router.post('/diary/:id/student-reply', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Запись не найдена' });
     }
 
-    // Get student user data
     const studentData = await prisma.student.findUnique({
       where: { id: student.studentId },
       include: { user: { select: { id: true, name: true } } }
@@ -1737,8 +1735,7 @@ router.post('/diary/:id/student-reply', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
-    // Parse existing reply history
-    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; attachments?: any[] }> = [];
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; attachments?: any[] }> = [];
     
     if (diary.reply) {
       try {
@@ -1765,8 +1762,7 @@ router.post('/diary/:id/student-reply', async (req: Request, res: Response) => {
       }
     }
 
-    // Create new message
-    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; attachments?: any[] } = {
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; attachments?: any[] } = {
       text: audioData ? '🎤 Голосовое сообщение' : reply,
       authorId: studentData.user.id,
       authorName: studentData.user.name,
@@ -1777,6 +1773,7 @@ router.post('/diary/:id/student-reply', async (req: Request, res: Response) => {
     if (audioData) {
       newMessage.audioData = audioData.includes(',') ? audioData.split(',')[1] : audioData;
       newMessage.audioDuration = audioDuration;
+      newMessage.audioMimeType = audioMimeType || 'audio/webm';
     }
 
     if (attachments && attachments.length > 0) {
@@ -1785,7 +1782,6 @@ router.post('/diary/:id/student-reply', async (req: Request, res: Response) => {
 
     replyHistory.push(newMessage);
 
-    // Update diary
     await prisma.diary.update({
       where: { id },
       data: {
@@ -1809,13 +1805,12 @@ router.post('/note/:id/student-reply', async (req: Request, res: Response) => {
     }
 
     const { id } = req.params;
-    const { reply, audioData, audioDuration, attachments } = req.body;
+    const { reply, audioData, audioDuration, audioMimeType, attachments } = req.body;
 
     if (!reply?.trim() && !audioData) {
       return res.status(400).json({ error: 'Необходим текст или голосовое сообщение' });
     }
 
-    // Verify note belongs to student
     const note = await prisma.studentNote.findFirst({
       where: { id, studentId: student.studentId },
       select: { reply: true }
@@ -1825,7 +1820,6 @@ router.post('/note/:id/student-reply', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Запись не найдена' });
     }
 
-    // Get student user data
     const studentData = await prisma.student.findUnique({
       where: { id: student.studentId },
       include: { user: { select: { id: true, name: true } } }
@@ -1835,8 +1829,7 @@ router.post('/note/:id/student-reply', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Пользователь не найден' });
     }
 
-    // Parse existing reply history
-    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; attachments?: any[] }> = [];
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; attachments?: any[] }> = [];
     
     if (note.reply) {
       try {
@@ -1863,8 +1856,7 @@ router.post('/note/:id/student-reply', async (req: Request, res: Response) => {
       }
     }
 
-    // Create new message
-    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; attachments?: any[] } = {
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; attachments?: any[] } = {
       text: audioData ? '🎤 Голосовое сообщение' : reply,
       authorId: studentData.user.id,
       authorName: studentData.user.name,
@@ -1875,6 +1867,7 @@ router.post('/note/:id/student-reply', async (req: Request, res: Response) => {
     if (audioData) {
       newMessage.audioData = audioData.includes(',') ? audioData.split(',')[1] : audioData;
       newMessage.audioDuration = audioDuration;
+      newMessage.audioMimeType = audioMimeType || 'audio/webm';
     }
 
     if (attachments && attachments.length > 0) {

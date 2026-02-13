@@ -478,13 +478,14 @@ router.get('/mini-groups', async (req: AuthRequest, res: Response) => {
 const replySchema = z.object({
   reply: z.string(),
   audioData: z.string().optional(),
-  audioDuration: z.number().optional()
+  audioDuration: z.number().optional(),
+  audioMimeType: z.string().optional()
 });
 
 router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { reply, audioData, audioDuration } = replySchema.parse(req.body);
+    const { reply, audioData, audioDuration, audioMimeType } = replySchema.parse(req.body);
 
     if (!reply.trim() && !audioData) {
       return res.status(400).json({ error: 'Необходим текст или голосовое сообщение' });
@@ -495,7 +496,7 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
       select: { reply: true }
     });
 
-    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number }> = [];
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string }> = [];
     
     if (existingDiary?.reply) {
       try {
@@ -522,7 +523,7 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number } = {
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string } = {
       text: audioData ? '🎤 Голосовое сообщение' : reply,
       authorId: req.user!.id,
       authorName: req.user!.name,
@@ -533,6 +534,7 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
     if (audioData) {
       newMessage.audioData = audioData.includes(',') ? audioData.split(',')[1] : audioData;
       newMessage.audioDuration = audioDuration;
+      newMessage.audioMimeType = audioMimeType || 'audio/webm';
     }
 
     replyHistory.push(newMessage);
@@ -571,7 +573,7 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
 router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { reply, audioData, audioDuration } = replySchema.parse(req.body);
+    const { reply, audioData, audioDuration, audioMimeType } = replySchema.parse(req.body);
 
     if (!reply.trim() && !audioData) {
       return res.status(400).json({ error: 'Необходим текст или голосовое сообщение' });
@@ -582,7 +584,7 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
       select: { reply: true }
     });
 
-    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number }> = [];
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string }> = [];
     
     if (existingNote?.reply) {
       try {
@@ -609,7 +611,7 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number } = {
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string } = {
       text: audioData ? '🎤 Голосовое сообщение' : reply,
       authorId: req.user!.id,
       authorName: req.user!.name,
@@ -620,6 +622,7 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
     if (audioData) {
       newMessage.audioData = audioData.includes(',') ? audioData.split(',')[1] : audioData;
       newMessage.audioDuration = audioDuration;
+      newMessage.audioMimeType = audioMimeType || 'audio/webm';
     }
 
     replyHistory.push(newMessage);

@@ -78,6 +78,7 @@ interface ChatMessage {
   files?: { name: string; type: string; url?: string }[];
   hasAudio?: boolean;
   audioData?: string;
+  audioMimeType?: string;
   audioDuration?: number;
   curatorName?: string;
 }
@@ -109,6 +110,7 @@ interface ReplyHistoryItem {
   authorRole: string;
   createdAt: string;
   audioData?: string;
+  audioMimeType?: string;
   audioDuration?: number;
 }
 
@@ -277,6 +279,7 @@ export function LessonDetailPage() {
   const [notesFiles, setNotesFiles] = useState<File[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioMimeType, setAudioMimeType] = useState<string>('audio/webm');
   const [recordingTime, setRecordingTime] = useState(0);
   
   // Lesson completion state
@@ -745,18 +748,20 @@ export function LessonDetailPage() {
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
+      const { createMediaRecorder } = await import('../lib/audioRecorder');
+      const { recorder, mimeType } = createMediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
+      setAudioMimeType(mimeType);
 
-      mediaRecorder.ondataavailable = (event) => {
+      recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
 
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         setAudioBlob(audioBlob);
         stream.getTracks().forEach(track => track.stop());
         if (timerRef.current) {
@@ -764,7 +769,7 @@ export function LessonDetailPage() {
         }
       };
 
-      mediaRecorder.start();
+      recorder.start();
       setIsRecording(true);
       setRecordingTime(0);
 
@@ -1086,7 +1091,7 @@ export function LessonDetailPage() {
                     {message.audioData ? (
                       <div className="flex items-center gap-2">
                         <audio 
-                          src={`data:audio/webm;base64,${message.audioData}`} 
+                          src={`data:${message.audioMimeType || 'audio/webm'};base64,${message.audioData}`} 
                           controls 
                           className="h-8 max-w-full"
                         />
@@ -1255,7 +1260,7 @@ export function LessonDetailPage() {
                     {message.audioData ? (
                       <div className="flex items-center gap-2">
                         <audio 
-                          src={`data:audio/webm;base64,${message.audioData}`} 
+                          src={`data:${message.audioMimeType || 'audio/webm'};base64,${message.audioData}`} 
                           controls 
                           className="h-8 max-w-full"
                         />

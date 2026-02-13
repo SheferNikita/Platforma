@@ -35,6 +35,7 @@ interface ReplyMessage {
   createdAt: string;
   audioData?: string;
   audioDuration?: number;
+  audioMimeType?: string;
 }
 
 function parseReplyHistory(reply: string | null): ReplyMessage[] {
@@ -287,7 +288,7 @@ export function ModerationAdmin() {
     }
   }
 
-  async function submitAudioReply(audioData: string, duration: number) {
+  async function submitAudioReply(audioData: string, duration: number, mimeType?: string) {
     const targetItem = getLastUnansweredItem();
     if (!targetItem) return;
 
@@ -300,7 +301,8 @@ export function ModerationAdmin() {
       await api.post<ModerationItem>(endpoint, {
         reply: '',
         audioData,
-        audioDuration: duration
+        audioDuration: duration,
+        audioMimeType: mimeType || 'audio/webm'
       });
       toast.success('Голосовое сообщение отправлено');
       await reloadDialogItems();
@@ -643,7 +645,7 @@ function ChatDialog({
   hasUnanswered: boolean;
   onClose: () => void;
   onSubmitReply: () => void;
-  onSubmitAudioReply: (audioData: string, duration: number) => void;
+  onSubmitAudioReply: (audioData: string, duration: number, mimeType?: string) => void;
   onMarkAsViewed: () => void;
 }) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -653,6 +655,7 @@ function ChatDialog({
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioMimeType, setAudioMimeType] = useState<string>('audio/webm');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -672,25 +675,27 @@ function ChatDialog({
 
   const startRecording = async () => {
     try {
+      const { createMediaRecorder } = await import('../../lib/audioRecorder');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
+      const { recorder, mimeType } = createMediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      setAudioMimeType(mimeType);
       chunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (e) => {
+      recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunksRef.current.push(e.data);
         }
       };
 
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: mimeType });
         setAudioBlob(blob);
         setAudioUrl(URL.createObjectURL(blob));
         stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start();
+      recorder.start();
       setIsRecording(true);
       setRecordingTime(0);
       timerRef.current = setInterval(() => {
@@ -725,7 +730,7 @@ function ChatDialog({
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = (reader.result as string).split(',')[1];
-      onSubmitAudioReply(base64, recordingTime);
+      onSubmitAudioReply(base64, recordingTime, audioMimeType);
       cancelRecording();
     };
     reader.readAsDataURL(audioBlob);
@@ -850,7 +855,7 @@ function ChatDialog({
                         {msg.audioData ? (
                           <div className="flex items-center gap-2">
                             <audio
-                              src={`data:audio/webm;base64,${msg.audioData}`}
+                              src={`data:${msg.audioMimeType || 'audio/webm'};base64,${msg.audioData}`}
                               controls
                               className="h-8 max-w-[200px]"
                             />

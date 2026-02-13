@@ -23,6 +23,7 @@ interface ReplyHistoryItem {
   createdAt: string;
   audioData?: string;
   audioDuration?: number;
+  audioMimeType?: string;
   attachments?: AttachmentItem[];
 }
 
@@ -123,6 +124,7 @@ export function MentorResponsesPage() {
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioMimeTypeRef = useRef<string>('audio/webm');
 
   // Проверка видимости раздела
   const isSectionEnabled = isSectionVisible('mentor_responses', user?.tariff);
@@ -165,13 +167,13 @@ export function MentorResponsesPage() {
     setExpandedItem(expandedItem === itemId ? null : itemId);
   };
 
-  const playAudio = (audioData: string, itemId: string) => {
+  const playAudio = (audioData: string, itemId: string, mimeType?: string) => {
     if (playingAudio === itemId) {
       setPlayingAudio(null);
       return;
     }
     try {
-      const audio = new Audio(audioData);
+      const audio = new Audio(`data:${mimeType || 'audio/webm'};base64,${audioData}`);
       audio.onended = () => setPlayingAudio(null);
       audio.play();
       setPlayingAudio(itemId);
@@ -193,16 +195,18 @@ export function MentorResponsesPage() {
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
+      const { createMediaRecorder } = await import('../lib/audioRecorder');
+      const { recorder, mimeType: recMimeType } = createMediaRecorder(stream);
+      audioMimeTypeRef.current = recMimeType;
+      mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
 
-      mediaRecorder.ondataavailable = (event) => {
+      recorder.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
       };
 
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: recMimeType });
         setAudioBlob(audioBlob);
         stream.getTracks().forEach(track => track.stop());
         if (timerRef.current) {
@@ -210,7 +214,7 @@ export function MentorResponsesPage() {
         }
       };
 
-      mediaRecorder.start();
+      recorder.start();
       setIsRecording(true);
       setRecordingTime(0);
 
@@ -296,7 +300,7 @@ export function MentorResponsesPage() {
     try {
       let audioData: string | undefined;
       if (audioBlob) {
-        audioData = await fileToBase64(new window.File([audioBlob], 'audio.webm', { type: 'audio/webm' }));
+        audioData = await fileToBase64(new window.File([audioBlob], 'audio.webm', { type: audioMimeTypeRef.current }));
       }
 
       const attachments = await Promise.all(
@@ -317,6 +321,7 @@ export function MentorResponsesPage() {
         reply: replyText.trim(),
         audioData,
         audioDuration: recordingTime,
+        audioMimeType: audioMimeTypeRef.current,
         attachments: attachments.length > 0 ? attachments : undefined
       });
 
@@ -523,7 +528,7 @@ export function MentorResponsesPage() {
                                   
                                   {reply.audioData && (
                                     <button
-                                      onClick={() => playAudio(reply.audioData!, `${item.id}-${idx}`)}
+                                      onClick={() => playAudio(reply.audioData!, `${item.id}-${idx}`, reply.audioMimeType)}
                                       className={`flex items-center gap-2 mb-2 px-3 py-1.5 rounded-full text-sm transition-colors ${
                                         playingAudio === `${item.id}-${idx}`
                                           ? 'bg-[var(--button-lavender)] text-white'

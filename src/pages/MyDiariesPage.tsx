@@ -12,6 +12,7 @@ interface ReplyHistoryItem {
   createdAt: string;
   audioData?: string;
   audioDuration?: number;
+  audioMimeType?: string;
 }
 
 function parseReplyHistory(reply: string | null | undefined): ReplyHistoryItem[] {
@@ -201,7 +202,7 @@ export function MyDiariesPage() {
                           {replyItem.audioData ? (
                             <div className="flex items-center gap-2">
                               <audio 
-                                src={`data:audio/webm;base64,${replyItem.audioData}`} 
+                                src={`data:${replyItem.audioMimeType || 'audio/webm'};base64,${replyItem.audioData}`} 
                                 controls 
                                 className="h-8 max-w-full"
                               />

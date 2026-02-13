@@ -67,6 +67,25 @@ interface ModerationItem {
   attachments?: Attachment[];
 }
 
+interface DialogSummary {
+  studentId: string;
+  lessonId: string;
+  type: 'diary' | 'question' | 'report';
+  student: { id: string; user: { name: string; email: string } };
+  lesson: { id: string; title: string };
+  totalCount: number;
+  unansweredCount: number;
+  latestContent: string;
+  latestDate: string;
+  hasAttachments: boolean;
+}
+
+interface DialogsResponse {
+  dialogs: DialogSummary[];
+  total: number;
+  hasMore: boolean;
+}
+
 const typeConfig = {
   diary: { label: 'Дневник', icon: BookOpen, color: 'bg-blue-100 text-blue-700' },
   question: { label: 'Вопрос', icon: MessageCircle, color: 'bg-purple-100 text-purple-700' },
@@ -94,10 +113,25 @@ function getContentPreview(item: ModerationItem): string {
   return 'Без содержания';
 }
 
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function getRecordCountLabel(count: number): string {
+  if (count === 1) return '1 запись';
+  if (count >= 2 && count <= 4) return `${count} записи`;
+  return `${count} записей`;
+}
+
 export function ModerationAdmin() {
-  const [items, setItems] = useState<ModerationItem[]>([]);
-  const [allItems, setAllItems] = useState<ModerationItem[]>([]);
+  const [dialogs, setDialogs] = useState<DialogSummary[]>([]);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'answered'>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [miniGroupFilter, setMiniGroupFilter] = useState<string>('all');
@@ -105,7 +139,9 @@ export function ModerationAdmin() {
   const [emailSearch, setEmailSearch] = useState('');
   const [emailSearchApplied, setEmailSearchApplied] = useState('');
   const [miniGroups, setMiniGroups] = useState<{ id: string; title: string }[]>([]);
-  const [selectedItem, setSelectedItem] = useState<ModerationItem | null>(null);
+  const [selectedDialog, setSelectedDialog] = useState<DialogSummary | null>(null);
+  const [dialogItems, setDialogItems] = useState<ModerationItem[]>([]);
+  const [dialogLoading, setDialogLoading] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const emailSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -115,14 +151,10 @@ export function ModerationAdmin() {
   }, []);
 
   useEffect(() => {
-    loadItems();
+    setOffset(0);
+    setDialogs([]);
+    loadDialogs(0, true);
   }, [statusFilter, typeFilter, miniGroupFilter, lessonFilter, emailSearchApplied]);
-
-  useEffect(() => {
-    if (statusFilter === 'all' && typeFilter === 'all' && miniGroupFilter === 'all' && lessonFilter === 'all' && !emailSearchApplied) {
-      setAllItems(items);
-    }
-  }, [items, statusFilter, typeFilter, miniGroupFilter, lessonFilter, emailSearchApplied]);
 
   const handleEmailSearch = useCallback((value: string) => {
     setEmailSearch(value);
@@ -145,50 +177,109 @@ export function ModerationAdmin() {
 
   const uniqueLessons = React.useMemo(() => {
     const lessonMap = new Map<string, { id: string; title: string }>();
-    allItems.forEach(item => {
-      if (!lessonMap.has(item.lesson.id)) {
-        lessonMap.set(item.lesson.id, {
-          id: item.lesson.id,
-          title: item.lesson.title
+    dialogs.forEach(d => {
+      if (!lessonMap.has(d.lessonId)) {
+        lessonMap.set(d.lessonId, {
+          id: d.lessonId,
+          title: d.lesson.title
         });
       }
     });
     return Array.from(lessonMap.values()).sort((a, b) => a.title.localeCompare(b.title));
-  }, [allItems]);
+  }, [dialogs]);
 
-  async function loadItems() {
+  async function loadDialogs(newOffset: number, replace: boolean) {
     try {
-      setLoading(true);
+      if (replace) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
       if (typeFilter !== 'all') params.append('type', typeFilter);
       if (miniGroupFilter !== 'all') params.append('miniGroupId', miniGroupFilter);
       if (lessonFilter !== 'all') params.append('lessonId', lessonFilter);
       if (emailSearchApplied) params.append('email', emailSearchApplied);
-      
-      const data = await api.get<ModerationItem[]>(`/public/moderation?${params.toString()}`);
-      setItems(data);
+      params.append('offset', String(newOffset));
+      params.append('limit', '50');
+
+      const data = await api.get<DialogsResponse>(`/public/moderation?${params.toString()}`);
+      if (replace) {
+        setDialogs(data.dialogs);
+      } else {
+        setDialogs(prev => [...prev, ...data.dialogs]);
+      }
+      setTotal(data.total);
+      setHasMore(data.hasMore);
+      setOffset(newOffset + data.dialogs.length);
     } catch (error) {
       toast.error('Ошибка загрузки');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   }
 
+  function handleLoadMore() {
+    loadDialogs(offset, false);
+  }
+
+  async function openDialog(dialog: DialogSummary) {
+    setSelectedDialog(dialog);
+    setReplyText('');
+    setDialogLoading(true);
+    try {
+      const params = new URLSearchParams({
+        studentId: dialog.studentId,
+        lessonId: dialog.lessonId,
+        type: dialog.type
+      });
+      const items = await api.get<ModerationItem[]>(`/public/moderation/dialog?${params.toString()}`);
+      setDialogItems(items);
+    } catch (error) {
+      toast.error('Ошибка загрузки диалога');
+      setSelectedDialog(null);
+    } finally {
+      setDialogLoading(false);
+    }
+  }
+
+  async function reloadDialogItems() {
+    if (!selectedDialog) return;
+    try {
+      const params = new URLSearchParams({
+        studentId: selectedDialog.studentId,
+        lessonId: selectedDialog.lessonId,
+        type: selectedDialog.type
+      });
+      const items = await api.get<ModerationItem[]>(`/public/moderation/dialog?${params.toString()}`);
+      setDialogItems(items);
+    } catch (error) {
+      console.error('Failed to reload dialog items:', error);
+    }
+  }
+
+  function getLastUnansweredItem(): ModerationItem | null {
+    const unanswered = dialogItems.filter(i => !i.reply);
+    return unanswered.length > 0 ? unanswered[unanswered.length - 1] : null;
+  }
+
   async function submitReply() {
-    if (!selectedItem || !replyText.trim()) return;
-    
+    const targetItem = getLastUnansweredItem();
+    if (!targetItem || !replyText.trim()) return;
+
     setSubmitting(true);
     try {
-      const endpoint = selectedItem.type === 'diary' 
-        ? `/public/moderation/diary/${selectedItem.id}/reply`
-        : `/public/moderation/note/${selectedItem.id}/reply`;
-      
-      const updatedItem = await api.post<ModerationItem>(endpoint, { reply: replyText });
+      const endpoint = targetItem.type === 'diary'
+        ? `/public/moderation/diary/${targetItem.id}/reply`
+        : `/public/moderation/note/${targetItem.id}/reply`;
+
+      await api.post<ModerationItem>(endpoint, { reply: replyText });
       toast.success('Сообщение отправлено');
       setReplyText('');
-      setSelectedItem({ ...selectedItem, reply: updatedItem.reply, repliedAt: updatedItem.repliedAt });
-      loadItems();
+      await reloadDialogItems();
+      loadDialogs(0, true);
     } catch (error) {
       toast.error('Ошибка отправки');
     } finally {
@@ -197,22 +288,23 @@ export function ModerationAdmin() {
   }
 
   async function submitAudioReply(audioData: string, duration: number) {
-    if (!selectedItem) return;
-    
+    const targetItem = getLastUnansweredItem();
+    if (!targetItem) return;
+
     setSubmitting(true);
     try {
-      const endpoint = selectedItem.type === 'diary' 
-        ? `/public/moderation/diary/${selectedItem.id}/reply`
-        : `/public/moderation/note/${selectedItem.id}/reply`;
-      
-      const updatedItem = await api.post<ModerationItem>(endpoint, { 
+      const endpoint = targetItem.type === 'diary'
+        ? `/public/moderation/diary/${targetItem.id}/reply`
+        : `/public/moderation/note/${targetItem.id}/reply`;
+
+      await api.post<ModerationItem>(endpoint, {
         reply: '',
         audioData,
         audioDuration: duration
       });
       toast.success('Голосовое сообщение отправлено');
-      setSelectedItem({ ...selectedItem, reply: updatedItem.reply, repliedAt: updatedItem.repliedAt });
-      loadItems();
+      await reloadDialogItems();
+      loadDialogs(0, true);
     } catch (error) {
       toast.error('Ошибка отправки голосового сообщения');
     } finally {
@@ -221,19 +313,19 @@ export function ModerationAdmin() {
   }
 
   async function markAsViewed() {
-    if (!selectedItem) return;
-    
+    const targetItem = getLastUnansweredItem();
+    if (!targetItem) return;
+
     setSubmitting(true);
     try {
-      const endpoint = selectedItem.type === 'diary' 
-        ? `/public/moderation/diary/${selectedItem.id}/view`
-        : `/public/moderation/note/${selectedItem.id}/view`;
-      
+      const endpoint = targetItem.type === 'diary'
+        ? `/public/moderation/diary/${targetItem.id}/view`
+        : `/public/moderation/note/${targetItem.id}/view`;
+
       await api.post(endpoint, {});
       toast.success('Отмечено как просмотренное');
-      setSelectedItem(null);
-      setReplyText('');
-      loadItems();
+      await reloadDialogItems();
+      loadDialogs(0, true);
     } catch (error) {
       toast.error('Ошибка');
     } finally {
@@ -242,9 +334,9 @@ export function ModerationAdmin() {
   }
 
   const stats = {
-    total: items.length,
-    pending: items.filter(i => !i.reply).length,
-    answered: items.filter(i => i.reply).length
+    total: total,
+    pending: dialogs.filter(d => d.unansweredCount > 0).length,
+    answered: dialogs.filter(d => d.unansweredCount === 0).length
   };
 
   return (
@@ -258,7 +350,7 @@ export function ModerationAdmin() {
 
       <div className="grid grid-cols-3 gap-2 md:gap-4">
         <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-2 md:p-4">
-          <p className="text-xs md:text-sm text-[#3d3527]/60">Всего записей</p>
+          <p className="text-xs md:text-sm text-[#3d3527]/60">Всего диалогов</p>
           <p className="text-lg md:text-2xl font-bold text-[#3d3527]">{stats.total}</p>
         </div>
         <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-2 md:p-4">
@@ -266,7 +358,7 @@ export function ModerationAdmin() {
           <p className="text-lg md:text-2xl font-bold text-orange-600">{stats.pending}</p>
         </div>
         <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-2 md:p-4">
-          <p className="text-xs md:text-sm text-[#3d3527]/60">С ответом</p>
+          <p className="text-xs md:text-sm text-[#3d3527]/60">Все отвечены</p>
           <p className="text-lg md:text-2xl font-bold text-green-600">{stats.answered}</p>
         </div>
       </div>
@@ -340,56 +432,58 @@ export function ModerationAdmin() {
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#a67c52]"></div>
           </div>
-        ) : items.length === 0 ? (
+        ) : dialogs.length === 0 ? (
           <div className="text-center py-12 text-[#3d3527]/60">
             <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Записей не найдено</p>
+            <p>Диалогов не найдено</p>
           </div>
         ) : (
           <>
             {/* Mobile card view */}
             <div className="md:hidden divide-y divide-[#d4c9b0]/30">
-              {items.map((item) => {
-                const TypeIcon = typeConfig[item.type]?.icon || MessageCircle;
+              {dialogs.map((dialog) => {
+                const key = `${dialog.studentId}__${dialog.lessonId}__${dialog.type}`;
+                const TypeIcon = typeConfig[dialog.type]?.icon || MessageCircle;
                 return (
-                  <div key={`${item.type}-${item.id}`} className="p-3 space-y-2">
+                  <div
+                    key={key}
+                    className="p-3 space-y-2 cursor-pointer active:bg-[#f5f3ed]/50"
+                    onClick={() => openDialog(dialog)}
+                  >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${typeConfig[item.type]?.color || 'bg-gray-100'}`}>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${typeConfig[dialog.type]?.color || 'bg-gray-100'}`}>
                           <TypeIcon className="w-3 h-3" />
-                          {typeConfig[item.type]?.label || item.type}
+                          {typeConfig[dialog.type]?.label || dialog.type}
                         </span>
-                        {item.reply ? (
+                        <span className="text-xs text-[#3d3527]/60">{getRecordCountLabel(dialog.totalCount)}</span>
+                        {dialog.unansweredCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
+                            <Clock className="w-3 h-3" />
+                            {dialog.unansweredCount} без ответа
+                          </span>
+                        ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">
                             <CheckCircle className="w-3 h-3" />
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
-                            <Clock className="w-3 h-3" />
-                          </span>
+                        )}
+                        {dialog.hasAttachments && (
+                          <Paperclip className="w-3 h-3 text-[#3d3527]/40" />
                         )}
                       </div>
-                      <button
-                        onClick={() => {
-                          setSelectedItem(item);
-                          setReplyText('');
-                        }}
-                        className="p-2 hover:bg-[#f5f3ed] rounded-lg"
-                      >
-                        <MessageCircle className="w-4 h-4 text-[#3d3527]" />
-                      </button>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center flex-shrink-0">
                         <User className="w-3 h-3 text-white" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-[#3d3527] truncate">{item.student.user.name}</p>
+                        <p className="text-sm font-medium text-[#3d3527] truncate">{dialog.student.user.name}</p>
+                        <p className="text-xs text-[#3d3527]/50 truncate">{dialog.student.user.email}</p>
                       </div>
                     </div>
-                    <p className="text-xs text-[#3d3527]/60 truncate">{item.lesson.title}</p>
-                    <p className="text-sm text-[#3d3527] line-clamp-2">{getContentPreview(item)}</p>
-                    <p className="text-xs text-[#3d3527]/50">{format(new Date(item.createdAt), 'd MMM yyyy', { locale: ru })}</p>
+                    <p className="text-xs text-[#3d3527]/60 truncate">{dialog.lesson.title}</p>
+                    <p className="text-sm text-[#3d3527] line-clamp-2">{dialog.latestContent || 'Без содержания'}</p>
+                    <p className="text-xs text-[#3d3527]/50">{format(new Date(dialog.latestDate), 'd MMM yyyy', { locale: ru })}</p>
                   </div>
                 );
               })}
@@ -401,37 +495,30 @@ export function ModerationAdmin() {
                 <thead className="bg-[#f5f3ed]">
                   <tr>
                     <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Тип</th>
-                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Статус</th>
                     <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Ученик</th>
                     <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Урок</th>
-                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Текст</th>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Записи</th>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Статус</th>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Последнее</th>
                     <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Дата</th>
                     <th className="p-4"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => {
-                    const TypeIcon = typeConfig[item.type]?.icon || MessageCircle;
+                  {dialogs.map((dialog) => {
+                    const key = `${dialog.studentId}__${dialog.lessonId}__${dialog.type}`;
+                    const TypeIcon = typeConfig[dialog.type]?.icon || MessageCircle;
                     return (
-                      <tr key={`${item.type}-${item.id}`} className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50">
+                      <tr
+                        key={key}
+                        className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50 cursor-pointer"
+                        onClick={() => openDialog(dialog)}
+                      >
                         <td className="p-4">
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${typeConfig[item.type]?.color || 'bg-gray-100'}`}>
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${typeConfig[dialog.type]?.color || 'bg-gray-100'}`}>
                             <TypeIcon className="w-3 h-3" />
-                            {typeConfig[item.type]?.label || item.type}
+                            {typeConfig[dialog.type]?.label || dialog.type}
                           </span>
-                        </td>
-                        <td className="p-4">
-                          {item.reply ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">
-                              <CheckCircle className="w-3 h-3" />
-                              Отвечено
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
-                              <Clock className="w-3 h-3" />
-                              Ожидает
-                            </span>
-                          )}
                         </td>
                         <td className="p-4">
                           <div className="flex items-center gap-2">
@@ -439,24 +526,45 @@ export function ModerationAdmin() {
                               <User className="w-4 h-4 text-white" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-[#3d3527]">{item.student.user.name}</p>
-                              <p className="text-xs text-[#3d3527]/60">{item.student.user.email}</p>
+                              <p className="text-sm font-medium text-[#3d3527]">{dialog.student.user.name}</p>
+                              <p className="text-xs text-[#3d3527]/60">{dialog.student.user.email}</p>
                             </div>
                           </div>
                         </td>
-                        <td className="p-4 text-sm text-[#3d3527]">{item.lesson.title}</td>
-                        <td className="p-4 text-sm text-[#3d3527] max-w-xs truncate">{getContentPreview(item)}</td>
-                        <td className="p-4 text-sm text-[#3d3527]/60">
-                          {format(new Date(item.createdAt), 'd MMM yyyy', { locale: ru })}
+                        <td className="p-4 text-sm text-[#3d3527] max-w-[180px] truncate">{dialog.lesson.title}</td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm text-[#3d3527]">{getRecordCountLabel(dialog.totalCount)}</span>
+                            {dialog.hasAttachments && (
+                              <Paperclip className="w-3.5 h-3.5 text-[#3d3527]/40" />
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          {dialog.unansweredCount > 0 ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
+                              <Clock className="w-3 h-3" />
+                              {dialog.unansweredCount} без ответа
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">
+                              <CheckCircle className="w-3 h-3" />
+                              Отвечено
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 text-sm text-[#3d3527] max-w-xs truncate">{dialog.latestContent || 'Без содержания'}</td>
+                        <td className="p-4 text-sm text-[#3d3527]/60 whitespace-nowrap">
+                          {format(new Date(dialog.latestDate), 'd MMM yyyy', { locale: ru })}
                         </td>
                         <td className="p-4">
                           <button
-                            onClick={() => {
-                              setSelectedItem(item);
-                              setReplyText('');
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openDialog(dialog);
                             }}
                             className="p-2 hover:bg-[#f5f3ed] rounded-lg"
-                            title={item.reply ? 'Просмотреть' : 'Ответить'}
+                            title="Открыть диалог"
                           >
                             <MessageCircle className="w-4 h-4 text-[#3d3527]" />
                           </button>
@@ -467,18 +575,41 @@ export function ModerationAdmin() {
                 </tbody>
               </table>
             </div>
+
+            {hasMore && (
+              <div className="flex justify-center py-4 border-t border-[#d4c9b0]/30">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="px-6 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl hover:shadow-lg transition-all disabled:opacity-50 text-sm"
+                >
+                  {loadingMore ? (
+                    <span className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Загрузка...
+                    </span>
+                  ) : (
+                    'Загрузить ещё'
+                  )}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>
 
-      {selectedItem && (
+      {selectedDialog && (
         <ChatDialog
-          item={selectedItem}
+          dialog={selectedDialog}
+          items={dialogItems}
+          dialogLoading={dialogLoading}
           replyText={replyText}
           setReplyText={setReplyText}
           submitting={submitting}
+          hasUnanswered={dialogItems.some(i => !i.reply)}
           onClose={() => {
-            setSelectedItem(null);
+            setSelectedDialog(null);
+            setDialogItems([]);
             setReplyText('');
           }}
           onSubmitReply={submitReply}
@@ -491,27 +622,33 @@ export function ModerationAdmin() {
 }
 
 function ChatDialog({
-  item,
+  dialog,
+  items,
+  dialogLoading,
   replyText,
   setReplyText,
   submitting,
+  hasUnanswered,
   onClose,
   onSubmitReply,
   onSubmitAudioReply,
   onMarkAsViewed
 }: {
-  item: ModerationItem;
+  dialog: DialogSummary;
+  items: ModerationItem[];
+  dialogLoading: boolean;
   replyText: string;
   setReplyText: (text: string) => void;
   submitting: boolean;
+  hasUnanswered: boolean;
   onClose: () => void;
   onSubmitReply: () => void;
   onSubmitAudioReply: (audioData: string, duration: number) => void;
   onMarkAsViewed: () => void;
 }) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
-  const TypeIcon = typeConfig[item.type]?.icon || BookOpen;
-  
+  const TypeIcon = typeConfig[dialog.type]?.icon || BookOpen;
+
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -524,7 +661,7 @@ function ChatDialog({
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [item]);
+  }, [items]);
 
   useEffect(() => {
     return () => {
@@ -584,7 +721,7 @@ function ChatDialog({
 
   const sendAudioMessage = async () => {
     if (!audioBlob) return;
-    
+
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = (reader.result as string).split(',')[1];
@@ -600,12 +737,6 @@ function ChatDialog({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
   const isImageFile = (mimeType: string) => mimeType.startsWith('image/');
 
   return (
@@ -619,10 +750,10 @@ function ChatDialog({
             </div>
             <div>
               <h2 className="text-lg font-bold text-[#3d3527]">
-                {typeConfig[item.type]?.label || 'Запись'} к уроку
+                {typeConfig[dialog.type]?.label || 'Запись'} к уроку
               </h2>
               <p className="text-sm text-[#3d3527]/60 truncate max-w-[200px] md:max-w-none">
-                {item.lesson.title}
+                {dialog.lesson.title}
               </p>
             </div>
           </div>
@@ -631,8 +762,8 @@ function ChatDialog({
               <User className="w-4 h-4 text-white" />
             </div>
             <div className="text-right">
-              <p className="text-sm font-medium text-[#3d3527]">{item.student.user.name}</p>
-              <p className="text-xs text-[#3d3527]/60">{item.student.user.email}</p>
+              <p className="text-sm font-medium text-[#3d3527]">{dialog.student.user.name}</p>
+              <p className="text-xs text-[#3d3527]/60">{dialog.student.user.email}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg flex-shrink-0">
@@ -643,97 +774,108 @@ function ChatDialog({
         {/* Description */}
         <div className="px-4 md:px-6 py-3 bg-[#f5f3ed]/50 border-b border-[#d4c9b0]/20">
           <p className="text-sm text-[#3d3527]/70">
-            {item.type === 'diary' && 'Запишите свои мысли, эмоции и впечатления от пройденного урока'}
-            {item.type === 'question' && 'Вопрос от ученика по содержанию урока'}
-            {item.type === 'report' && 'Отчет ученика о выполнении задания'}
-            {item.type === 'personal' && 'Личные заметки и конспект ученика к уроку'}
+            {dialog.type === 'diary' && 'Запишите свои мысли, эмоции и впечатления от пройденного урока'}
+            {dialog.type === 'question' && 'Вопрос от ученика по содержанию урока'}
+            {dialog.type === 'report' && 'Отчет ученика о выполнении задания'}
           </p>
         </div>
 
         {/* Chat Messages Area */}
-        <div 
+        <div
           ref={chatContainerRef}
           className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 min-h-[200px] max-h-[40vh] bg-gradient-to-b from-[#f9f8f5] to-white"
         >
-          {/* Student Message - left side (incoming) */}
-          <div className="flex justify-start">
-            <div className="max-w-[85%] md:max-w-[75%]">
-              <div className="bg-gradient-to-br from-[#8b9abc] to-[#a5b0cc] text-white rounded-2xl rounded-tl-md px-4 py-3 shadow-sm">
-                <p className="whitespace-pre-wrap text-sm md:text-base">{item.content}</p>
-                
-                {/* Attachments */}
-                {item.attachments && item.attachments.length > 0 && (
-                  <div className="mt-3 space-y-2">
-                    {item.attachments.map((att) => {
-                      const attachmentUrl = getAttachmentUrl(att, item.type);
-                      return (
-                        <div key={att.id}>
-                          {isImageFile(att.mimeType) ? (
-                            <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="block">
-                              <img 
-                                src={attachmentUrl} 
-                                alt={att.originalName}
-                                className="max-w-full rounded-lg max-h-48 object-cover"
-                              />
-                            </a>
-                          ) : (
-                            <a 
-                              href={attachmentUrl}
-                              download={att.originalName}
-                              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-lg px-3 py-2 transition-colors"
-                            >
-                              <File className="w-4 h-4" />
-                              <span className="text-sm truncate flex-1">{att.originalName}</span>
-                              <span className="text-xs opacity-70">{formatFileSize(att.size)}</span>
-                              <Download className="w-4 h-4" />
-                            </a>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-[#3d3527]/50">{item.student.user.name}</span>
-                <span className="text-xs text-[#3d3527]/40">
-                  {formatDistanceToNow(new Date(item.createdAt), { locale: ru, addSuffix: true })}
-                </span>
-              </div>
+          {dialogLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#a67c52]"></div>
             </div>
-          </div>
+          ) : (
+            items.map((item, itemIndex) => (
+              <React.Fragment key={item.id}>
+                {/* Student Message - left side */}
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] md:max-w-[75%]">
+                    <div className={`bg-gradient-to-br from-[#8b9abc] to-[#a5b0cc] text-white rounded-2xl rounded-tl-md px-4 py-3 shadow-sm ${!item.reply ? 'ring-2 ring-orange-300 ring-offset-1' : ''}`}>
+                      <p className="whitespace-pre-wrap text-sm md:text-base">{item.content}</p>
 
-          {/* Mentor Replies (chat history) - right side (outgoing) */}
-          {parseReplyHistory(item.reply).map((msg, index) => (
-            <div key={index} className="flex justify-end">
-              <div className="max-w-[85%] md:max-w-[75%]">
-                <div className="bg-gradient-to-br from-[#a67c52] to-[#c4a57b] text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-sm">
-                  {msg.audioData ? (
-                    <div className="flex items-center gap-2">
-                      <audio 
-                        src={`data:audio/webm;base64,${msg.audioData}`} 
-                        controls 
-                        className="h-8 max-w-[200px]"
-                      />
-                      {msg.audioDuration && (
-                        <span className="text-xs opacity-80">
-                          {Math.floor(msg.audioDuration / 60)}:{(msg.audioDuration % 60).toString().padStart(2, '0')}
-                        </span>
+                      {item.attachments && item.attachments.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {item.attachments.map((att) => {
+                            const attachmentUrl = getAttachmentUrl(att, item.type);
+                            return (
+                              <div key={att.id}>
+                                {isImageFile(att.mimeType) ? (
+                                  <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="block">
+                                    <img
+                                      src={attachmentUrl}
+                                      alt={att.originalName}
+                                      className="max-w-full rounded-lg max-h-48 object-cover"
+                                    />
+                                  </a>
+                                ) : (
+                                  <a
+                                    href={attachmentUrl}
+                                    download={att.originalName}
+                                    className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-lg px-3 py-2 transition-colors"
+                                  >
+                                    <File className="w-4 h-4" />
+                                    <span className="text-sm truncate flex-1">{att.originalName}</span>
+                                    <span className="text-xs opacity-70">{formatFileSize(att.size)}</span>
+                                    <Download className="w-4 h-4" />
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
-                  ) : (
-                    <p className="whitespace-pre-wrap text-sm md:text-base">{msg.text}</p>
-                  )}
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-[#3d3527]/50">{item.student.user.name}</span>
+                      <span className="text-xs text-[#3d3527]/40">
+                        {formatDistanceToNow(new Date(item.createdAt), { locale: ru, addSuffix: true })}
+                      </span>
+                      {!item.reply && (
+                        <span className="text-xs text-orange-500 font-medium">● без ответа</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-end gap-2 mt-1">
-                  <span className="text-xs text-[#3d3527]/50">{msg.authorName}</span>
-                  <span className="text-xs text-[#3d3527]/40">
-                    {formatDistanceToNow(new Date(msg.createdAt), { locale: ru, addSuffix: true })}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
+
+                {/* Mentor Replies for this item - right side */}
+                {parseReplyHistory(item.reply).map((msg, index) => (
+                  <div key={`${item.id}-reply-${index}`} className="flex justify-end">
+                    <div className="max-w-[85%] md:max-w-[75%]">
+                      <div className="bg-gradient-to-br from-[#a67c52] to-[#c4a57b] text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-sm">
+                        {msg.audioData ? (
+                          <div className="flex items-center gap-2">
+                            <audio
+                              src={`data:audio/webm;base64,${msg.audioData}`}
+                              controls
+                              className="h-8 max-w-[200px]"
+                            />
+                            {msg.audioDuration && (
+                              <span className="text-xs opacity-80">
+                                {Math.floor(msg.audioDuration / 60)}:{(msg.audioDuration % 60).toString().padStart(2, '0')}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap text-sm md:text-base">{msg.text}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-end gap-2 mt-1">
+                        <span className="text-xs text-[#3d3527]/50">{msg.authorName}</span>
+                        <span className="text-xs text-[#3d3527]/40">
+                          {formatDistanceToNow(new Date(msg.createdAt), { locale: ru, addSuffix: true })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </React.Fragment>
+            ))
+          )}
         </div>
 
         {/* Reply Input Area */}
@@ -778,7 +920,7 @@ function ChatDialog({
           )}
 
           {/* Text Input */}
-          {!audioUrl && !isRecording && (
+          {!audioUrl && !isRecording && hasUnanswered && (
             <div className="flex items-end gap-3">
               <div className="flex-1">
                 <textarea
@@ -808,17 +950,17 @@ function ChatDialog({
               </div>
             </div>
           )}
-          
+
           {/* Action buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
-            <button 
-              onClick={onClose} 
+            <button
+              onClick={onClose}
               className="text-sm text-[#3d3527]/60 hover:text-[#3d3527] transition-colors"
             >
               Закрыть
             </button>
             <div className="flex gap-2">
-              {!item.reply && (
+              {hasUnanswered && (
                 <button
                   onClick={onMarkAsViewed}
                   disabled={submitting}

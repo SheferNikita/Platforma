@@ -16,13 +16,32 @@ interface LibraryItem {
 }
 
 const TARIFF_OPTIONS = [
-  { value: 'BASIC', label: 'Базовый' },
-  { value: 'FAMILY', label: 'Для родственников' },
-  { value: 'RELATIVE', label: 'Родственник участника' },
-  { value: 'WITH_MENTOR', label: 'С наставником' },
-  { value: 'WITH_PSYCHOLOGIST', label: 'С психологом' },
-  { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивидуальный с психологом' },
+  { value: 'BASIC', label: 'Базовый', short: 'Базовый', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { value: 'FAMILY', label: 'Для родственников', short: 'Родств.', color: 'bg-pink-50 text-pink-700 border-pink-200' },
+  { value: 'RELATIVE', label: 'Родственник участника', short: 'Родств. уч.', color: 'bg-violet-50 text-violet-700 border-violet-200' },
+  { value: 'WITH_MENTOR', label: 'С наставником', short: 'Настав.', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  { value: 'WITH_PSYCHOLOGIST', label: 'С психологом', short: 'Психол.', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+  { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивидуальный с психологом', short: 'Инд. псих.', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
 ];
+
+function TariffBadges({ tariffs }: { tariffs: string[] }) {
+  if (!tariffs || tariffs.length === 0 || tariffs.length === TARIFF_OPTIONS.length) {
+    return <span className="text-xs px-1.5 py-0.5 rounded border bg-gray-50 text-gray-500 border-gray-200">Все тарифы</span>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {tariffs.map(t => {
+        const opt = TARIFF_OPTIONS.find(o => o.value === t);
+        if (!opt) return null;
+        return (
+          <span key={t} className={`text-xs px-1.5 py-0.5 rounded border ${opt.color}`}>
+            {opt.short}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 export function LibraryAdmin() {
   const [items, setItems] = useState<LibraryItem[]>([]);
@@ -193,6 +212,9 @@ export function LibraryAdmin() {
                       {item.description && (
                         <p className="text-xs text-[#3d3527]/50 mt-1 line-clamp-2">{item.description}</p>
                       )}
+                      <div className="mt-1.5">
+                        <TariffBadges tariffs={item.allowedTariffs} />
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center justify-end gap-1 mt-2">
@@ -247,6 +269,9 @@ export function LibraryAdmin() {
                       {item.description && (
                         <p className="text-sm text-[#3d3527]/50 mt-1 line-clamp-2">{item.description}</p>
                       )}
+                      <div className="mt-1.5">
+                        <TariffBadges tariffs={item.allowedTariffs} />
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">

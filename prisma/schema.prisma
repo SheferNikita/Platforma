@@ -120,6 +120,7 @@ model Lesson {
   showTask            Boolean            @default(false)
   taskContent         String?
   taskAllowedTariffs  String[]           @default([])
+  allowedTariffs      String[]           @default([])
   diaries             Diary[]
   module              Module             @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   attachments         LessonAttachment[]

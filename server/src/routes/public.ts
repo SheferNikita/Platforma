@@ -41,7 +41,8 @@ async function getCachedModules() {
           duration: true,
           order: true,
           isPublished: true,
-          publishAt: true
+          publishAt: true,
+          allowedTariffs: true
         }
       }
     },
@@ -53,6 +54,17 @@ async function getCachedModules() {
 
 function invalidateModulesCache() {
   modulesCache = { data: null, timestamp: 0 };
+}
+
+function filterLessonsByTariff(modules: any[], studentTariff: string | null | undefined) {
+  if (!studentTariff) return modules;
+  return modules.map(m => ({
+    ...m,
+    lessons: m.lessons.filter((l: any) => {
+      if (!l.allowedTariffs || l.allowedTariffs.length === 0) return true;
+      return l.allowedTariffs.includes(studentTariff);
+    })
+  }));
 }
 
 router.use('/orders', ordersRouter);
@@ -67,7 +79,7 @@ interface DecodedToken {
   role: string;
 }
 
-async function getStudentFromToken(req: Request): Promise<{ studentId: string } | null> {
+async function getStudentFromToken(req: Request): Promise<{ studentId: string; tariff: string } | null> {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader?.replace('Bearer ', '') || req.cookies?.token;
@@ -83,7 +95,7 @@ async function getStudentFromToken(req: Request): Promise<{ studentId: string } 
     });
     
     if (!user?.student) return null;
-    return { studentId: user.student.id };
+    return { studentId: user.student.id, tariff: user.student.tariff };
   } catch (error) {
     console.error('[getStudentFromToken] Error:', error);
     return null;
@@ -143,7 +155,8 @@ router.get('/modules', async (req: Request, res: Response) => {
     const t3 = Date.now();
     const accessMap = new Map(accessList.map(a => [a.moduleId, a]));
 
-    const result = modules.map(m => {
+    const filteredModules = filterLessonsByTariff(modules, student.tariff);
+    const result = filteredModules.map(m => {
       const access = accessMap.get(m.id);
       return {
         ...m,
@@ -190,7 +203,8 @@ router.get('/modules-with-progress', async (req: Request, res: Response) => {
     const t3 = Date.now();
 
     const isAdmin = isAdminRole(userRole);
-    const result = modules.map(m => {
+    const filteredModules = (student && !isAdmin) ? filterLessonsByTariff(modules, student.tariff) : modules;
+    const result = filteredModules.map(m => {
       const access = accessMap.get(m.id);
       return {
         ...m,

@@ -33,6 +33,7 @@ interface Lesson {
   showTask: boolean;
   taskContent: string;
   taskAllowedTariffs: string[];
+  allowedTariffs: string[];
 }
 
 const TARIFF_OPTIONS = [
@@ -426,7 +427,16 @@ export function LessonsAdmin() {
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-[#3d3527] text-sm md:text-base truncate">{lesson.title}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-[#3d3527] text-sm md:text-base truncate">{lesson.title}</p>
+                          {lesson.allowedTariffs && lesson.allowedTariffs.length > 0 && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 bg-purple-100 text-purple-700 text-[10px] rounded-full whitespace-nowrap" title={lesson.allowedTariffs.map(t => TARIFF_OPTIONS.find(o => o.value === t)?.label || t).join(', ')}>
+                              {lesson.allowedTariffs.length === 1
+                                ? TARIFF_OPTIONS.find(o => o.value === lesson.allowedTariffs[0])?.label || lesson.allowedTariffs[0]
+                                : `${lesson.allowedTariffs.length} тариф.`}
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
                           <p className="text-xs md:text-sm text-[#3d3527]/60">{lesson.duration}</p>
                           {lesson.publishAt && new Date(lesson.publishAt) > new Date() && (
@@ -678,9 +688,19 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
   const [showTask, setShowTask] = useState(lesson?.showTask ?? false);
   const [taskContent, setTaskContent] = useState(lesson?.taskContent || '');
   const [taskAllowedTariffs, setTaskAllowedTariffs] = useState<string[]>(lesson?.taskAllowedTariffs || []);
+  const [allowedTariffs, setAllowedTariffs] = useState<string[]>(lesson?.allowedTariffs || []);
+  const [showLessonTariffs, setShowLessonTariffs] = useState((lesson?.allowedTariffs || []).length > 0);
   
   const toggleTaskTariff = (tariff: string) => {
     setTaskAllowedTariffs(prev => 
+      prev.includes(tariff) 
+        ? prev.filter(t => t !== tariff) 
+        : [...prev, tariff]
+    );
+  };
+
+  const toggleLessonTariff = (tariff: string) => {
+    setAllowedTariffs(prev => 
       prev.includes(tariff) 
         ? prev.filter(t => t !== tariff) 
         : [...prev, tariff]
@@ -737,7 +757,8 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
       notesDescription,
       showTask,
       taskContent,
-      taskAllowedTariffs
+      taskAllowedTariffs,
+      allowedTariffs: showLessonTariffs ? allowedTariffs : []
     });
   };
 
@@ -767,6 +788,59 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
               className="w-full px-3 sm:px-4 py-2 border border-[#d4c9b0] rounded-lg sm:rounded-xl focus:outline-none focus:border-[#a67c52] text-sm sm:text-base"
               rows={2}
             />
+          </div>
+
+          {/* Доступ по тарифам */}
+          <div className="p-4 bg-[#f5f3ed] rounded-xl space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showLessonTariffs}
+                onChange={(e) => {
+                  setShowLessonTariffs(e.target.checked);
+                  if (!e.target.checked) setAllowedTariffs([]);
+                }}
+                className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+              />
+              <span className="text-sm font-medium text-[#3d3527]">Ограничить доступ по тарифу</span>
+            </label>
+            {showLessonTariffs && (
+              <div className="ml-6 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs text-[#3d3527]/60">Кому доступен урок</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (allowedTariffs.length === TARIFF_OPTIONS.length) {
+                        setAllowedTariffs([]);
+                      } else {
+                        setAllowedTariffs(TARIFF_OPTIONS.map(t => t.value));
+                      }
+                    }}
+                    className="text-xs text-[#a67c52] hover:underline"
+                  >
+                    {allowedTariffs.length === TARIFF_OPTIONS.length ? 'Снять все' : 'Выбрать все'}
+                  </button>
+                </div>
+                <div className="space-y-1.5 bg-white/50 rounded-lg p-2">
+                  {TARIFF_OPTIONS.map(tariff => (
+                    <label key={tariff.value} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={allowedTariffs.includes(tariff.value)}
+                        onChange={() => toggleLessonTariff(tariff.value)}
+                        className="w-3.5 h-3.5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                      />
+                      <span className="text-xs text-[#3d3527]">{tariff.label}</span>
+                    </label>
+                  ))}
+                </div>
+                {allowedTariffs.length === 0 && (
+                  <p className="text-xs text-orange-500">Выберите хотя бы один тариф, иначе ограничение не применится</p>
+                )}
+                <p className="text-xs text-[#3d3527]/50">Если не включено — урок доступен всем тарифам</p>
+              </div>
+            )}
           </div>
 
           {/* Видео Kinescope */}

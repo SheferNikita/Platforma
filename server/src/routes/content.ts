@@ -71,6 +71,7 @@ const lessonSchema = z.object({
   showTask: z.boolean().optional(),
   taskContent: z.string().optional(),
   taskAllowedTariffs: z.array(z.string()).optional(),
+  allowedTariffs: z.array(z.string()).optional(),
   videos: z.array(z.object({
     id: z.string().optional(),
     title: z.string().nullable().optional(),
@@ -365,6 +366,7 @@ router.post('/lessons/:id/copy', moderatorRoles, async (req: AuthRequest & Reque
         showTask: original.showTask,
         taskContent: original.taskContent,
         taskAllowedTariffs: original.taskAllowedTariffs,
+        allowedTariffs: original.allowedTariffs,
         videos: original.videos.length > 0 ? {
           create: original.videos.map((v, i) => ({
             title: v.title || null,

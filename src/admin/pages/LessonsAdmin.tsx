@@ -790,59 +790,6 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
             />
           </div>
 
-          {/* Доступ по тарифам */}
-          <div className="p-4 bg-[#f5f3ed] rounded-xl space-y-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showLessonTariffs}
-                onChange={(e) => {
-                  setShowLessonTariffs(e.target.checked);
-                  if (!e.target.checked) setAllowedTariffs([]);
-                }}
-                className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
-              />
-              <span className="text-sm font-medium text-[#3d3527]">Ограничить доступ по тарифу</span>
-            </label>
-            {showLessonTariffs && (
-              <div className="ml-6 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs text-[#3d3527]/60">Кому доступен урок</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (allowedTariffs.length === TARIFF_OPTIONS.length) {
-                        setAllowedTariffs([]);
-                      } else {
-                        setAllowedTariffs(TARIFF_OPTIONS.map(t => t.value));
-                      }
-                    }}
-                    className="text-xs text-[#a67c52] hover:underline"
-                  >
-                    {allowedTariffs.length === TARIFF_OPTIONS.length ? 'Снять все' : 'Выбрать все'}
-                  </button>
-                </div>
-                <div className="space-y-1.5 bg-white/50 rounded-lg p-2">
-                  {TARIFF_OPTIONS.map(tariff => (
-                    <label key={tariff.value} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={allowedTariffs.includes(tariff.value)}
-                        onChange={() => toggleLessonTariff(tariff.value)}
-                        className="w-3.5 h-3.5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
-                      />
-                      <span className="text-xs text-[#3d3527]">{tariff.label}</span>
-                    </label>
-                  ))}
-                </div>
-                {allowedTariffs.length === 0 && (
-                  <p className="text-xs text-orange-500">Выберите хотя бы один тариф, иначе ограничение не применится</p>
-                )}
-                <p className="text-xs text-[#3d3527]/50">Если не включено — урок доступен всем тарифам</p>
-              </div>
-            )}
-          </div>
-
           {/* Видео Kinescope */}
           <div className="space-y-3">
             <div className="flex items-center gap-3">
@@ -1112,6 +1059,58 @@ function LessonModal({ lesson, onSave, onClose }: { lesson: Lesson | null; onSav
                 </div>
               </div>
             )}
+
+            <div className="border-t border-[#d4c9b0]/30 pt-3 mt-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showLessonTariffs}
+                  onChange={(e) => {
+                    setShowLessonTariffs(e.target.checked);
+                    if (!e.target.checked) setAllowedTariffs([]);
+                  }}
+                  className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                />
+                <span className="text-sm font-medium text-[#3d3527]">Ограничить доступ по тарифу</span>
+              </label>
+              {showLessonTariffs && (
+                <div className="ml-6 space-y-2 mt-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs text-[#3d3527]/60">Кому доступен урок</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (allowedTariffs.length === TARIFF_OPTIONS.length) {
+                          setAllowedTariffs([]);
+                        } else {
+                          setAllowedTariffs(TARIFF_OPTIONS.map(t => t.value));
+                        }
+                      }}
+                      className="text-xs text-[#a67c52] hover:underline"
+                    >
+                      {allowedTariffs.length === TARIFF_OPTIONS.length ? 'Снять все' : 'Выбрать все'}
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 bg-white/50 rounded-lg p-2">
+                    {TARIFF_OPTIONS.map(tariff => (
+                      <label key={tariff.value} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={allowedTariffs.includes(tariff.value)}
+                          onChange={() => toggleLessonTariff(tariff.value)}
+                          className="w-3.5 h-3.5 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+                        />
+                        <span className="text-xs text-[#3d3527]">{tariff.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {allowedTariffs.length === 0 && (
+                    <p className="text-xs text-orange-500">Выберите хотя бы один тариф, иначе ограничение не применится</p>
+                  )}
+                  <p className="text-xs text-[#3d3527]/50">Если не включено — урок доступен всем тарифам</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3 mt-6">

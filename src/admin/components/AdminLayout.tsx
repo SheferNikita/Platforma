@@ -89,7 +89,7 @@ export function AdminLayout() {
   const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(user?.role as UserRole));
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gradient-to-br from-[#f5f3ed] via-[#ebe8dc] to-[#f0ede3]">
+    <div className="min-h-screen flex bg-gradient-to-br from-[#f5f3ed] via-[#ebe8dc] to-[#f0ede3]">
       <Toaster position="top-right" richColors />
       
       {/* Mobile header - visible below md */}
@@ -156,24 +156,24 @@ export function AdminLayout() {
               </li>
             ))}
           </ul>
+          <div className="mt-3 pt-3 border-t border-[#d4c9b0]/30">
+            <NavLink
+              to="/"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#3d3527] hover:bg-[#f5f3ed] transition-all duration-200 mb-1"
+            >
+              <BookOpen className="w-5 h-5" />
+              <span className="font-medium">На платформу</span>
+            </NavLink>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 w-full"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">Выйти</span>
+            </button>
+          </div>
         </nav>
-        <div className="p-4 border-t border-[#d4c9b0]/30">
-          <NavLink
-            to="/"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#3d3527] hover:bg-[#f5f3ed] transition-all duration-200 mb-2"
-          >
-            <BookOpen className="w-5 h-5" />
-            <span className="font-medium">На платформу</span>
-          </NavLink>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 w-full"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Выйти</span>
-          </button>
-        </div>
       </aside>
 
       {/* Tablet sidebar (md to xl) - icons only with tooltips */}
@@ -215,29 +215,29 @@ export function AdminLayout() {
               </li>
             ))}
           </ul>
+          <div className="mt-2 pt-2 border-t border-[#d4c9b0]/30 space-y-0.5">
+            <NavLink
+              to="/"
+              title="На платформу"
+              className="flex items-center justify-center p-2.5 rounded-xl text-[#3d3527] hover:bg-[#f5f3ed] transition-all duration-200 group relative"
+            >
+              <BookOpen className="w-5 h-5" />
+              <span className="absolute left-full ml-2 px-2 py-1 bg-[#3d3527] text-white text-xs rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50">
+                На платформу
+              </span>
+            </NavLink>
+            <button
+              onClick={handleLogout}
+              title="Выйти"
+              className="flex items-center justify-center p-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 w-full group relative"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="absolute left-full ml-2 px-2 py-1 bg-[#3d3527] text-white text-xs rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50">
+                Выйти
+              </span>
+            </button>
+          </div>
         </nav>
-        <div className="p-1.5 border-t border-[#d4c9b0]/30 space-y-0.5">
-          <NavLink
-            to="/"
-            title="На платформу"
-            className="flex items-center justify-center p-2.5 rounded-xl text-[#3d3527] hover:bg-[#f5f3ed] transition-all duration-200 group relative"
-          >
-            <BookOpen className="w-5 h-5" />
-            <span className="absolute left-full ml-2 px-2 py-1 bg-[#3d3527] text-white text-xs rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50">
-              На платформу
-            </span>
-          </NavLink>
-          <button
-            onClick={handleLogout}
-            title="Выйти"
-            className="flex items-center justify-center p-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 w-full group relative"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="absolute left-full ml-2 px-2 py-1 bg-[#3d3527] text-white text-xs rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50">
-              Выйти
-            </span>
-          </button>
-        </div>
       </aside>
 
       {/* Desktop sidebar (xl+) - full width with labels */}
@@ -277,23 +277,23 @@ export function AdminLayout() {
               </li>
             ))}
           </ul>
+          <div className="mt-3 pt-3 border-t border-[#d4c9b0]/30">
+            <NavLink
+              to="/"
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#3d3527] hover:bg-[#f5f3ed] transition-all duration-200 mb-1"
+            >
+              <BookOpen className="w-5 h-5" />
+              <span className="font-medium">На платформу</span>
+            </NavLink>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 w-full"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="font-medium">Выйти</span>
+            </button>
+          </div>
         </nav>
-        <div className="p-4 border-t border-[#d4c9b0]/30">
-          <NavLink
-            to="/"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-[#3d3527] hover:bg-[#f5f3ed] transition-all duration-200 mb-2"
-          >
-            <BookOpen className="w-5 h-5" />
-            <span className="font-medium">На платформу</span>
-          </NavLink>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200 w-full"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Выйти</span>
-          </button>
-        </div>
       </aside>
       
       <main className="flex-1 overflow-y-auto pt-14 md:pt-0 min-w-0">

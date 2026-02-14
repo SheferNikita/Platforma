@@ -89,7 +89,7 @@ export function AdminLayout() {
   const filteredNavItems = navItems.filter(item => !item.roles || item.roles.includes(user?.role as UserRole));
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-[#f5f3ed] via-[#ebe8dc] to-[#f0ede3]">
+    <div className="h-screen flex overflow-hidden bg-gradient-to-br from-[#f5f3ed] via-[#ebe8dc] to-[#f0ede3]">
       <Toaster position="top-right" richColors />
       
       {/* Mobile header - visible below md */}

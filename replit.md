@@ -6,6 +6,7 @@ A full-featured educational platform focused on sobriety with a Russian-language
 
 ## User Preferences
 
+- Always communicate in Russian language.
 - I prefer clear and concise communication.
 - I expect the agent to prioritize critical tasks and system stability.
 - All changes should be communicated and approved before implementation.

@@ -281,8 +281,7 @@ export function ModerationAdmin() {
       await api.post<ModerationItem>(endpoint, { reply: replyText });
       toast.success('Сообщение отправлено');
       setReplyText('');
-      await reloadDialogItems();
-      loadDialogs(0, true);
+      await Promise.all([reloadDialogItems(), loadDialogs(0, true)]);
     } catch (error) {
       toast.error('Ошибка отправки');
     } finally {
@@ -307,8 +306,7 @@ export function ModerationAdmin() {
         audioMimeType: mimeType || 'audio/webm'
       });
       toast.success('Голосовое сообщение отправлено');
-      await reloadDialogItems();
-      loadDialogs(0, true);
+      await Promise.all([reloadDialogItems(), loadDialogs(0, true)]);
     } catch (error) {
       toast.error('Ошибка отправки голосового сообщения');
     } finally {
@@ -328,8 +326,7 @@ export function ModerationAdmin() {
 
       await api.post(endpoint, {});
       toast.success('Отмечено как просмотренное');
-      await reloadDialogItems();
-      loadDialogs(0, true);
+      await Promise.all([reloadDialogItems(), loadDialogs(0, true)]);
     } catch (error) {
       toast.error('Ошибка');
     } finally {

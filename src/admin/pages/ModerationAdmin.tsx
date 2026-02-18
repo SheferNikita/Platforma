@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { api } from '../../lib/api';
 import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye, Paperclip, Image, File, Download, Mic, Square, Play, Pause, Search, Users } from 'lucide-react';
 import AudioPlayer from '../../components/AudioPlayer';
+import ImageViewer from '../../components/ImageViewer';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -650,6 +651,22 @@ function ChatDialog({
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const TypeIcon = typeConfig[dialog.type]?.icon || BookOpen;
 
+  const [viewerImages, setViewerImages] = useState<{ url: string; name?: string }[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  const openImageViewer = useCallback((attachments: Attachment[], clickedId: string, itemType: 'diary' | 'question' | 'report' | 'personal') => {
+    const imageAtts = attachments.filter(a => a.mimeType.startsWith('image/'));
+    const imageList = imageAtts.map(a => ({
+      url: getAttachmentUrl(a, itemType),
+      name: a.originalName,
+    }));
+    const clickedIdx = imageAtts.findIndex(a => a.id === clickedId);
+    setViewerImages(imageList);
+    setViewerIndex(clickedIdx >= 0 ? clickedIdx : 0);
+    setViewerOpen(true);
+  }, []);
+
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -809,13 +826,12 @@ function ChatDialog({
                             return (
                               <div key={att.id}>
                                 {isImageFile(att.mimeType) ? (
-                                  <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="block">
-                                    <img
-                                      src={attachmentUrl}
-                                      alt={att.originalName}
-                                      className="max-w-full rounded-lg max-h-48 object-cover"
-                                    />
-                                  </a>
+                                  <img
+                                    src={attachmentUrl}
+                                    alt={att.originalName}
+                                    className="max-w-full rounded-lg max-h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                    onClick={() => openImageViewer(item.attachments || [], att.id, item.type)}
+                                  />
                                 ) : (
                                   <a
                                     href={attachmentUrl}
@@ -972,6 +988,14 @@ function ChatDialog({
           </div>
         </div>
       </div>
+
+      {viewerOpen && viewerImages.length > 0 && (
+        <ImageViewer
+          images={viewerImages}
+          initialIndex={viewerIndex}
+          onClose={() => setViewerOpen(false)}
+        />
+      )}
     </div>
   );
 }

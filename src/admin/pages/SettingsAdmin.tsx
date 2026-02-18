@@ -249,12 +249,15 @@ export function SettingsAdmin() {
     const newValue = !notifSettings[key];
     setNotifSaving(key);
     setNotifSettings(prev => ({ ...prev, [key]: newValue }));
+    console.log(`[NotifToggle] Sending PUT for key="${key}", value=${newValue}`);
     try {
       await api.put('/admin/notification-settings', { [key]: newValue });
+      console.log(`[NotifToggle] Success for key="${key}"`);
       toast.success(newValue ? 'Уведомление включено' : 'Уведомление отключено');
-    } catch (error) {
+    } catch (error: any) {
+      console.error(`[NotifToggle] ERROR for key="${key}":`, error.message, error);
       setNotifSettings(prev => ({ ...prev, [key]: !newValue }));
-      toast.error('Ошибка сохранения');
+      toast.error('Ошибка сохранения: ' + (error.message || 'неизвестная ошибка'));
     } finally {
       setNotifSaving(null);
     }
@@ -265,13 +268,16 @@ export function SettingsAdmin() {
     const updates: Record<string, boolean> = {};
     groupItems.forEach(item => { updates[item.key] = enable; });
     
+    console.log(`[NotifToggle] Group "${groupId}" toggle, enable=${enable}, keys:`, Object.keys(updates));
     setNotifSettings(prev => ({ ...prev, ...updates }));
     try {
       await api.put('/admin/notification-settings', updates);
+      console.log(`[NotifToggle] Group "${groupId}" success`);
       toast.success(enable ? 'Все уведомления группы включены' : 'Все уведомления группы отключены');
-    } catch (error) {
+    } catch (error: any) {
+      console.error(`[NotifToggle] Group "${groupId}" ERROR:`, error.message, error);
       loadData();
-      toast.error('Ошибка сохранения');
+      toast.error('Ошибка сохранения: ' + (error.message || 'неизвестная ошибка'));
     }
   }
 

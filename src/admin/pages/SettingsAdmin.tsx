@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, Upload, Save, RotateCcw, Mail, History, AlertCircle, Check, X, Play, Pause, Edit2, Loader2, Eye, EyeOff, ChevronDown, Trash2 } from 'lucide-react';
+import { Settings, Upload, Save, RotateCcw, Mail, History, AlertCircle, Check, X, Play, Pause, Edit2, Loader2, Eye, EyeOff, ChevronDown, Trash2, Bell } from 'lucide-react';
 import { api } from '../../lib/api';
 import { toast } from 'sonner';
 import { EmailTemplateEditor } from '../../components/EmailTemplateEditor';
@@ -85,7 +85,42 @@ interface UnifiedHistoryItem {
   changedAt: string;
 }
 
-type TabType = 'general' | 'sos' | 'visibility' | 'email' | 'history';
+type TabType = 'general' | 'sos' | 'visibility' | 'notifications' | 'email' | 'history';
+
+const NOTIFICATION_GROUPS: { id: string; label: string; icon: string }[] = [
+  { id: 'learning', label: 'Обучение', icon: '📚' },
+  { id: 'mentoring', label: 'Наставничество', icon: '💬' },
+  { id: 'access', label: 'Доступ к модулям', icon: '🔓' },
+  { id: 'schedule', label: 'Расписание', icon: '📅' },
+  { id: 'groups', label: 'Мини-группы', icon: '👥' },
+  { id: 'sobriety', label: 'Трезвость', icon: '🎉' },
+  { id: 'other', label: 'Прочее', icon: '📌' },
+];
+
+const NOTIFICATION_ITEMS: { key: string; label: string; group: string; description: string }[] = [
+  { key: 'notif_NEW_LESSON', label: 'Новый урок', group: 'learning', description: 'Уведомление при открытии нового урока' },
+  { key: 'notif_INCOMPLETE_LESSON', label: 'Напоминание об уроке', group: 'learning', description: 'Если ученик начал урок, но не завершил' },
+  { key: 'notif_PROGRESS_25', label: 'Прогресс 25%', group: 'learning', description: 'Четверть модуля пройдена' },
+  { key: 'notif_PROGRESS_50', label: 'Прогресс 50%', group: 'learning', description: 'Половина модуля пройдена' },
+  { key: 'notif_PROGRESS_75', label: 'Прогресс 75%', group: 'learning', description: 'Три четверти модуля пройдены' },
+  { key: 'notif_PROGRESS_100', label: 'Прогресс 100%', group: 'learning', description: 'Модуль полностью пройден' },
+  { key: 'notif_MENTOR_REPLY', label: 'Ответ от наставника', group: 'mentoring', description: 'Наставник ответил на вопрос ученика' },
+  { key: 'notif_NEW_MODULE_ACCESS', label: 'Открытие доступа', group: 'access', description: 'Ученику предоставлен доступ к модулю' },
+  { key: 'notif_ACCESS_EXPIRES_14D', label: 'Истекает через 14 дней', group: 'access', description: 'Напоминание за 14 дней до окончания доступа' },
+  { key: 'notif_ACCESS_EXPIRES_7D', label: 'Истекает через 7 дней', group: 'access', description: 'Напоминание за 7 дней до окончания доступа' },
+  { key: 'notif_ACCESS_EXPIRES_1D', label: 'Истекает через 1 день', group: 'access', description: 'Напоминание за 1 день до окончания доступа' },
+  { key: 'notif_NEW_EVENT', label: 'Новое мероприятие', group: 'schedule', description: 'Добавлено новое событие в расписание' },
+  { key: 'notif_EVENT_CHANGED', label: 'Изменение в расписании', group: 'schedule', description: 'Изменились время или дата мероприятия' },
+  { key: 'notif_EVENT_REMINDER_24H', label: 'Напоминание за 24 часа', group: 'schedule', description: 'За 24 часа до начала мероприятия' },
+  { key: 'notif_EVENT_REMINDER_1H', label: 'Напоминание за 1 час', group: 'schedule', description: 'За 1 час до начала мероприятия' },
+  { key: 'notif_ADDED_TO_GROUP', label: 'Добавление в группу', group: 'groups', description: 'Ученик добавлен в мини-группу' },
+  { key: 'notif_MENTOR_CHANGED', label: 'Изменение наставника', group: 'groups', description: 'В группе сменился наставник' },
+  { key: 'notif_SOBRIETY_WEEK', label: 'Неделя трезвости', group: 'sobriety', description: 'Поздравление с неделей трезвости' },
+  { key: 'notif_SOBRIETY_MONTH', label: 'Месяц трезвости', group: 'sobriety', description: 'Поздравление с месяцем трезвости' },
+  { key: 'notif_SOBRIETY_YEAR', label: 'Год трезвости', group: 'sobriety', description: 'Поздравление с годом трезвости' },
+  { key: 'notif_WELCOME', label: 'Приветствие', group: 'other', description: 'При первом входе на платформу' },
+  { key: 'notif_NEW_LIBRARY_ITEM', label: 'Новый материал', group: 'other', description: 'Добавлен новый материал в библиотеку' },
+];
 
 const fieldLabels: Record<string, string> = {
   name: 'Название',
@@ -107,6 +142,9 @@ export function SettingsAdmin() {
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
   const [templateForm, setTemplateForm] = useState({ name: '', subject: '', body: '', description: '' });
   const [savingTemplate, setSavingTemplate] = useState(false);
+  const [notifSettings, setNotifSettings] = useState<Record<string, boolean>>({});
+  const [notifLoading, setNotifLoading] = useState(false);
+  const [notifSaving, setNotifSaving] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -114,11 +152,12 @@ export function SettingsAdmin() {
 
   async function loadData() {
     try {
-      const [settingsData, historyData, templatesData, templateHistoryData] = await Promise.all([
+      const [settingsData, historyData, templatesData, templateHistoryData, notifData] = await Promise.all([
         api.get<PlatformSetting[]>('/admin/settings'),
         api.get<SettingHistory[]>('/admin/settings/history').catch(() => [] as SettingHistory[]),
         api.get<EmailTemplate[]>('/admin/email-templates').catch(() => [] as EmailTemplate[]),
-        api.get<EmailTemplateHistory[]>('/admin/email-templates/history').catch(() => [] as EmailTemplateHistory[])
+        api.get<EmailTemplateHistory[]>('/admin/email-templates/history').catch(() => [] as EmailTemplateHistory[]),
+        api.get<Record<string, boolean>>('/admin/notification-settings').catch(() => ({} as Record<string, boolean>))
       ]);
 
       setSettings(settingsData);
@@ -128,6 +167,7 @@ export function SettingsAdmin() {
       setHistory(historyData);
       setTemplates(templatesData);
       setTemplateHistory(templateHistoryData);
+      setNotifSettings(notifData);
     } catch (error) {
       console.error('Load settings error:', error);
       toast.error('Ошибка загрузки настроек');
@@ -202,6 +242,36 @@ export function SettingsAdmin() {
       loadData();
     } catch (error) {
       toast.error('Ошибка отката');
+    }
+  }
+
+  async function toggleNotification(key: string) {
+    const newValue = !notifSettings[key];
+    setNotifSaving(key);
+    setNotifSettings(prev => ({ ...prev, [key]: newValue }));
+    try {
+      await api.put('/admin/notification-settings', { [key]: newValue });
+      toast.success(newValue ? 'Уведомление включено' : 'Уведомление отключено');
+    } catch (error) {
+      setNotifSettings(prev => ({ ...prev, [key]: !newValue }));
+      toast.error('Ошибка сохранения');
+    } finally {
+      setNotifSaving(null);
+    }
+  }
+
+  async function toggleAllInGroup(groupId: string, enable: boolean) {
+    const groupItems = NOTIFICATION_ITEMS.filter(i => i.group === groupId);
+    const updates: Record<string, boolean> = {};
+    groupItems.forEach(item => { updates[item.key] = enable; });
+    
+    setNotifSettings(prev => ({ ...prev, ...updates }));
+    try {
+      await api.put('/admin/notification-settings', updates);
+      toast.success(enable ? 'Все уведомления группы включены' : 'Все уведомления группы отключены');
+    } catch (error) {
+      loadData();
+      toast.error('Ошибка сохранения');
     }
   }
 
@@ -311,7 +381,8 @@ export function SettingsAdmin() {
           { id: 'general' as TabType, label: 'Общие', icon: Settings },
           { id: 'sos' as TabType, label: 'SOS', icon: AlertCircle },
           { id: 'visibility' as TabType, label: 'Видимость', icon: Eye },
-          { id: 'email' as TabType, label: 'Email-уведомления', icon: Mail },
+          { id: 'notifications' as TabType, label: 'Уведомления', icon: Bell },
+          { id: 'email' as TabType, label: 'Email-шаблоны', icon: Mail },
           { id: 'history' as TabType, label: 'История', icon: History },
         ].map(tab => (
           <button
@@ -444,6 +515,75 @@ export function SettingsAdmin() {
                         </div>
                       </div>
                     )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'notifications' && (
+        <div className="space-y-6">
+          <div className="bg-white/60 rounded-xl p-4 md:p-6 border border-[#e8e4da]">
+            <h2 className="text-lg font-semibold text-[#3d3527] mb-2">Уведомления в колокольчике</h2>
+            <p className="text-sm text-[#3d3527]/60 mb-6">
+              Управляйте тем, какие уведомления получают ученики на платформе. Отключённые уведомления не будут создаваться.
+            </p>
+
+            <div className="space-y-6">
+              {NOTIFICATION_GROUPS.map(group => {
+                const items = NOTIFICATION_ITEMS.filter(i => i.group === group.id);
+                const allEnabled = items.every(i => notifSettings[i.key] !== false);
+                const someEnabled = items.some(i => notifSettings[i.key] !== false);
+
+                return (
+                  <div key={group.id} className="rounded-xl border border-[#e8e4da] overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 bg-[#f5f3ed]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">{group.icon}</span>
+                        <h3 className="font-medium text-[#3d3527]">{group.label}</h3>
+                        <span className="text-xs text-[#3d3527]/40 ml-1">
+                          {items.filter(i => notifSettings[i.key] !== false).length}/{items.length}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => toggleAllInGroup(group.id, !allEnabled)}
+                        className={`text-xs px-3 py-1 rounded-lg transition-colors ${
+                          allEnabled
+                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                      >
+                        {allEnabled ? 'Отключить все' : 'Включить все'}
+                      </button>
+                    </div>
+                    <div className="divide-y divide-[#e8e4da]/50">
+                      {items.map(item => {
+                        const enabled = notifSettings[item.key] !== false;
+                        return (
+                          <div key={item.key} className="flex items-center justify-between px-4 py-3 hover:bg-[#f5f3ed]/30 transition-colors">
+                            <div className="flex-1 min-w-0 mr-4">
+                              <p className="text-sm font-medium text-[#3d3527]">{item.label}</p>
+                              <p className="text-xs text-[#3d3527]/50 truncate">{item.description}</p>
+                            </div>
+                            <button
+                              onClick={() => toggleNotification(item.key)}
+                              disabled={notifSaving === item.key}
+                              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                enabled ? 'bg-green-500' : 'bg-gray-300'
+                              } ${notifSaving === item.key ? 'opacity-50' : ''}`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                                  enabled ? 'translate-x-5' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}

@@ -7,6 +7,7 @@ import { sendEmail } from '../services/email';
 import { emailTemplateService } from '../services/emailTemplateService';
 import { runEmailTemplatesMigration } from '../migrations/updateEmailTemplates';
 import { invalidateMediaCache } from './public';
+import { invalidateNotificationSettingsCache } from '../services/notificationService';
 
 const PLATFORM_URL = 'https://schkola-trezvosti.ru';
 
@@ -560,6 +561,100 @@ router.post('/settings/rollback/:historyId', settingsRoles, async (req: AuthRequ
     res.json(updated);
   } catch (error) {
     console.error('Rollback setting error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+const NOTIFICATION_TYPES = [
+  { key: 'notif_MENTOR_REPLY', label: 'Ответ от наставника', group: 'mentoring' },
+  { key: 'notif_NEW_LESSON', label: 'Новый урок', group: 'learning' },
+  { key: 'notif_INCOMPLETE_LESSON', label: 'Напоминание об уроке', group: 'learning' },
+  { key: 'notif_PROGRESS_25', label: 'Прогресс 25%', group: 'learning' },
+  { key: 'notif_PROGRESS_50', label: 'Прогресс 50%', group: 'learning' },
+  { key: 'notif_PROGRESS_75', label: 'Прогресс 75%', group: 'learning' },
+  { key: 'notif_PROGRESS_100', label: 'Прогресс 100%', group: 'learning' },
+  { key: 'notif_NEW_MODULE_ACCESS', label: 'Открытие доступа к модулю', group: 'access' },
+  { key: 'notif_ACCESS_EXPIRES_14D', label: 'Истекает доступ (14 дней)', group: 'access' },
+  { key: 'notif_ACCESS_EXPIRES_7D', label: 'Истекает доступ (7 дней)', group: 'access' },
+  { key: 'notif_ACCESS_EXPIRES_1D', label: 'Истекает доступ (1 день)', group: 'access' },
+  { key: 'notif_NEW_EVENT', label: 'Новое мероприятие', group: 'schedule' },
+  { key: 'notif_EVENT_CHANGED', label: 'Изменение в расписании', group: 'schedule' },
+  { key: 'notif_EVENT_REMINDER_24H', label: 'Напоминание за 24 часа', group: 'schedule' },
+  { key: 'notif_EVENT_REMINDER_1H', label: 'Напоминание за 1 час', group: 'schedule' },
+  { key: 'notif_ADDED_TO_GROUP', label: 'Добавление в мини-группу', group: 'groups' },
+  { key: 'notif_MENTOR_CHANGED', label: 'Изменение наставника', group: 'groups' },
+  { key: 'notif_SOBRIETY_WEEK', label: 'Юбилей: неделя трезвости', group: 'sobriety' },
+  { key: 'notif_SOBRIETY_MONTH', label: 'Юбилей: месяц трезвости', group: 'sobriety' },
+  { key: 'notif_SOBRIETY_YEAR', label: 'Юбилей: год трезвости', group: 'sobriety' },
+  { key: 'notif_WELCOME', label: 'Приветствие', group: 'other' },
+  { key: 'notif_NEW_LIBRARY_ITEM', label: 'Новый материал в библиотеке', group: 'other' },
+];
+
+async function ensureNotificationSettings() {
+  for (const nt of NOTIFICATION_TYPES) {
+    const existing = await prisma.platformSetting.findUnique({ where: { key: nt.key } });
+    if (!existing) {
+      await prisma.platformSetting.create({
+        data: {
+          key: nt.key,
+          label: nt.label,
+          category: 'notifications',
+          type: 'TEXT',
+          value: 'true',
+        },
+      });
+    }
+  }
+}
+
+router.get('/notification-settings', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    await ensureNotificationSettings();
+    const settings = await prisma.platformSetting.findMany({
+      where: { category: 'notifications' },
+    });
+    const result: Record<string, boolean> = {};
+    for (const s of settings) {
+      result[s.key] = s.value !== 'false';
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Get notification settings error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/notification-settings', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const updates = req.body as Record<string, boolean>;
+    for (const [key, enabled] of Object.entries(updates)) {
+      if (!key.startsWith('notif_')) continue;
+
+      const setting = await prisma.platformSetting.findUnique({ where: { key } });
+      if (setting) {
+        const oldValue = setting.value;
+        const newValue = String(enabled);
+
+        await prisma.platformSettingHistory.create({
+          data: {
+            settingId: setting.id,
+            oldValue,
+            newValue,
+            changedBy: (req as any).user?.email || 'admin',
+          },
+        });
+
+        await prisma.platformSetting.update({
+          where: { key },
+          data: { value: newValue },
+        });
+      }
+    }
+
+    invalidateNotificationSettingsCache();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update notification settings error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

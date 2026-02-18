@@ -1,6 +1,46 @@
 import { prisma } from '../db';
 import { NotificationType } from '@prisma/client';
 
+let notificationSettingsCache: Record<string, boolean> | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 60_000;
+
+async function loadNotificationSettings(): Promise<Record<string, boolean>> {
+  const now = Date.now();
+  if (notificationSettingsCache && now - cacheTimestamp < CACHE_TTL) {
+    return notificationSettingsCache;
+  }
+
+  const settings = await prisma.platformSetting.findMany({
+    where: { category: 'notifications' },
+  });
+
+  const result: Record<string, boolean> = {};
+  for (const s of settings) {
+    result[s.key] = s.value !== 'false';
+  }
+
+  notificationSettingsCache = result;
+  cacheTimestamp = now;
+  return result;
+}
+
+export function invalidateNotificationSettingsCache() {
+  notificationSettingsCache = null;
+  cacheTimestamp = 0;
+}
+
+async function isNotificationEnabled(type: NotificationType): Promise<boolean> {
+  try {
+    const settings = await loadNotificationSettings();
+    const key = `notif_${type}`;
+    return settings[key] !== false;
+  } catch (error) {
+    console.error('Error checking notification settings, defaulting to enabled:', error);
+    return true;
+  }
+}
+
 interface CreateNotificationParams {
   userId: string;
   type: NotificationType;
@@ -12,6 +52,11 @@ interface CreateNotificationParams {
 
 export const notificationService = {
   async create(params: CreateNotificationParams) {
+    const enabled = await isNotificationEnabled(params.type);
+    if (!enabled) {
+      return null;
+    }
+
     return prisma.notification.create({
       data: {
         userId: params.userId,

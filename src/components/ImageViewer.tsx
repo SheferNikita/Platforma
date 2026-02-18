@@ -14,8 +14,8 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchDelta, setTouchDelta] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isAnimatingRef = useRef(false);
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
 
   const currentImage = images[currentIndex];
   const hasMultiple = images.length > 1;
@@ -25,21 +25,17 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
   }, [currentIndex]);
 
   const goTo = useCallback((index: number) => {
-    if (isAnimatingRef.current) return;
-    isAnimatingRef.current = true;
     setCurrentIndex(index);
     setTouchDelta(0);
-    if (animTimerRef.current) clearTimeout(animTimerRef.current);
-    animTimerRef.current = setTimeout(() => { isAnimatingRef.current = false; }, 200);
   }, []);
 
   const goPrev = useCallback(() => {
-    if (currentIndex > 0) goTo(currentIndex - 1);
-  }, [currentIndex, goTo]);
+    if (currentIndexRef.current > 0) goTo(currentIndexRef.current - 1);
+  }, [goTo]);
 
   const goNext = useCallback(() => {
-    if (currentIndex < images.length - 1) goTo(currentIndex + 1);
-  }, [currentIndex, images.length, goTo]);
+    if (currentIndexRef.current < images.length - 1) goTo(currentIndexRef.current + 1);
+  }, [goTo, images.length]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -54,7 +50,6 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
-      if (animTimerRef.current) clearTimeout(animTimerRef.current);
     };
   }, [onClose, goPrev, goNext]);
 

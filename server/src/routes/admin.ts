@@ -630,25 +630,29 @@ router.put('/notification-settings', settingsRoles, async (req: AuthRequest, res
     for (const [key, enabled] of Object.entries(updates)) {
       if (!key.startsWith('notif_')) continue;
 
-      const setting = await prisma.platformSetting.findUnique({ where: { key } });
-      if (setting) {
-        const oldValue = setting.value;
-        const newValue = String(enabled);
+      const newValue = String(enabled);
+      const existing = await prisma.platformSetting.findUnique({ where: { key } });
+      const oldValue = existing?.value ?? 'true';
 
-        await prisma.platformSettingHistory.create({
-          data: {
-            settingId: setting.id,
-            oldValue,
-            newValue,
-            changedBy: (req as any).user?.email || 'admin',
-          },
-        });
+      const setting = await prisma.platformSetting.upsert({
+        where: { key },
+        update: { value: newValue },
+        create: {
+          key,
+          value: newValue,
+          category: 'notifications',
+          label: key,
+        },
+      });
 
-        await prisma.platformSetting.update({
-          where: { key },
-          data: { value: newValue },
-        });
-      }
+      await prisma.platformSettingHistory.create({
+        data: {
+          settingId: setting.id,
+          oldValue,
+          newValue,
+          changedBy: (req as any).user?.email || 'admin',
+        },
+      });
     }
 
     invalidateNotificationSettingsCache();

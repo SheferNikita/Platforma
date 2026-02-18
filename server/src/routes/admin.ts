@@ -282,6 +282,112 @@ router.post('/', async (req: AuthRequest, res: Response) => {
   }
 });
 
+const settingsRoles = requireRole('SUPER_ADMIN', 'ADMIN');
+
+const NOTIFICATION_TYPES = [
+  { key: 'notif_MENTOR_REPLY', label: 'Ответ от наставника', group: 'mentoring' },
+  { key: 'notif_NEW_LESSON', label: 'Новый урок', group: 'learning' },
+  { key: 'notif_INCOMPLETE_LESSON', label: 'Напоминание об уроке', group: 'learning' },
+  { key: 'notif_PROGRESS_25', label: 'Прогресс 25%', group: 'learning' },
+  { key: 'notif_PROGRESS_50', label: 'Прогресс 50%', group: 'learning' },
+  { key: 'notif_PROGRESS_75', label: 'Прогресс 75%', group: 'learning' },
+  { key: 'notif_PROGRESS_100', label: 'Прогресс 100%', group: 'learning' },
+  { key: 'notif_NEW_MODULE_ACCESS', label: 'Открытие доступа к модулю', group: 'access' },
+  { key: 'notif_ACCESS_EXPIRES_14D', label: 'Истекает доступ (14 дней)', group: 'access' },
+  { key: 'notif_ACCESS_EXPIRES_7D', label: 'Истекает доступ (7 дней)', group: 'access' },
+  { key: 'notif_ACCESS_EXPIRES_1D', label: 'Истекает доступ (1 день)', group: 'access' },
+  { key: 'notif_NEW_EVENT', label: 'Новое мероприятие', group: 'schedule' },
+  { key: 'notif_EVENT_CHANGED', label: 'Изменение в расписании', group: 'schedule' },
+  { key: 'notif_EVENT_REMINDER_24H', label: 'Напоминание за 24 часа', group: 'schedule' },
+  { key: 'notif_EVENT_REMINDER_1H', label: 'Напоминание за 1 час', group: 'schedule' },
+  { key: 'notif_ADDED_TO_GROUP', label: 'Добавление в мини-группу', group: 'groups' },
+  { key: 'notif_MENTOR_CHANGED', label: 'Изменение наставника', group: 'groups' },
+  { key: 'notif_SOBRIETY_WEEK', label: 'Юбилей: неделя трезвости', group: 'sobriety' },
+  { key: 'notif_SOBRIETY_MONTH', label: 'Юбилей: месяц трезвости', group: 'sobriety' },
+  { key: 'notif_SOBRIETY_YEAR', label: 'Юбилей: год трезвости', group: 'sobriety' },
+  { key: 'notif_WELCOME', label: 'Приветствие', group: 'other' },
+  { key: 'notif_NEW_LIBRARY_ITEM', label: 'Новый материал в библиотеке', group: 'other' },
+];
+
+async function ensureNotificationSettings() {
+  for (const nt of NOTIFICATION_TYPES) {
+    const existing = await prisma.platformSetting.findUnique({ where: { key: nt.key } });
+    if (!existing) {
+      await prisma.platformSetting.create({
+        data: {
+          key: nt.key,
+          label: nt.label,
+          category: 'notifications',
+          type: 'TEXT',
+          value: 'true',
+        },
+      });
+    }
+  }
+}
+
+router.get('/notification-settings', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    await ensureNotificationSettings();
+    const settings = await prisma.platformSetting.findMany({
+      where: { category: 'notifications' },
+    });
+    const result: Record<string, boolean> = {};
+    for (const s of settings) {
+      result[s.key] = s.value !== 'false';
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Get notification settings error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.put('/notification-settings', settingsRoles, async (req: AuthRequest, res: Response) => {
+  try {
+    const updates = req.body as Record<string, boolean>;
+    console.log('[NotifSettings PUT] Received body:', JSON.stringify(updates));
+
+    let processedCount = 0;
+    for (const [key, enabled] of Object.entries(updates)) {
+      if (!key.startsWith('notif_')) continue;
+
+      const newValue = String(enabled);
+      const existing = await prisma.platformSetting.findUnique({ where: { key } });
+      const oldValue = existing?.value ?? 'true';
+
+      const setting = await prisma.platformSetting.upsert({
+        where: { key },
+        update: { value: newValue },
+        create: {
+          key,
+          value: newValue,
+          category: 'notifications',
+          label: key,
+          type: 'TEXT',
+        },
+      });
+
+      await prisma.platformSettingHistory.create({
+        data: {
+          settingId: setting.id,
+          oldValue,
+          newValue,
+          changedBy: (req as any).user?.email || 'admin',
+        },
+      });
+      processedCount++;
+    }
+
+    console.log(`[NotifSettings PUT] Processed ${processedCount} settings.`);
+    invalidateNotificationSettingsCache();
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('[NotifSettings PUT] ERROR:', error.message, error.code, JSON.stringify(error.meta));
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 router.put('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -461,8 +567,6 @@ async function ensureDefaultSettings() {
   }
 }
 
-const settingsRoles = requireRole('SUPER_ADMIN', 'ADMIN');
-
 router.get('/settings', settingsRoles, async (req: AuthRequest, res: Response) => {
   try {
     await ensureDefaultSettings();
@@ -561,133 +665,6 @@ router.post('/settings/rollback/:historyId', settingsRoles, async (req: AuthRequ
     res.json(updated);
   } catch (error) {
     console.error('Rollback setting error:', error);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
-});
-
-const NOTIFICATION_TYPES = [
-  { key: 'notif_MENTOR_REPLY', label: 'Ответ от наставника', group: 'mentoring' },
-  { key: 'notif_NEW_LESSON', label: 'Новый урок', group: 'learning' },
-  { key: 'notif_INCOMPLETE_LESSON', label: 'Напоминание об уроке', group: 'learning' },
-  { key: 'notif_PROGRESS_25', label: 'Прогресс 25%', group: 'learning' },
-  { key: 'notif_PROGRESS_50', label: 'Прогресс 50%', group: 'learning' },
-  { key: 'notif_PROGRESS_75', label: 'Прогресс 75%', group: 'learning' },
-  { key: 'notif_PROGRESS_100', label: 'Прогресс 100%', group: 'learning' },
-  { key: 'notif_NEW_MODULE_ACCESS', label: 'Открытие доступа к модулю', group: 'access' },
-  { key: 'notif_ACCESS_EXPIRES_14D', label: 'Истекает доступ (14 дней)', group: 'access' },
-  { key: 'notif_ACCESS_EXPIRES_7D', label: 'Истекает доступ (7 дней)', group: 'access' },
-  { key: 'notif_ACCESS_EXPIRES_1D', label: 'Истекает доступ (1 день)', group: 'access' },
-  { key: 'notif_NEW_EVENT', label: 'Новое мероприятие', group: 'schedule' },
-  { key: 'notif_EVENT_CHANGED', label: 'Изменение в расписании', group: 'schedule' },
-  { key: 'notif_EVENT_REMINDER_24H', label: 'Напоминание за 24 часа', group: 'schedule' },
-  { key: 'notif_EVENT_REMINDER_1H', label: 'Напоминание за 1 час', group: 'schedule' },
-  { key: 'notif_ADDED_TO_GROUP', label: 'Добавление в мини-группу', group: 'groups' },
-  { key: 'notif_MENTOR_CHANGED', label: 'Изменение наставника', group: 'groups' },
-  { key: 'notif_SOBRIETY_WEEK', label: 'Юбилей: неделя трезвости', group: 'sobriety' },
-  { key: 'notif_SOBRIETY_MONTH', label: 'Юбилей: месяц трезвости', group: 'sobriety' },
-  { key: 'notif_SOBRIETY_YEAR', label: 'Юбилей: год трезвости', group: 'sobriety' },
-  { key: 'notif_WELCOME', label: 'Приветствие', group: 'other' },
-  { key: 'notif_NEW_LIBRARY_ITEM', label: 'Новый материал в библиотеке', group: 'other' },
-];
-
-async function ensureNotificationSettings() {
-  for (const nt of NOTIFICATION_TYPES) {
-    const existing = await prisma.platformSetting.findUnique({ where: { key: nt.key } });
-    if (!existing) {
-      await prisma.platformSetting.create({
-        data: {
-          key: nt.key,
-          label: nt.label,
-          category: 'notifications',
-          type: 'TEXT',
-          value: 'true',
-        },
-      });
-    }
-  }
-}
-
-router.get('/notification-settings', settingsRoles, async (req: AuthRequest, res: Response) => {
-  try {
-    await ensureNotificationSettings();
-    const settings = await prisma.platformSetting.findMany({
-      where: { category: 'notifications' },
-    });
-    const result: Record<string, boolean> = {};
-    for (const s of settings) {
-      result[s.key] = s.value !== 'false';
-    }
-    res.json(result);
-  } catch (error) {
-    console.error('Get notification settings error:', error);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
-});
-
-router.put('/notification-settings', settingsRoles, async (req: AuthRequest, res: Response) => {
-  try {
-    const updates = req.body as Record<string, boolean>;
-    console.log('[NotifSettings PUT] Received body:', JSON.stringify(updates));
-    console.log('[NotifSettings PUT] Body type:', typeof req.body);
-    console.log('[NotifSettings PUT] Keys count:', Object.keys(updates).length);
-
-    let processedCount = 0;
-    for (const [key, enabled] of Object.entries(updates)) {
-      console.log(`[NotifSettings PUT] Processing key="${key}", enabled=${enabled}, type=${typeof enabled}`);
-      if (!key.startsWith('notif_')) {
-        console.log(`[NotifSettings PUT] Skipping key="${key}" (no notif_ prefix)`);
-        continue;
-      }
-
-      const newValue = String(enabled);
-      console.log(`[NotifSettings PUT] Finding existing for key="${key}"...`);
-      const existing = await prisma.platformSetting.findUnique({ where: { key } });
-      console.log(`[NotifSettings PUT] Existing record:`, existing ? JSON.stringify(existing) : 'null');
-      const oldValue = existing?.value ?? 'true';
-
-      console.log(`[NotifSettings PUT] Upserting key="${key}", newValue="${newValue}", oldValue="${oldValue}"...`);
-      try {
-        const setting = await prisma.platformSetting.upsert({
-          where: { key },
-          update: { value: newValue },
-          create: {
-            key,
-            value: newValue,
-            category: 'notifications',
-            label: key,
-            type: 'TEXT',
-          },
-        });
-        console.log(`[NotifSettings PUT] Upsert success for key="${key}", id=${setting.id}`);
-
-        console.log(`[NotifSettings PUT] Creating history for settingId=${setting.id}...`);
-        await prisma.platformSettingHistory.create({
-          data: {
-            settingId: setting.id,
-            oldValue,
-            newValue,
-            changedBy: (req as any).user?.email || 'admin',
-          },
-        });
-        console.log(`[NotifSettings PUT] History created for key="${key}"`);
-        processedCount++;
-      } catch (innerError: any) {
-        console.error(`[NotifSettings PUT] ERROR on key="${key}":`, innerError.message);
-        console.error(`[NotifSettings PUT] Error code:`, innerError.code);
-        console.error(`[NotifSettings PUT] Error meta:`, JSON.stringify(innerError.meta));
-        console.error(`[NotifSettings PUT] Full error:`, innerError);
-        throw innerError;
-      }
-    }
-
-    console.log(`[NotifSettings PUT] All done. Processed ${processedCount} settings.`);
-    invalidateNotificationSettingsCache();
-    res.json({ success: true });
-  } catch (error: any) {
-    console.error('[NotifSettings PUT] FINAL ERROR:', error.message);
-    console.error('[NotifSettings PUT] Error stack:', error.stack);
-    console.error('[NotifSettings PUT] Error code:', error.code);
-    console.error('[NotifSettings PUT] Error meta:', JSON.stringify(error.meta));
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

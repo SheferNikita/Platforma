@@ -306,73 +306,85 @@ export function LessonDetailPage() {
   });
   const [chatDataLoaded, setChatDataLoaded] = useState(false);
 
-  const [pendingDeletes, setPendingDeletes] = useState<Record<string, { timer: ReturnType<typeof setTimeout>; countdown: number }>>({});
-  const pendingDeleteTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
-  const pendingDeleteTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const [deleteMode, setDeleteMode] = useState<'diary' | 'notes' | null>(null);
+  const [selectedForDelete, setSelectedForDelete] = useState<Set<string>>(new Set());
+  const [deletingCountdown, setDeletingCountdown] = useState<number | null>(null);
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deleteIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const cancelDelete = useCallback((messageId: string) => {
-    setPendingDeletes(prev => {
-      const next = { ...prev };
-      if (next[messageId]?.timer) clearTimeout(next[messageId].timer);
-      delete next[messageId];
+  const toggleDeleteMode = useCallback((type: 'diary' | 'notes') => {
+    if (deleteTimerRef.current) { clearTimeout(deleteTimerRef.current); deleteTimerRef.current = null; }
+    if (deleteIntervalRef.current) { clearInterval(deleteIntervalRef.current); deleteIntervalRef.current = null; }
+    if (deleteMode === type) {
+      setDeleteMode(null);
+      setSelectedForDelete(new Set());
+      setDeletingCountdown(null);
+    } else {
+      setDeleteMode(type);
+      setSelectedForDelete(new Set());
+      setDeletingCountdown(null);
+    }
+  }, [deleteMode]);
+
+  const toggleSelectMessage = useCallback((messageId: string) => {
+    setSelectedForDelete(prev => {
+      const next = new Set(prev);
+      if (next.has(messageId)) next.delete(messageId); else next.add(messageId);
       return next;
     });
-    if (pendingDeleteTimersRef.current[messageId]) {
-      clearInterval(pendingDeleteTimersRef.current[messageId]);
-      delete pendingDeleteTimersRef.current[messageId];
-    }
-    if (pendingDeleteTimeoutsRef.current[messageId]) {
-      clearTimeout(pendingDeleteTimeoutsRef.current[messageId]);
-      delete pendingDeleteTimeoutsRef.current[messageId];
-    }
   }, []);
 
-  const startDelete = useCallback((messageId: string, type: 'diary' | 'notes') => {
-    const countdownInterval = setInterval(() => {
-      setPendingDeletes(prev => {
-        if (!prev[messageId]) return prev;
-        const newCountdown = prev[messageId].countdown - 1;
-        if (newCountdown <= 0) return prev;
-        return { ...prev, [messageId]: { ...prev[messageId], countdown: newCountdown } };
+  const cancelBatchDelete = useCallback(() => {
+    setDeletingCountdown(null);
+    if (deleteTimerRef.current) { clearTimeout(deleteTimerRef.current); deleteTimerRef.current = null; }
+    if (deleteIntervalRef.current) { clearInterval(deleteIntervalRef.current); deleteIntervalRef.current = null; }
+  }, []);
+
+  const confirmBatchDelete = useCallback(() => {
+    if (selectedForDelete.size === 0 || !deleteMode) return;
+    const type = deleteMode;
+    const ids = Array.from(selectedForDelete);
+    setDeletingCountdown(5);
+
+    deleteIntervalRef.current = setInterval(() => {
+      setDeletingCountdown(prev => {
+        if (prev === null || prev <= 1) return prev;
+        return prev - 1;
       });
     }, 1000);
 
-    pendingDeleteTimersRef.current[messageId] = countdownInterval;
-
-    const timer = setTimeout(async () => {
-      clearInterval(countdownInterval);
-      delete pendingDeleteTimersRef.current[messageId];
-      delete pendingDeleteTimeoutsRef.current[messageId];
-      try {
-        const endpoint = type === 'diary'
-          ? `/public/lessons/${lessonId}/diary/${messageId}`
-          : `/public/lessons/${lessonId}/personal-notes/${messageId}`;
-        await api.delete(endpoint);
-        if (type === 'diary') {
-          setDiaryHistory(prev => prev.filter(m => m.id !== messageId));
-        } else {
-          setNotesHistory(prev => prev.filter(m => m.id !== messageId));
+    deleteTimerRef.current = setTimeout(async () => {
+      if (deleteIntervalRef.current) { clearInterval(deleteIntervalRef.current); deleteIntervalRef.current = null; }
+      let successCount = 0;
+      for (const id of ids) {
+        try {
+          const endpoint = type === 'diary'
+            ? `/public/lessons/${lessonId}/diary/${id}`
+            : `/public/lessons/${lessonId}/personal-notes/${id}`;
+          await api.delete(endpoint);
+          successCount++;
+        } catch (err) {
+          console.error('Delete error:', err);
         }
-        toast.success('Сообщение удалено');
-      } catch (err) {
-        console.error('Delete error:', err);
-        toast.error('Ошибка удаления сообщения');
       }
-      setPendingDeletes(prev => {
-        const next = { ...prev };
-        delete next[messageId];
-        return next;
-      });
+      if (type === 'diary') {
+        setDiaryHistory(prev => prev.filter(m => !ids.includes(m.id)));
+      } else {
+        setNotesHistory(prev => prev.filter(m => !ids.includes(m.id)));
+      }
+      if (successCount > 0) toast.success(`Удалено: ${successCount}`);
+      if (successCount < ids.length) toast.error(`Не удалось удалить: ${ids.length - successCount}`);
+      setDeleteMode(null);
+      setSelectedForDelete(new Set());
+      setDeletingCountdown(null);
+      deleteTimerRef.current = null;
     }, 5000);
-
-    pendingDeleteTimeoutsRef.current[messageId] = timer;
-    setPendingDeletes(prev => ({ ...prev, [messageId]: { timer, countdown: 5 } }));
-  }, [lessonId]);
+  }, [selectedForDelete, deleteMode, lessonId]);
 
   useEffect(() => {
     return () => {
-      Object.values(pendingDeleteTimersRef.current).forEach(clearInterval);
-      Object.values(pendingDeleteTimeoutsRef.current).forEach(clearTimeout);
+      if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+      if (deleteIntervalRef.current) clearInterval(deleteIntervalRef.current);
     };
   }, []);
 
@@ -1146,36 +1158,67 @@ export function LessonDetailPage() {
 
           {/* Diary chat history */}
           {diaryHistory.length > 0 && (
-            <div className="mb-4 bg-gradient-to-br from-[var(--sky-soft)]/20 to-white/40 rounded-xl p-2 md:p-3 space-y-1.5 md:space-y-2 border border-[var(--sky-light)]/30">
-              {diaryHistory.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.author === 'student' ? 'justify-end' : 'justify-start'} animate-fade-in`}
-                >
-                  {message.author === 'student' && !pendingDeletes[message.id] && (
+            <div className="mb-4">
+              {diaryHistory.some(m => m.author === 'student') && (
+                <div className="flex items-center justify-end gap-2 mb-2">
+                  {deleteMode === 'diary' && selectedForDelete.size > 0 && deletingCountdown === null && (
                     <button
-                      onClick={() => startDelete(message.id, 'diary')}
-                      className="self-center mr-1 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
-                      title="Удалить сообщение"
-                      style={{ opacity: 0.3 }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.3')}
+                      onClick={confirmBatchDelete}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs hover:bg-red-600 transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
+                      Удалить ({selectedForDelete.size})
                     </button>
                   )}
-                  {pendingDeletes[message.id] ? (
-                    <div className="flex items-center gap-2 max-w-[85%] md:max-w-[70%] rounded-xl px-3 py-2 bg-red-50 border border-red-200 shadow-sm">
-                      <span className="text-xs text-red-600">Удаление через {pendingDeletes[message.id].countdown}с</span>
+                  {deleteMode === 'diary' && deletingCountdown !== null && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-xs">
+                      <span className="text-red-600">Удаление через {deletingCountdown}с</span>
                       <button
-                        onClick={() => cancelDelete(message.id)}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-red-200 text-red-600 hover:bg-red-50 text-xs transition-colors"
+                        onClick={cancelBatchDelete}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <Undo2 className="w-3 h-3" />
                         Отменить
                       </button>
                     </div>
-                  ) : (
+                  )}
+                  <button
+                    onClick={() => toggleDeleteMode('diary')}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                      deleteMode === 'diary'
+                        ? 'bg-red-100 text-red-600 border border-red-200'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200'
+                    }`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {deleteMode === 'diary' ? 'Отмена' : 'Удалить'}
+                  </button>
+                </div>
+              )}
+              <div className="bg-gradient-to-br from-[var(--sky-soft)]/20 to-white/40 rounded-xl p-2 md:p-3 space-y-1.5 md:space-y-2 border border-[var(--sky-light)]/30">
+              {diaryHistory.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.author === 'student' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+                >
+                  {deleteMode === 'diary' && message.author === 'student' && deletingCountdown === null && (
+                    <button
+                      onClick={() => toggleSelectMessage(message.id)}
+                      className="self-center mr-2 flex-shrink-0"
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        selectedForDelete.has(message.id)
+                          ? 'bg-red-500 border-red-500'
+                          : 'border-gray-300 hover:border-red-400'
+                      }`}>
+                        {selectedForDelete.has(message.id) && (
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+                  )}
                   <div
                     className={`max-w-[85%] md:max-w-[70%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 ${
                       message.author === 'student'
@@ -1229,9 +1272,9 @@ export function LessonDetailPage() {
                       {message.curatorName && `${message.curatorName} • `}{formatMessageTime(message.timestamp)}
                     </p>
                   </div>
-                  )}
                 </div>
               ))}
+              </div>
             </div>
           )}
 
@@ -1337,36 +1380,67 @@ export function LessonDetailPage() {
 
           {/* Notes chat history */}
           {notesHistory.length > 0 && (
-            <div className="mb-4 bg-gradient-to-br from-[var(--sky-soft)]/20 to-white/40 rounded-xl p-2 md:p-3 space-y-1.5 md:space-y-2 border border-[var(--sky-light)]/30">
-              {notesHistory.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.author === 'student' ? 'justify-end' : 'justify-start'} animate-fade-in`}
-                >
-                  {message.author === 'student' && !pendingDeletes[message.id] && (
+            <div className="mb-4">
+              {notesHistory.some(m => m.author === 'student') && (
+                <div className="flex items-center justify-end gap-2 mb-2">
+                  {deleteMode === 'notes' && selectedForDelete.size > 0 && deletingCountdown === null && (
                     <button
-                      onClick={() => startDelete(message.id, 'notes')}
-                      className="self-center mr-1 p-1 rounded-full hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
-                      title="Удалить сообщение"
-                      style={{ opacity: 0.3 }}
-                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
-                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.3')}
+                      onClick={confirmBatchDelete}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs hover:bg-red-600 transition-colors"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
+                      Удалить ({selectedForDelete.size})
                     </button>
                   )}
-                  {pendingDeletes[message.id] ? (
-                    <div className="flex items-center gap-2 max-w-[85%] md:max-w-[70%] rounded-xl px-3 py-2 bg-red-50 border border-red-200 shadow-sm">
-                      <span className="text-xs text-red-600">Удаление через {pendingDeletes[message.id].countdown}с</span>
+                  {deleteMode === 'notes' && deletingCountdown !== null && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-xs">
+                      <span className="text-red-600">Удаление через {deletingCountdown}с</span>
                       <button
-                        onClick={() => cancelDelete(message.id)}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-red-200 text-red-600 hover:bg-red-50 text-xs transition-colors"
+                        onClick={cancelBatchDelete}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <Undo2 className="w-3 h-3" />
                         Отменить
                       </button>
                     </div>
-                  ) : (
+                  )}
+                  <button
+                    onClick={() => toggleDeleteMode('notes')}
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                      deleteMode === 'notes'
+                        ? 'bg-red-100 text-red-600 border border-red-200'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-200'
+                    }`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {deleteMode === 'notes' ? 'Отмена' : 'Удалить'}
+                  </button>
+                </div>
+              )}
+              <div className="bg-gradient-to-br from-[var(--sky-soft)]/20 to-white/40 rounded-xl p-2 md:p-3 space-y-1.5 md:space-y-2 border border-[var(--sky-light)]/30">
+              {notesHistory.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.author === 'student' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+                >
+                  {deleteMode === 'notes' && message.author === 'student' && deletingCountdown === null && (
+                    <button
+                      onClick={() => toggleSelectMessage(message.id)}
+                      className="self-center mr-2 flex-shrink-0"
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        selectedForDelete.has(message.id)
+                          ? 'bg-red-500 border-red-500'
+                          : 'border-gray-300 hover:border-red-400'
+                      }`}>
+                        {selectedForDelete.has(message.id) && (
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+                  )}
                   <div
                     className={`max-w-[85%] md:max-w-[70%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 ${
                       message.author === 'student'
@@ -1420,9 +1494,9 @@ export function LessonDetailPage() {
                       {message.curatorName && `${message.curatorName} • `}{formatMessageTime(message.timestamp)}
                     </p>
                   </div>
-                  )}
                 </div>
               ))}
+              </div>
             </div>
           )}
 

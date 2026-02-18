@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { createPortal } from 'react-dom';
 import { PageWrapper } from '../components/PageWrapper';
 import { ArrowLeft, ArrowRight, List, CheckCircle, ArrowUp, MessageCircle, HelpCircle, BookOpen, Mic, Paperclip, Image, Video, File, X, StopCircle, FileText, NotebookPen, Download, Loader2, Info, ChevronDown, Trash2, Undo2 } from 'lucide-react';
 import AudioPlayer from '../components/AudioPlayer';
+import ImageViewer from '../components/ImageViewer';
 import { toast } from 'sonner';
 import { api } from '../lib/api';
 import { KinescopeMultiPlayer } from '../components/KinescopePlayer';
@@ -289,8 +289,15 @@ export function LessonDetailPage() {
   // Chat history state
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   
-  // Image modal state
-  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [viewerImages, setViewerImages] = useState<{ url: string; name?: string }[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+  const [viewerOpen, setViewerOpen] = useState(false);
+
+  const openImageViewer = useCallback((images: { url: string; name?: string }[], clickedIndex: number) => {
+    setViewerImages(images);
+    setViewerIndex(clickedIndex);
+    setViewerOpen(true);
+  }, []);
   
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
@@ -392,18 +399,6 @@ export function LessonDetailPage() {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
   }, []);
   
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (fullscreenImage) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [fullscreenImage]);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -1247,7 +1242,12 @@ export function LessonDetailPage() {
                                 src={file.url} 
                                 alt={file.name}
                                 loading="lazy"
-                                onClick={() => setFullscreenImage(file.url!)}
+                                onClick={() => {
+                                  const imageFiles = (message.files || []).filter(f => f.type.startsWith('image/') && f.url);
+                                  const imageList = imageFiles.map(f => ({ url: f.url!, name: f.name }));
+                                  const clickedIdx = imageFiles.findIndex(f => f.url === file.url);
+                                  openImageViewer(imageList, clickedIdx >= 0 ? clickedIdx : 0);
+                                }}
                                 className="max-w-full max-h-48 md:max-h-64 rounded-lg mt-1 border border-white/20 cursor-pointer hover:opacity-90 transition-opacity object-contain"
                               />
                             ) : (
@@ -1469,7 +1469,12 @@ export function LessonDetailPage() {
                                 src={file.url} 
                                 alt={file.name}
                                 loading="lazy"
-                                onClick={() => setFullscreenImage(file.url!)}
+                                onClick={() => {
+                                  const imageFiles = (message.files || []).filter(f => f.type.startsWith('image/') && f.url);
+                                  const imageList = imageFiles.map(f => ({ url: f.url!, name: f.name }));
+                                  const clickedIdx = imageFiles.findIndex(f => f.url === file.url);
+                                  openImageViewer(imageList, clickedIdx >= 0 ? clickedIdx : 0);
+                                }}
                                 className="max-w-full max-h-48 md:max-h-64 rounded-lg mt-1 border border-white/20 cursor-pointer hover:opacity-90 transition-opacity object-contain"
                               />
                             ) : (
@@ -1620,29 +1625,12 @@ export function LessonDetailPage() {
           </button>
         )}
         
-        {/* Fullscreen image modal */}
-        {fullscreenImage && createPortal(
-          <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-fade-in p-4"
-            style={{ margin: 0, padding: '1rem' }}
-            onClick={() => setFullscreenImage(null)}
-          >
-            <button
-              onClick={() => setFullscreenImage(null)}
-              className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all duration-200 transform hover:scale-110 active:scale-95 z-10"
-              title="Закрыть"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            <img
-              src={fullscreenImage}
-              alt="Полноразмерное изображение"
-              className="max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] w-auto h-auto object-contain rounded-lg"
-              style={{ display: 'block' }}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>,
-          document.body
+        {viewerOpen && viewerImages.length > 0 && (
+          <ImageViewer
+            images={viewerImages}
+            initialIndex={viewerIndex}
+            onClose={() => setViewerOpen(false)}
+          />
         )}
       </div>
     </PageWrapper>

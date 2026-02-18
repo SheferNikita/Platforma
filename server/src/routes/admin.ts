@@ -642,6 +642,7 @@ router.put('/notification-settings', settingsRoles, async (req: AuthRequest, res
           value: newValue,
           category: 'notifications',
           label: key,
+          type: 'TEXT',
         },
       });
 

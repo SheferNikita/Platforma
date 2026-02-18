@@ -627,39 +627,67 @@ router.get('/notification-settings', settingsRoles, async (req: AuthRequest, res
 router.put('/notification-settings', settingsRoles, async (req: AuthRequest, res: Response) => {
   try {
     const updates = req.body as Record<string, boolean>;
+    console.log('[NotifSettings PUT] Received body:', JSON.stringify(updates));
+    console.log('[NotifSettings PUT] Body type:', typeof req.body);
+    console.log('[NotifSettings PUT] Keys count:', Object.keys(updates).length);
+
+    let processedCount = 0;
     for (const [key, enabled] of Object.entries(updates)) {
-      if (!key.startsWith('notif_')) continue;
+      console.log(`[NotifSettings PUT] Processing key="${key}", enabled=${enabled}, type=${typeof enabled}`);
+      if (!key.startsWith('notif_')) {
+        console.log(`[NotifSettings PUT] Skipping key="${key}" (no notif_ prefix)`);
+        continue;
+      }
 
       const newValue = String(enabled);
+      console.log(`[NotifSettings PUT] Finding existing for key="${key}"...`);
       const existing = await prisma.platformSetting.findUnique({ where: { key } });
+      console.log(`[NotifSettings PUT] Existing record:`, existing ? JSON.stringify(existing) : 'null');
       const oldValue = existing?.value ?? 'true';
 
-      const setting = await prisma.platformSetting.upsert({
-        where: { key },
-        update: { value: newValue },
-        create: {
-          key,
-          value: newValue,
-          category: 'notifications',
-          label: key,
-          type: 'TEXT',
-        },
-      });
+      console.log(`[NotifSettings PUT] Upserting key="${key}", newValue="${newValue}", oldValue="${oldValue}"...`);
+      try {
+        const setting = await prisma.platformSetting.upsert({
+          where: { key },
+          update: { value: newValue },
+          create: {
+            key,
+            value: newValue,
+            category: 'notifications',
+            label: key,
+            type: 'TEXT',
+          },
+        });
+        console.log(`[NotifSettings PUT] Upsert success for key="${key}", id=${setting.id}`);
 
-      await prisma.platformSettingHistory.create({
-        data: {
-          settingId: setting.id,
-          oldValue,
-          newValue,
-          changedBy: (req as any).user?.email || 'admin',
-        },
-      });
+        console.log(`[NotifSettings PUT] Creating history for settingId=${setting.id}...`);
+        await prisma.platformSettingHistory.create({
+          data: {
+            settingId: setting.id,
+            oldValue,
+            newValue,
+            changedBy: (req as any).user?.email || 'admin',
+          },
+        });
+        console.log(`[NotifSettings PUT] History created for key="${key}"`);
+        processedCount++;
+      } catch (innerError: any) {
+        console.error(`[NotifSettings PUT] ERROR on key="${key}":`, innerError.message);
+        console.error(`[NotifSettings PUT] Error code:`, innerError.code);
+        console.error(`[NotifSettings PUT] Error meta:`, JSON.stringify(innerError.meta));
+        console.error(`[NotifSettings PUT] Full error:`, innerError);
+        throw innerError;
+      }
     }
 
+    console.log(`[NotifSettings PUT] All done. Processed ${processedCount} settings.`);
     invalidateNotificationSettingsCache();
     res.json({ success: true });
-  } catch (error) {
-    console.error('Update notification settings error:', error);
+  } catch (error: any) {
+    console.error('[NotifSettings PUT] FINAL ERROR:', error.message);
+    console.error('[NotifSettings PUT] Error stack:', error.stack);
+    console.error('[NotifSettings PUT] Error code:', error.code);
+    console.error('[NotifSettings PUT] Error meta:', JSON.stringify(error.meta));
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

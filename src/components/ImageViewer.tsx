@@ -13,9 +13,9 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
   const [rotation, setRotation] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchDelta, setTouchDelta] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isAnimatingRef = useRef(false);
 
   const currentImage = images[currentIndex];
   const hasMultiple = images.length > 1;
@@ -25,13 +25,13 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
   }, [currentIndex]);
 
   const goTo = useCallback((index: number) => {
-    if (isAnimating) return;
-    setIsAnimating(true);
+    if (isAnimatingRef.current) return;
+    isAnimatingRef.current = true;
     setCurrentIndex(index);
     setTouchDelta(0);
     if (animTimerRef.current) clearTimeout(animTimerRef.current);
-    animTimerRef.current = setTimeout(() => setIsAnimating(false), 200);
-  }, [isAnimating]);
+    animTimerRef.current = setTimeout(() => { isAnimatingRef.current = false; }, 200);
+  }, []);
 
   const goPrev = useCallback(() => {
     if (currentIndex > 0) goTo(currentIndex - 1);

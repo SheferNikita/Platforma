@@ -655,17 +655,25 @@ function ChatDialog({
   const [viewerIndex, setViewerIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
 
-  const openImageViewer = useCallback((attachments: Attachment[], clickedId: string, itemType: 'diary' | 'question' | 'report' | 'personal') => {
-    const imageAtts = attachments.filter(a => a.mimeType.startsWith('image/'));
-    const imageList = imageAtts.map(a => ({
-      url: getAttachmentUrl(a, itemType),
-      name: a.originalName,
-    }));
-    const clickedIdx = imageAtts.findIndex(a => a.id === clickedId);
-    setViewerImages(imageList);
+  const openImageViewer = useCallback((clickedId: string) => {
+    const allImages: { url: string; name?: string; id: string }[] = [];
+    for (const item of items) {
+      if (!item.attachments) continue;
+      for (const att of item.attachments) {
+        if (att.mimeType.startsWith('image/')) {
+          allImages.push({
+            url: getAttachmentUrl(att, item.type),
+            name: att.originalName,
+            id: att.id,
+          });
+        }
+      }
+    }
+    const clickedIdx = allImages.findIndex(a => a.id === clickedId);
+    setViewerImages(allImages.map(({ url, name }) => ({ url, name })));
     setViewerIndex(clickedIdx >= 0 ? clickedIdx : 0);
     setViewerOpen(true);
-  }, []);
+  }, [items]);
 
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -830,7 +838,7 @@ function ChatDialog({
                                     src={attachmentUrl}
                                     alt={att.originalName}
                                     className="max-w-full rounded-lg max-h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                    onClick={() => openImageViewer(item.attachments || [], att.id, item.type)}
+                                    onClick={() => openImageViewer(att.id)}
                                   />
                                 ) : (
                                   <a

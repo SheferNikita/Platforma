@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { PageWrapper } from '../components/PageWrapper';
-import { ArrowLeft, ArrowRight, List, CheckCircle, ArrowUp, MessageCircle, HelpCircle, BookOpen, Mic, Paperclip, Image, Video, File, X, StopCircle, FileText, NotebookPen, Download, Loader2, Info, ChevronDown } from 'lucide-react';
+import { ArrowLeft, ArrowRight, List, CheckCircle, ArrowUp, MessageCircle, HelpCircle, BookOpen, Mic, Paperclip, Image, Video, File, X, StopCircle, FileText, NotebookPen, Download, Loader2, Info, ChevronDown, Trash2, Undo2 } from 'lucide-react';
 import AudioPlayer from '../components/AudioPlayer';
 import { toast } from 'sonner';
 import { api } from '../lib/api';
@@ -305,6 +305,76 @@ export function LessonDetailPage() {
     questions: false,
   });
   const [chatDataLoaded, setChatDataLoaded] = useState(false);
+
+  const [pendingDeletes, setPendingDeletes] = useState<Record<string, { timer: ReturnType<typeof setTimeout>; countdown: number }>>({});
+  const pendingDeleteTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
+  const pendingDeleteTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const cancelDelete = useCallback((messageId: string) => {
+    setPendingDeletes(prev => {
+      const next = { ...prev };
+      if (next[messageId]?.timer) clearTimeout(next[messageId].timer);
+      delete next[messageId];
+      return next;
+    });
+    if (pendingDeleteTimersRef.current[messageId]) {
+      clearInterval(pendingDeleteTimersRef.current[messageId]);
+      delete pendingDeleteTimersRef.current[messageId];
+    }
+    if (pendingDeleteTimeoutsRef.current[messageId]) {
+      clearTimeout(pendingDeleteTimeoutsRef.current[messageId]);
+      delete pendingDeleteTimeoutsRef.current[messageId];
+    }
+  }, []);
+
+  const startDelete = useCallback((messageId: string, type: 'diary' | 'notes') => {
+    const countdownInterval = setInterval(() => {
+      setPendingDeletes(prev => {
+        if (!prev[messageId]) return prev;
+        const newCountdown = prev[messageId].countdown - 1;
+        if (newCountdown <= 0) return prev;
+        return { ...prev, [messageId]: { ...prev[messageId], countdown: newCountdown } };
+      });
+    }, 1000);
+
+    pendingDeleteTimersRef.current[messageId] = countdownInterval;
+
+    const timer = setTimeout(async () => {
+      clearInterval(countdownInterval);
+      delete pendingDeleteTimersRef.current[messageId];
+      delete pendingDeleteTimeoutsRef.current[messageId];
+      try {
+        const endpoint = type === 'diary'
+          ? `/public/lessons/${lessonId}/diary/${messageId}`
+          : `/public/lessons/${lessonId}/personal-notes/${messageId}`;
+        await api.delete(endpoint);
+        if (type === 'diary') {
+          setDiaryHistory(prev => prev.filter(m => m.id !== messageId));
+        } else {
+          setNotesHistory(prev => prev.filter(m => m.id !== messageId));
+        }
+        toast.success('Сообщение удалено');
+      } catch (err) {
+        console.error('Delete error:', err);
+        toast.error('Ошибка удаления сообщения');
+      }
+      setPendingDeletes(prev => {
+        const next = { ...prev };
+        delete next[messageId];
+        return next;
+      });
+    }, 5000);
+
+    pendingDeleteTimeoutsRef.current[messageId] = timer;
+    setPendingDeletes(prev => ({ ...prev, [messageId]: { timer, countdown: 5 } }));
+  }, [lessonId]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(pendingDeleteTimersRef.current).forEach(clearInterval);
+      Object.values(pendingDeleteTimeoutsRef.current).forEach(clearTimeout);
+    };
+  }, []);
 
   const toggleSection = useCallback((section: string) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -1082,6 +1152,30 @@ export function LessonDetailPage() {
                   key={message.id}
                   className={`flex ${message.author === 'student' ? 'justify-end' : 'justify-start'} animate-fade-in`}
                 >
+                  {message.author === 'student' && !pendingDeletes[message.id] && (
+                    <button
+                      onClick={() => startDelete(message.id, 'diary')}
+                      className="self-center mr-1 p-1 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
+                      title="Удалить сообщение"
+                      style={{ opacity: 0.3 }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.3')}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {pendingDeletes[message.id] ? (
+                    <div className="flex items-center gap-2 max-w-[85%] md:max-w-[70%] rounded-xl px-3 py-2 bg-red-50 border border-red-200 shadow-sm">
+                      <span className="text-xs text-red-600">Удаление через {pendingDeletes[message.id].countdown}с</span>
+                      <button
+                        onClick={() => cancelDelete(message.id)}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-red-200 text-red-600 hover:bg-red-50 text-xs transition-colors"
+                      >
+                        <Undo2 className="w-3 h-3" />
+                        Отменить
+                      </button>
+                    </div>
+                  ) : (
                   <div
                     className={`max-w-[85%] md:max-w-[70%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 ${
                       message.author === 'student'
@@ -1101,7 +1195,6 @@ export function LessonDetailPage() {
                         {message.text}
                       </p>
                     )}
-                    {/* Attached files */}
                     {message.files && message.files.length > 0 && (
                       <div className="mt-1 md:mt-1.5 space-y-1">
                         {message.files.map((file, idx) => (
@@ -1136,6 +1229,7 @@ export function LessonDetailPage() {
                       {message.curatorName && `${message.curatorName} • `}{formatMessageTime(message.timestamp)}
                     </p>
                   </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1249,6 +1343,30 @@ export function LessonDetailPage() {
                   key={message.id}
                   className={`flex ${message.author === 'student' ? 'justify-end' : 'justify-start'} animate-fade-in`}
                 >
+                  {message.author === 'student' && !pendingDeletes[message.id] && (
+                    <button
+                      onClick={() => startDelete(message.id, 'notes')}
+                      className="self-center mr-1 p-1 rounded-full hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
+                      title="Удалить сообщение"
+                      style={{ opacity: 0.3 }}
+                      onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                      onMouseLeave={e => (e.currentTarget.style.opacity = '0.3')}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {pendingDeletes[message.id] ? (
+                    <div className="flex items-center gap-2 max-w-[85%] md:max-w-[70%] rounded-xl px-3 py-2 bg-red-50 border border-red-200 shadow-sm">
+                      <span className="text-xs text-red-600">Удаление через {pendingDeletes[message.id].countdown}с</span>
+                      <button
+                        onClick={() => cancelDelete(message.id)}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-red-200 text-red-600 hover:bg-red-50 text-xs transition-colors"
+                      >
+                        <Undo2 className="w-3 h-3" />
+                        Отменить
+                      </button>
+                    </div>
+                  ) : (
                   <div
                     className={`max-w-[85%] md:max-w-[70%] rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 ${
                       message.author === 'student'
@@ -1268,7 +1386,6 @@ export function LessonDetailPage() {
                         {message.text}
                       </p>
                     )}
-                    {/* Attached files */}
                     {message.files && message.files.length > 0 && (
                       <div className="mt-1 md:mt-1.5 space-y-1">
                         {message.files.map((file, idx) => (
@@ -1303,6 +1420,7 @@ export function LessonDetailPage() {
                       {message.curatorName && `${message.curatorName} • `}{formatMessageTime(message.timestamp)}
                     </p>
                   </div>
+                  )}
                 </div>
               ))}
             </div>

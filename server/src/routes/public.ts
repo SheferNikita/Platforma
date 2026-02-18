@@ -796,6 +796,38 @@ router.post('/lessons/:lessonId/diary', async (req: Request, res: Response) => {
   }
 });
 
+router.delete('/lessons/:lessonId/diary/:diaryId', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const { lessonId, diaryId } = req.params;
+
+    const diary = await prisma.diary.findFirst({
+      where: {
+        id: diaryId,
+        lessonId,
+        studentId: student.studentId
+      }
+    });
+
+    if (!diary) {
+      return res.status(404).json({ error: 'Запись не найдена' });
+    }
+
+    await prisma.diary.delete({
+      where: { id: diaryId }
+    });
+
+    res.json({ message: 'Запись удалена' });
+  } catch (error) {
+    console.error('Delete diary error:', error);
+    res.status(500).json({ error: 'Ошибка удаления записи' });
+  }
+});
+
 // Get student's personal notes (конспект) entries for a lesson (chat format)
 router.get('/lessons/:lessonId/personal-notes', async (req: Request, res: Response) => {
   try {
@@ -928,6 +960,39 @@ router.post('/lessons/:lessonId/personal-notes', async (req: Request, res: Respo
     }
     
     res.status(500).json({ error: 'Ошибка сервера при сохранении конспекта' });
+  }
+});
+
+router.delete('/lessons/:lessonId/personal-notes/:noteId', async (req: Request, res: Response) => {
+  try {
+    const student = await getStudentFromToken(req);
+    if (!student) {
+      return res.status(401).json({ error: 'Требуется авторизация' });
+    }
+
+    const { lessonId, noteId } = req.params;
+
+    const note = await prisma.studentNote.findFirst({
+      where: {
+        id: noteId,
+        lessonId,
+        studentId: student.studentId,
+        noteType: 'notes'
+      }
+    });
+
+    if (!note) {
+      return res.status(404).json({ error: 'Запись не найдена' });
+    }
+
+    await prisma.studentNote.delete({
+      where: { id: noteId }
+    });
+
+    res.json({ message: 'Запись удалена' });
+  } catch (error) {
+    console.error('Delete personal note error:', error);
+    res.status(500).json({ error: 'Ошибка удаления записи' });
   }
 });
 

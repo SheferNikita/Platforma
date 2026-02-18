@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { PageWrapper } from '../components/PageWrapper';
-import { BookOpen, Calendar, ArrowLeft, ChevronDown, ChevronUp, Loader2, User } from 'lucide-react';
+import { BookOpen, Calendar, ArrowLeft, ChevronDown, ChevronUp, Loader2, User, Trash2, Undo2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { toast } from 'sonner';
 
 interface ReplyHistoryItem {
   text: string;
@@ -73,6 +74,68 @@ export function MyDiariesPage() {
     };
     fetchDiaries();
   }, [navigate]);
+
+  const [pendingDeletes, setPendingDeletes] = useState<Record<string, { timer: ReturnType<typeof setTimeout>; countdown: number }>>({});
+  const pendingDeleteTimersRef = useRef<Record<string, ReturnType<typeof setInterval>>>({});
+  const pendingDeleteTimeoutsRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const cancelDelete = useCallback((id: string) => {
+    setPendingDeletes(prev => {
+      const next = { ...prev };
+      if (next[id]?.timer) clearTimeout(next[id].timer);
+      delete next[id];
+      return next;
+    });
+    if (pendingDeleteTimersRef.current[id]) {
+      clearInterval(pendingDeleteTimersRef.current[id]);
+      delete pendingDeleteTimersRef.current[id];
+    }
+    if (pendingDeleteTimeoutsRef.current[id]) {
+      clearTimeout(pendingDeleteTimeoutsRef.current[id]);
+      delete pendingDeleteTimeoutsRef.current[id];
+    }
+  }, []);
+
+  const startDelete = useCallback((diary: DiaryEntry) => {
+    const countdownInterval = setInterval(() => {
+      setPendingDeletes(prev => {
+        if (!prev[diary.id]) return prev;
+        const newCountdown = prev[diary.id].countdown - 1;
+        if (newCountdown <= 0) return prev;
+        return { ...prev, [diary.id]: { ...prev[diary.id], countdown: newCountdown } };
+      });
+    }, 1000);
+    pendingDeleteTimersRef.current[diary.id] = countdownInterval;
+
+    const timer = setTimeout(async () => {
+      clearInterval(countdownInterval);
+      delete pendingDeleteTimersRef.current[diary.id];
+      delete pendingDeleteTimeoutsRef.current[diary.id];
+      try {
+        await api.delete(`/public/lessons/${diary.lessonId}/diary/${diary.id}`);
+        setDiaries(prev => prev.filter(d => d.id !== diary.id));
+        toast.success('Запись удалена');
+      } catch (err) {
+        console.error('Delete diary error:', err);
+        toast.error('Ошибка удаления записи');
+      }
+      setPendingDeletes(prev => {
+        const next = { ...prev };
+        delete next[diary.id];
+        return next;
+      });
+    }, 5000);
+
+    pendingDeleteTimeoutsRef.current[diary.id] = timer;
+    setPendingDeletes(prev => ({ ...prev, [diary.id]: { timer, countdown: 5 } }));
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      Object.values(pendingDeleteTimersRef.current).forEach(clearInterval);
+      Object.values(pendingDeleteTimeoutsRef.current).forEach(clearTimeout);
+    };
+  }, []);
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
@@ -173,6 +236,26 @@ export function MyDiariesPage() {
                       })}</span>
                     </div>
                   </div>
+                  {pendingDeletes[diary.id] ? (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 rounded-xl">
+                      <span className="text-xs text-red-600">Удаление через {pendingDeletes[diary.id].countdown}с</span>
+                      <button
+                        onClick={() => cancelDelete(diary.id)}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-red-200 text-red-600 hover:bg-red-50 text-xs transition-colors"
+                      >
+                        <Undo2 className="w-3 h-3" />
+                        Отменить
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => startDelete(diary)}
+                      className="p-2 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-400 transition-all"
+                      title="Удалить запись"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
                 <div className="relative">

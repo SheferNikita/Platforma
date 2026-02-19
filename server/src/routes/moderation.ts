@@ -475,20 +475,29 @@ router.get('/mini-groups', async (req: AuthRequest, res: Response) => {
   }
 });
 
+const attachmentSchema = z.object({
+  filename: z.string(),
+  originalName: z.string(),
+  mimeType: z.string(),
+  size: z.number(),
+  data: z.string()
+});
+
 const replySchema = z.object({
   reply: z.string(),
   audioData: z.string().optional(),
   audioDuration: z.number().optional(),
-  audioMimeType: z.string().optional()
+  audioMimeType: z.string().optional(),
+  attachments: z.array(attachmentSchema).optional()
 });
 
 router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { reply, audioData, audioDuration, audioMimeType } = replySchema.parse(req.body);
+    const { reply, audioData, audioDuration, audioMimeType, attachments } = replySchema.parse(req.body);
 
-    if (!reply.trim() && !audioData) {
-      return res.status(400).json({ error: 'Необходим текст или голосовое сообщение' });
+    if (!reply.trim() && !audioData && (!attachments || attachments.length === 0)) {
+      return res.status(400).json({ error: 'Необходим текст, голосовое сообщение или файл' });
     }
 
     const existingDiary = await prisma.diary.findUnique({
@@ -496,7 +505,7 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
       select: { reply: true }
     });
 
-    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string }> = [];
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string; fileAttachmentIds?: string[] }> = [];
     
     if (existingDiary?.reply) {
       try {
@@ -523,7 +532,7 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string } = {
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string; fileAttachmentIds?: string[] } = {
       text: audioData ? '🎤 Голосовое сообщение' : reply,
       authorId: req.user!.id,
       authorName: req.user!.name,
@@ -548,6 +557,28 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
       newMessage.audioAttachmentId = attachment.id;
       newMessage.audioDuration = audioDuration;
       newMessage.audioMimeType = mime;
+    }
+
+    if (attachments && attachments.length > 0) {
+      const fileAttachmentIds: string[] = [];
+      for (const att of attachments) {
+        const cleanData = att.data.includes(',') ? att.data.split(',')[1] : att.data;
+        const created = await prisma.diaryAttachment.create({
+          data: {
+            diaryId: id,
+            filename: att.filename,
+            originalName: att.originalName,
+            mimeType: att.mimeType,
+            size: att.size,
+            data: cleanData,
+          }
+        });
+        fileAttachmentIds.push(created.id);
+      }
+      newMessage.fileAttachmentIds = fileAttachmentIds;
+      if (!audioData && !reply.trim()) {
+        newMessage.text = `📎 ${attachments.length > 1 ? `${attachments.length} файлов` : attachments[0].originalName}`;
+      }
     }
 
     replyHistory.push(newMessage);
@@ -586,10 +617,10 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
 router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
   try {
     const id = req.params.id as string;
-    const { reply, audioData, audioDuration, audioMimeType } = replySchema.parse(req.body);
+    const { reply, audioData, audioDuration, audioMimeType, attachments } = replySchema.parse(req.body);
 
-    if (!reply.trim() && !audioData) {
-      return res.status(400).json({ error: 'Необходим текст или голосовое сообщение' });
+    if (!reply.trim() && !audioData && (!attachments || attachments.length === 0)) {
+      return res.status(400).json({ error: 'Необходим текст, голосовое сообщение или файл' });
     }
 
     const existingNote = await prisma.studentNote.findUnique({
@@ -597,7 +628,7 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
       select: { reply: true }
     });
 
-    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string }> = [];
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string; fileAttachmentIds?: string[] }> = [];
     
     if (existingNote?.reply) {
       try {
@@ -624,7 +655,7 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string } = {
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string; fileAttachmentIds?: string[] } = {
       text: audioData ? '🎤 Голосовое сообщение' : reply,
       authorId: req.user!.id,
       authorName: req.user!.name,
@@ -649,6 +680,28 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
       newMessage.audioAttachmentId = attachment.id;
       newMessage.audioDuration = audioDuration;
       newMessage.audioMimeType = mime;
+    }
+
+    if (attachments && attachments.length > 0) {
+      const fileAttachmentIds: string[] = [];
+      for (const att of attachments) {
+        const cleanData = att.data.includes(',') ? att.data.split(',')[1] : att.data;
+        const created = await prisma.noteAttachment.create({
+          data: {
+            noteId: id,
+            filename: att.filename,
+            originalName: att.originalName,
+            mimeType: att.mimeType,
+            size: att.size,
+            data: cleanData,
+          }
+        });
+        fileAttachmentIds.push(created.id);
+      }
+      newMessage.fileAttachmentIds = fileAttachmentIds;
+      if (!audioData && !reply.trim()) {
+        newMessage.text = `📎 ${attachments.length > 1 ? `${attachments.length} файлов` : attachments[0].originalName}`;
+      }
     }
 
     replyHistory.push(newMessage);

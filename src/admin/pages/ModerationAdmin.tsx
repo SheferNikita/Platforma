@@ -39,6 +39,7 @@ interface ReplyMessage {
   audioDuration?: number;
   audioMimeType?: string;
   audioAttachmentId?: string;
+  fileAttachmentIds?: string[];
 }
 
 function parseReplyHistory(reply: string | null): ReplyMessage[] {
@@ -270,9 +271,10 @@ export function ModerationAdmin() {
     return dialogItems.length > 0 ? dialogItems[dialogItems.length - 1] : null;
   }
 
-  async function submitReply() {
+  async function submitReply(files?: File[]) {
     const targetItem = getTargetItem();
-    if (!targetItem || !replyText.trim()) return;
+    const hasFiles = files && files.length > 0;
+    if (!targetItem || (!replyText.trim() && !hasFiles)) return;
 
     setSubmitting(true);
     try {
@@ -280,7 +282,31 @@ export function ModerationAdmin() {
         ? `/public/moderation/diary/${targetItem.id}/reply`
         : `/public/moderation/note/${targetItem.id}/reply`;
 
-      await api.post<ModerationItem>(endpoint, { reply: replyText });
+      let attachments: Array<{ filename: string; originalName: string; mimeType: string; size: number; data: string }> | undefined;
+      if (hasFiles) {
+        attachments = await Promise.all(
+          files.map(async (file) => {
+            const base64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onload = () => resolve((reader.result as string).split(',')[1]);
+              reader.onerror = reject;
+            });
+            return {
+              filename: `${Date.now()}_${file.name}`,
+              originalName: file.name,
+              mimeType: file.type || 'application/octet-stream',
+              size: file.size,
+              data: base64
+            };
+          })
+        );
+      }
+
+      await api.post<ModerationItem>(endpoint, { 
+        reply: replyText,
+        attachments: attachments && attachments.length > 0 ? attachments : undefined
+      });
       toast.success('Сообщение отправлено');
       setReplyText('');
       await Promise.all([reloadDialogItems(), loadDialogs(0, true)]);
@@ -645,13 +671,15 @@ function ChatDialog({
   submitting: boolean;
   hasUnanswered: boolean;
   onClose: () => void;
-  onSubmitReply: () => void;
+  onSubmitReply: (files?: File[]) => void;
   onSubmitAudioReply: (audioData: string, duration: number, mimeType?: string) => void;
   onMarkAsViewed: () => void;
 }) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const TypeIcon = typeConfig[dialog.type]?.icon || BookOpen;
 
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [viewerImages, setViewerImages] = useState<{ url: string; name?: string }[]>([]);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -915,8 +943,28 @@ function ChatDialog({
                             duration={msg.audioDuration}
                             variant="dark"
                           />
-                        ) : (
+                        ) : null}
+                        {!msg.audioAttachmentId && !msg.audioData && msg.text && (
                           <p className="whitespace-pre-wrap text-sm md:text-base">{msg.text}</p>
+                        )}
+                        {msg.audioAttachmentId && msg.text && msg.text !== '🎤 Голосовое сообщение' && (
+                          <p className="whitespace-pre-wrap text-sm md:text-base mt-2">{msg.text}</p>
+                        )}
+                        {msg.fileAttachmentIds && msg.fileAttachmentIds.length > 0 && (
+                          <div className="mt-2 space-y-1.5">
+                            {msg.fileAttachmentIds.map((attId) => (
+                              <a
+                                key={attId}
+                                href={`/api/public/attachments/${dialog.type === 'diary' ? 'diary' : 'note'}/${attId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-lg px-3 py-2 transition-colors"
+                              >
+                                <Download className="w-4 h-4 flex-shrink-0" />
+                                <span className="text-sm truncate">Скачать вложение</span>
+                              </a>
+                            ))}
+                          </div>
                         )}
                       </div>
                       <div className="flex items-center justify-end gap-2 mt-1">
@@ -985,32 +1033,72 @@ function ChatDialog({
 
           {/* Text Input */}
           {!audioUrl && !isRecording && !isPaused && (
-            <div className="flex items-end gap-3">
-              <div className="flex-1">
-                <textarea
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  rows={3}
-                  className="w-full px-4 py-3 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] resize-none text-sm md:text-base"
-                  placeholder="Напишите сообщение..."
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={startRecording}
-                  className="p-3 bg-[#f5f3ed] text-[#a67c52] rounded-xl hover:bg-[#ebe7dd] transition-all border border-[#d4c9b0]"
-                  title="Записать голосовое сообщение"
-                >
-                  <Mic className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={onSubmitReply}
-                  disabled={!replyText.trim() || submitting}
-                  className="p-3 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl disabled:opacity-50 hover:shadow-lg transition-all"
-                  title="Отправить сообщение"
-                >
-                  <Send className="w-5 h-5" />
-                </button>
+            <div>
+              {attachedFiles.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {attachedFiles.map((file, idx) => (
+                    <div key={idx} className="flex items-center gap-2 bg-[#f5f3ed] px-3 py-1.5 rounded-lg border border-[#d4c9b0] text-sm">
+                      {file.type.startsWith('image/') ? <Image className="w-4 h-4 text-[#a67c52]" /> : <File className="w-4 h-4 text-[#a67c52]" />}
+                      <span className="max-w-[150px] truncate text-[#3d3527]">{file.name}</span>
+                      <span className="text-[#3d3527]/40 text-xs">({(file.size / 1024).toFixed(0)} КБ)</span>
+                      <button onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <textarea
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    rows={3}
+                    className="w-full px-4 py-3 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] resize-none text-sm md:text-base"
+                    placeholder="Напишите сообщение..."
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+                    className="hidden"
+                    onChange={(e) => {
+                      const files = e.target.files;
+                      if (files) {
+                        setAttachedFiles(prev => [...prev, ...Array.from(files)]);
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-3 bg-[#f5f3ed] text-[#a67c52] rounded-xl hover:bg-[#ebe7dd] transition-all border border-[#d4c9b0]"
+                    title="Прикрепить файл"
+                  >
+                    <Paperclip className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={startRecording}
+                    className="p-3 bg-[#f5f3ed] text-[#a67c52] rounded-xl hover:bg-[#ebe7dd] transition-all border border-[#d4c9b0]"
+                    title="Записать голосовое сообщение"
+                  >
+                    <Mic className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      onSubmitReply(attachedFiles.length > 0 ? attachedFiles : undefined);
+                      setAttachedFiles([]);
+                    }}
+                    disabled={(!replyText.trim() && attachedFiles.length === 0) || submitting}
+                    className="p-3 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl disabled:opacity-50 hover:shadow-lg transition-all"
+                    title="Отправить сообщение"
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </div>
           )}

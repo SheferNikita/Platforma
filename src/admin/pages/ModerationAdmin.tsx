@@ -854,15 +854,6 @@ function ChatDialog({
           </button>
         </div>
 
-        {/* Description */}
-        <div className="px-4 md:px-6 py-3 bg-[#f5f3ed]/50 border-b border-[#d4c9b0]/20">
-          <p className="text-sm text-[#3d3527]/70">
-            {dialog.type === 'diary' && 'Запишите свои мысли, эмоции и впечатления от пройденного урока'}
-            {dialog.type === 'question' && 'Вопрос от ученика по содержанию урока'}
-            {dialog.type === 'report' && 'Отчет ученика о выполнении задания'}
-          </p>
-        </div>
-
         {/* Chat Messages Area */}
         <div
           ref={chatContainerRef}

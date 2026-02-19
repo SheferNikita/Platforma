@@ -496,7 +496,7 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
       select: { reply: true }
     });
 
-    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string }> = [];
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string }> = [];
     
     if (existingDiary?.reply) {
       try {
@@ -523,7 +523,7 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string } = {
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string } = {
       text: audioData ? '🎤 Голосовое сообщение' : reply,
       authorId: req.user!.id,
       authorName: req.user!.name,
@@ -532,9 +532,22 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
     };
 
     if (audioData) {
-      newMessage.audioData = audioData.includes(',') ? audioData.split(',')[1] : audioData;
+      const cleanAudioData = audioData.includes(',') ? audioData.split(',')[1] : audioData;
+      const mime = audioMimeType || 'audio/webm';
+      const ext = mime.includes('mp4') ? 'mp4' : mime.includes('ogg') ? 'ogg' : 'webm';
+      const attachment = await prisma.diaryAttachment.create({
+        data: {
+          diaryId: id,
+          filename: `voice_reply_${Date.now()}.${ext}`,
+          originalName: `Голосовое сообщение.${ext}`,
+          mimeType: mime,
+          size: Math.ceil(cleanAudioData.length * 0.75),
+          data: cleanAudioData,
+        }
+      });
+      newMessage.audioAttachmentId = attachment.id;
       newMessage.audioDuration = audioDuration;
-      newMessage.audioMimeType = audioMimeType || 'audio/webm';
+      newMessage.audioMimeType = mime;
     }
 
     replyHistory.push(newMessage);
@@ -584,7 +597,7 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
       select: { reply: true }
     });
 
-    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string }> = [];
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string }> = [];
     
     if (existingNote?.reply) {
       try {
@@ -611,7 +624,7 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string } = {
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string } = {
       text: audioData ? '🎤 Голосовое сообщение' : reply,
       authorId: req.user!.id,
       authorName: req.user!.name,
@@ -620,9 +633,22 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
     };
 
     if (audioData) {
-      newMessage.audioData = audioData.includes(',') ? audioData.split(',')[1] : audioData;
+      const cleanAudioData = audioData.includes(',') ? audioData.split(',')[1] : audioData;
+      const mime = audioMimeType || 'audio/webm';
+      const ext = mime.includes('mp4') ? 'mp4' : mime.includes('ogg') ? 'ogg' : 'webm';
+      const attachment = await prisma.noteAttachment.create({
+        data: {
+          noteId: id,
+          filename: `voice_reply_${Date.now()}.${ext}`,
+          originalName: `Голосовое сообщение.${ext}`,
+          mimeType: mime,
+          size: Math.ceil(cleanAudioData.length * 0.75),
+          data: cleanAudioData,
+        }
+      });
+      newMessage.audioAttachmentId = attachment.id;
       newMessage.audioDuration = audioDuration;
-      newMessage.audioMimeType = audioMimeType || 'audio/webm';
+      newMessage.audioMimeType = mime;
     }
 
     replyHistory.push(newMessage);

@@ -2,7 +2,8 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Play, Pause } from 'lucide-react';
 
 interface AudioPlayerProps {
-  audioData: string;
+  audioData?: string;
+  audioUrl?: string;
   mimeType?: string;
   duration?: number;
   variant?: 'light' | 'dark';
@@ -14,7 +15,7 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function AudioPlayer({ audioData, mimeType, duration, variant = 'light' }: AudioPlayerProps) {
+export default function AudioPlayer({ audioData, audioUrl, mimeType, duration, variant = 'light' }: AudioPlayerProps) {
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -23,7 +24,7 @@ export default function AudioPlayer({ audioData, mimeType, duration, variant = '
   const animFrameRef = useRef<number>(0);
 
   const resolvedMime = mimeType || 'audio/webm';
-  const src = `data:${resolvedMime};base64,${audioData}`;
+  const src = audioUrl || `data:${resolvedMime};base64,${audioData || ''}`;
 
   const cleanup = useCallback(() => {
     if (animFrameRef.current) {

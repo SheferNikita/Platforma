@@ -38,6 +38,7 @@ interface ReplyMessage {
   audioData?: string;
   audioDuration?: number;
   audioMimeType?: string;
+  audioAttachmentId?: string;
 }
 
 function parseReplyHistory(reply: string | null): ReplyMessage[] {
@@ -875,7 +876,14 @@ function ChatDialog({
                   <div key={`${item.id}-reply-${index}`} className="flex justify-end">
                     <div className="max-w-[85%] md:max-w-[75%]">
                       <div className="bg-gradient-to-br from-[#a67c52] to-[#c4a57b] text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-sm">
-                        {msg.audioData ? (
+                        {msg.audioAttachmentId ? (
+                          <AudioPlayer
+                            audioUrl={`/api/public/attachments/${dialog.type === 'diary' ? 'diary' : 'note'}/${msg.audioAttachmentId}`}
+                            mimeType={msg.audioMimeType}
+                            duration={msg.audioDuration}
+                            variant="dark"
+                          />
+                        ) : msg.audioData ? (
                           <AudioPlayer
                             audioData={msg.audioData}
                             mimeType={msg.audioMimeType}

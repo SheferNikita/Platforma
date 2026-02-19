@@ -81,6 +81,7 @@ interface ChatMessage {
   audioData?: string;
   audioMimeType?: string;
   audioDuration?: number;
+  audioAttachmentId?: string;
   curatorName?: string;
 }
 
@@ -113,6 +114,7 @@ interface ReplyHistoryItem {
   audioData?: string;
   audioMimeType?: string;
   audioDuration?: number;
+  audioAttachmentId?: string;
 }
 
 function parseReplyHistory(reply: string | null): ReplyHistoryItem[] {
@@ -436,7 +438,8 @@ export function LessonDetailPage() {
             curatorName: replyItem.authorName,
             audioData: replyItem.audioData,
             audioDuration: replyItem.audioDuration,
-            hasAudio: !!replyItem.audioData
+            audioAttachmentId: replyItem.audioAttachmentId,
+            hasAudio: !!(replyItem.audioData || replyItem.audioAttachmentId)
           });
         });
       }
@@ -1221,7 +1224,14 @@ export function LessonDetailPage() {
                         : 'bg-white/90 border border-[var(--sky-light)]/40 rounded-bl-md'
                     } shadow-sm`}
                   >
-                    {message.audioData ? (
+                    {message.audioAttachmentId ? (
+                      <AudioPlayer
+                        audioUrl={`/api/public/attachments/diary/${message.audioAttachmentId}`}
+                        mimeType={message.audioMimeType}
+                        duration={message.audioDuration}
+                        variant={message.author === 'student' ? 'dark' : 'light'}
+                      />
+                    ) : message.audioData ? (
                       <AudioPlayer
                         audioData={message.audioData}
                         mimeType={message.audioMimeType}
@@ -1448,7 +1458,14 @@ export function LessonDetailPage() {
                         : 'bg-white/90 border border-[var(--sky-light)]/40 rounded-bl-md'
                     } shadow-sm`}
                   >
-                    {message.audioData ? (
+                    {message.audioAttachmentId ? (
+                      <AudioPlayer
+                        audioUrl={`/api/public/attachments/note/${message.audioAttachmentId}`}
+                        mimeType={message.audioMimeType}
+                        duration={message.audioDuration}
+                        variant={message.author === 'student' ? 'dark' : 'light'}
+                      />
+                    ) : message.audioData ? (
                       <AudioPlayer
                         audioData={message.audioData}
                         mimeType={message.audioMimeType}

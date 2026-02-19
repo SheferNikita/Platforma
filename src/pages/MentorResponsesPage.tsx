@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PageWrapper } from '../components/PageWrapper';
-import { MessageCircle, BookOpen, FileText, ArrowLeft, ChevronDown, ChevronUp, Loader2, User, Volume2, Send, Mic, StopCircle, Paperclip, X, Image, File } from 'lucide-react';
+import { MessageCircle, BookOpen, FileText, ArrowLeft, ChevronDown, ChevronUp, Loader2, User, Volume2, Send, Mic, StopCircle, Paperclip, X, Image, File, Pause, Play, Square } from 'lucide-react';
 import AudioPlayer from '../components/AudioPlayer';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { api } from '../lib/api';
@@ -117,6 +117,7 @@ export function MentorResponsesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
   
@@ -202,6 +203,7 @@ export function MentorResponsesPage() {
 
       recorder.start();
       setIsRecording(true);
+      setIsPaused(false);
       setRecordingTime(0);
 
       timerRef.current = setInterval(() => {
@@ -223,16 +225,39 @@ export function MentorResponsesPage() {
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && (isRecording || isPaused)) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      setIsPaused(false);
       toast.success('Запись остановлена');
+    }
+  };
+
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current && isRecording && !isPaused) {
+      mediaRecorderRef.current.pause();
+      setIsPaused(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  };
+
+  const resumeRecording = () => {
+    if (mediaRecorderRef.current && isPaused) {
+      mediaRecorderRef.current.resume();
+      setIsPaused(false);
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
     }
   };
 
   const removeAudio = () => {
     setAudioBlob(null);
     setRecordingTime(0);
+    setIsPaused(false);
   };
 
   const formatTime = (seconds: number) => {
@@ -591,10 +616,12 @@ export function MentorResponsesPage() {
                                     </div>
                                   )}
                                   
-                                  {isRecording && (
-                                    <div className="mt-2 flex items-center gap-2 text-red-500">
-                                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                                      <span className="text-sm">Запись: {formatTime(recordingTime)}</span>
+                                  {(isRecording || isPaused) && (
+                                    <div className="mt-2 flex items-center gap-2">
+                                      <div className={`w-2 h-2 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}`} />
+                                      <span className={`text-sm ${isPaused ? 'text-yellow-600' : 'text-red-500'}`}>
+                                        {isPaused ? 'Пауза' : 'Запись'}: {formatTime(recordingTime)}
+                                      </span>
                                     </div>
                                   )}
                                   
@@ -608,14 +635,23 @@ export function MentorResponsesPage() {
                                         <Paperclip className="w-5 h-5 text-[#8b7355]" />
                                       </button>
                                       
-                                      {isRecording ? (
-                                        <button
-                                          onClick={stopRecording}
-                                          className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
-                                          title="Остановить запись"
-                                        >
-                                          <StopCircle className="w-5 h-5" />
-                                        </button>
+                                      {(isRecording || isPaused) ? (
+                                        <div className="flex items-center gap-1">
+                                          <button
+                                            onClick={isPaused ? resumeRecording : pauseRecording}
+                                            className={`p-2 rounded-lg transition-colors ${isPaused ? 'bg-green-100 text-green-600 hover:bg-green-200' : 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'}`}
+                                            title={isPaused ? 'Продолжить запись' : 'Пауза'}
+                                          >
+                                            {isPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
+                                          </button>
+                                          <button
+                                            onClick={stopRecording}
+                                            className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                                            title="Остановить запись"
+                                          >
+                                            <Square className="w-5 h-5" />
+                                          </button>
+                                        </div>
                                       ) : (
                                         <button
                                           onClick={startRecording}

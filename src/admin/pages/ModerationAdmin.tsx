@@ -677,6 +677,7 @@ function ChatDialog({
   }, [items]);
 
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -722,6 +723,7 @@ function ChatDialog({
 
       recorder.start();
       setIsRecording(true);
+      setIsPaused(false);
       setRecordingTime(0);
       timerRef.current = setInterval(() => {
         setRecordingTime(t => t + 1);
@@ -732,13 +734,35 @@ function ChatDialog({
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && (isRecording || isPaused)) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      setIsPaused(false);
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
+    }
+  };
+
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current && isRecording && !isPaused) {
+      mediaRecorderRef.current.pause();
+      setIsPaused(true);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+  };
+
+  const resumeRecording = () => {
+    if (mediaRecorderRef.current && isPaused) {
+      mediaRecorderRef.current.resume();
+      setIsPaused(false);
+      timerRef.current = setInterval(() => {
+        setRecordingTime(t => t + 1);
+      }, 1000);
     }
   };
 
@@ -747,6 +771,7 @@ function ChatDialog({
     setAudioBlob(null);
     setAudioUrl(null);
     setRecordingTime(0);
+    setIsPaused(false);
   };
 
   const sendAudioMessage = async () => {
@@ -911,11 +936,20 @@ function ChatDialog({
         {/* Reply Input Area */}
         <div className="p-4 md:p-6 border-t border-[#d4c9b0]/30 bg-white rounded-b-2xl">
           {/* Recording UI */}
-          {isRecording && (
+          {(isRecording || isPaused) && (
             <div className="flex items-center gap-3 mb-4 p-3 bg-red-50 rounded-xl border border-red-200">
-              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-red-600 font-medium">Запись: {formatTime(recordingTime)}</span>
+              <div className={`w-3 h-3 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}`} />
+              <span className={`font-medium ${isPaused ? 'text-yellow-600' : 'text-red-600'}`}>
+                {isPaused ? 'Пауза' : 'Запись'}: {formatTime(recordingTime)}
+              </span>
               <div className="flex-1" />
+              <button
+                onClick={isPaused ? resumeRecording : pauseRecording}
+                className={`p-2 rounded-lg transition-colors ${isPaused ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}`}
+                title={isPaused ? 'Продолжить запись' : 'Пауза'}
+              >
+                {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+              </button>
               <button
                 onClick={stopRecording}
                 className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
@@ -927,7 +961,7 @@ function ChatDialog({
           )}
 
           {/* Recorded Audio Preview */}
-          {audioUrl && !isRecording && (
+          {audioUrl && !isRecording && !isPaused && (
             <div className="flex items-center gap-3 mb-4 p-3 bg-[#f5f3ed] rounded-xl border border-[#d4c9b0]">
               <audio src={audioUrl} controls className="flex-1 h-10" />
               <span className="text-sm text-[#3d3527]/60">{formatTime(recordingTime)}</span>
@@ -950,7 +984,7 @@ function ChatDialog({
           )}
 
           {/* Text Input */}
-          {!audioUrl && !isRecording && (
+          {!audioUrl && !isRecording && !isPaused && (
             <div className="flex items-end gap-3">
               <div className="flex-1">
                 <textarea

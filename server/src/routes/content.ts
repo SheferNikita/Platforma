@@ -425,15 +425,17 @@ router.post('/library', moderatorRoles, async (req: AuthRequest, res: Response) 
       VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'LIBRARY', ${item.id}, ${JSON.stringify({ title: item.title })}::jsonb, ${JSON.stringify(item)}::jsonb, NOW())
     `;
 
-    const activeStudents = await prisma.student.findMany({
-      where: { user: { isActive: true } },
-      select: { userId: true }
-    });
-    await Promise.all(
-      activeStudents.map(s => 
-        notificationService.createForNewLibraryItem(s.userId, item.title, item.id)
-      )
-    );
+    if (item.isPublished) {
+      const activeStudents = await prisma.student.findMany({
+        where: { user: { isActive: true } },
+        select: { userId: true }
+      });
+      await Promise.all(
+        activeStudents.map(s => 
+          notificationService.createForNewLibraryItem(s.userId, item.title, item.id)
+        )
+      );
+    }
 
     res.status(201).json(item);
   } catch (error) {
@@ -452,6 +454,18 @@ router.put('/library/:id', moderatorRoles, async (req: AuthRequest & Request<IdP
       INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
       VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'LIBRARY', ${id}, ${JSON.stringify({ title: item.title })}::jsonb, ${JSON.stringify(oldItem)}::jsonb, ${JSON.stringify(item)}::jsonb, NOW())
     `;
+
+    if (!oldItem?.isPublished && item.isPublished) {
+      const activeStudents = await prisma.student.findMany({
+        where: { user: { isActive: true } },
+        select: { userId: true }
+      });
+      await Promise.all(
+        activeStudents.map(s => 
+          notificationService.createForNewLibraryItem(s.userId, item.title, item.id)
+        )
+      );
+    }
     
     res.json(item);
   } catch (error) {
@@ -512,11 +526,12 @@ router.get('/schedule', moderatorRoles, async (req: AuthRequest, res: Response) 
 
 router.post('/schedule', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
-    const { date, allowedTariffs, ...rest } = req.body;
+    const { date, allowedTariffs, isPublished, ...rest } = req.body;
     const isoDate = date ? new Date(date).toISOString() : new Date().toISOString();
     const tariffs = Array.isArray(allowedTariffs) ? allowedTariffs : [];
+    const published = isPublished !== undefined ? isPublished : true;
     const event = await prisma.scheduleEvent.create({ 
-      data: { ...rest, date: isoDate, isPublished: true },
+      data: { ...rest, date: isoDate, isPublished: published },
       include: { miniGroup: true }
     });
 
@@ -531,15 +546,17 @@ router.post('/schedule', moderatorRoles, async (req: AuthRequest, res: Response)
       VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'SCHEDULE', ${event.id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(eventWithTariffs)}::jsonb, NOW())
     `;
 
-    const activeStudents = await prisma.student.findMany({
-      where: { user: { isActive: true } },
-      select: { userId: true }
-    });
-    await Promise.all(
-      activeStudents.map(s => 
-        notificationService.createForNewEvent(s.userId, event.title, event.id)
-      )
-    );
+    if (event.isPublished) {
+      const activeStudents = await prisma.student.findMany({
+        where: { user: { isActive: true } },
+        select: { userId: true }
+      });
+      await Promise.all(
+        activeStudents.map(s => 
+          notificationService.createForNewEvent(s.userId, event.title, event.id)
+        )
+      );
+    }
 
     res.status(201).json(eventWithTariffs);
   } catch (error) {
@@ -574,6 +591,18 @@ router.put('/schedule/:id', moderatorRoles, async (req: AuthRequest & Request<Id
       INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
       VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'SCHEDULE', ${id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(oldEvent)}::jsonb, ${JSON.stringify(eventWithTariffs)}::jsonb, NOW())
     `;
+
+    if (!prismaOldEvent?.isPublished && event.isPublished) {
+      const activeStudents = await prisma.student.findMany({
+        where: { user: { isActive: true } },
+        select: { userId: true }
+      });
+      await Promise.all(
+        activeStudents.map(s => 
+          notificationService.createForNewEvent(s.userId, event.title, event.id)
+        )
+      );
+    }
     
     res.json(eventWithTariffs);
   } catch (error) {

@@ -83,6 +83,8 @@ interface ChatMessage {
   audioDuration?: number;
   audioAttachmentId?: string;
   curatorName?: string;
+  fileAttachmentIds?: string[];
+  chatType?: 'diary' | 'notes' | 'question';
 }
 
 interface AttachmentFromAPI {
@@ -115,6 +117,7 @@ interface ReplyHistoryItem {
   audioMimeType?: string;
   audioDuration?: number;
   audioAttachmentId?: string;
+  fileAttachmentIds?: string[];
 }
 
 function parseReplyHistory(reply: string | null): ReplyHistoryItem[] {
@@ -439,7 +442,9 @@ export function LessonDetailPage() {
             audioData: replyItem.audioData,
             audioDuration: replyItem.audioDuration,
             audioAttachmentId: replyItem.audioAttachmentId,
-            hasAudio: !!(replyItem.audioData || replyItem.audioAttachmentId)
+            hasAudio: !!(replyItem.audioData || replyItem.audioAttachmentId),
+            fileAttachmentIds: replyItem.fileAttachmentIds,
+            chatType: type === 'diary' ? 'diary' : 'notes'
           });
         });
       }
@@ -1238,10 +1243,34 @@ export function LessonDetailPage() {
                         duration={message.audioDuration}
                         variant={message.author === 'student' ? 'dark' : 'light'}
                       />
-                    ) : (
+                    ) : null}
+                    {!message.audioAttachmentId && !message.audioData && message.text && !message.text.startsWith('📎') && (
                       <p className={`text-xs md:text-sm leading-snug ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
                         {message.text}
                       </p>
+                    )}
+                    {(message.audioAttachmentId || message.audioData) && message.text && message.text !== '🎤 Голосовое сообщение' && !message.text.startsWith('📎') && (
+                      <p className={`text-xs md:text-sm leading-snug mt-1 ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
+                        {message.text}
+                      </p>
+                    )}
+                    {message.fileAttachmentIds && message.fileAttachmentIds.length > 0 && (
+                      <div className="mt-1.5 space-y-1">
+                        {message.fileAttachmentIds.map((attId) => (
+                          <a
+                            key={attId}
+                            href={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${attId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[10px] md:text-xs transition-colors ${
+                              message.author === 'student' ? 'bg-white/20 hover:bg-white/30' : 'bg-[var(--sky-soft)]/30 hover:bg-[var(--sky-soft)]/50'
+                            }`}
+                          >
+                            <Download className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">Скачать вложение</span>
+                          </a>
+                        ))}
+                      </div>
                     )}
                     {message.files && message.files.length > 0 && (
                       <div className="mt-1 md:mt-1.5 space-y-1">
@@ -1472,10 +1501,34 @@ export function LessonDetailPage() {
                         duration={message.audioDuration}
                         variant={message.author === 'student' ? 'dark' : 'light'}
                       />
-                    ) : (
+                    ) : null}
+                    {!message.audioAttachmentId && !message.audioData && message.text && !message.text.startsWith('📎') && (
                       <p className={`text-xs md:text-sm leading-snug ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
                         {message.text}
                       </p>
+                    )}
+                    {(message.audioAttachmentId || message.audioData) && message.text && message.text !== '🎤 Голосовое сообщение' && !message.text.startsWith('📎') && (
+                      <p className={`text-xs md:text-sm leading-snug mt-1 ${message.author === 'curator' ? 'text-gray-800' : ''}`}>
+                        {message.text}
+                      </p>
+                    )}
+                    {message.fileAttachmentIds && message.fileAttachmentIds.length > 0 && (
+                      <div className="mt-1.5 space-y-1">
+                        {message.fileAttachmentIds.map((attId) => (
+                          <a
+                            key={attId}
+                            href={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${attId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[10px] md:text-xs transition-colors ${
+                              message.author === 'student' ? 'bg-white/20 hover:bg-white/30' : 'bg-[var(--sky-soft)]/30 hover:bg-[var(--sky-soft)]/50'
+                            }`}
+                          >
+                            <Download className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">Скачать вложение</span>
+                          </a>
+                        ))}
+                      </div>
                     )}
                     {message.files && message.files.length > 0 && (
                       <div className="mt-1 md:mt-1.5 space-y-1">

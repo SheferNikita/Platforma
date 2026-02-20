@@ -84,6 +84,7 @@ interface ChatMessage {
   audioAttachmentId?: string;
   curatorName?: string;
   fileAttachmentIds?: string[];
+  fileAttachments?: FileAttachmentInfo[];
   chatType?: 'diary' | 'notes' | 'question';
 }
 
@@ -107,6 +108,12 @@ interface StudentNoteFromAPI {
   attachments?: AttachmentFromAPI[];
 }
 
+interface FileAttachmentInfo {
+  id: string;
+  originalName: string;
+  mimeType: string;
+}
+
 interface ReplyHistoryItem {
   text: string;
   authorId: string;
@@ -118,6 +125,7 @@ interface ReplyHistoryItem {
   audioDuration?: number;
   audioAttachmentId?: string;
   fileAttachmentIds?: string[];
+  fileAttachments?: FileAttachmentInfo[];
 }
 
 function parseReplyHistory(reply: string | null): ReplyHistoryItem[] {
@@ -444,6 +452,7 @@ export function LessonDetailPage() {
             audioAttachmentId: replyItem.audioAttachmentId,
             hasAudio: !!(replyItem.audioData || replyItem.audioAttachmentId),
             fileAttachmentIds: replyItem.fileAttachmentIds,
+            fileAttachments: replyItem.fileAttachments,
             chatType: type === 'diary' ? 'diary' : 'notes'
           });
         });
@@ -1254,7 +1263,24 @@ export function LessonDetailPage() {
                         {message.text}
                       </p>
                     )}
-                    {message.fileAttachmentIds && message.fileAttachmentIds.length > 0 && (
+                    {message.fileAttachments && message.fileAttachments.length > 0 ? (
+                      <div className="mt-1.5 space-y-1">
+                        {message.fileAttachments.map((att) => (
+                          <a
+                            key={att.id}
+                            href={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[10px] md:text-xs transition-colors ${
+                              message.author === 'student' ? 'bg-white/20 hover:bg-white/30' : 'bg-[var(--sky-soft)]/30 hover:bg-[var(--sky-soft)]/50'
+                            }`}
+                          >
+                            <Download className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate max-w-[200px]">{att.originalName}</span>
+                          </a>
+                        ))}
+                      </div>
+                    ) : message.fileAttachmentIds && message.fileAttachmentIds.length > 0 ? (
                       <div className="mt-1.5 space-y-1">
                         {message.fileAttachmentIds.map((attId) => (
                           <a
@@ -1271,17 +1297,24 @@ export function LessonDetailPage() {
                           </a>
                         ))}
                       </div>
-                    )}
+                    ) : null}
                     {message.files && message.files.length > 0 && (
                       <div className="mt-1 md:mt-1.5 space-y-1">
                         {message.files.map((file, idx) => (
-                          <div key={idx}>
+                          <a
+                            key={idx}
+                            href={file.url || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block"
+                          >
                             {file.type.startsWith('image/') && file.url ? (
                               <img 
                                 src={file.url} 
                                 alt={file.name}
                                 loading="lazy"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.preventDefault();
                                   const imageFiles = (message.files || []).filter(f => f.type.startsWith('image/') && f.url);
                                   const imageList = imageFiles.map(f => ({ url: f.url!, name: f.name }));
                                   const clickedIdx = imageFiles.findIndex(f => f.url === file.url);
@@ -1291,15 +1324,15 @@ export function LessonDetailPage() {
                               />
                             ) : (
                               <div
-                                className={`flex items-center gap-1.5 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-[10px] md:text-xs ${
-                                  message.author === 'student' ? 'bg-white/20' : 'bg-[var(--sky-soft)]/30'
+                                className={`flex items-center gap-1.5 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-[10px] md:text-xs transition-colors ${
+                                  message.author === 'student' ? 'bg-white/20 hover:bg-white/30' : 'bg-[var(--sky-soft)]/30 hover:bg-[var(--sky-soft)]/50'
                                 }`}
                               >
-                                <File className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                                <span className="truncate max-w-[100px] md:max-w-[120px]">{file.name}</span>
+                                <Download className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                                <span className="truncate max-w-[200px]">{file.name}</span>
                               </div>
                             )}
-                          </div>
+                          </a>
                         ))}
                       </div>
                     )}
@@ -1512,7 +1545,24 @@ export function LessonDetailPage() {
                         {message.text}
                       </p>
                     )}
-                    {message.fileAttachmentIds && message.fileAttachmentIds.length > 0 && (
+                    {message.fileAttachments && message.fileAttachments.length > 0 ? (
+                      <div className="mt-1.5 space-y-1">
+                        {message.fileAttachments.map((att) => (
+                          <a
+                            key={att.id}
+                            href={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[10px] md:text-xs transition-colors ${
+                              message.author === 'student' ? 'bg-white/20 hover:bg-white/30' : 'bg-[var(--sky-soft)]/30 hover:bg-[var(--sky-soft)]/50'
+                            }`}
+                          >
+                            <Download className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate max-w-[200px]">{att.originalName}</span>
+                          </a>
+                        ))}
+                      </div>
+                    ) : message.fileAttachmentIds && message.fileAttachmentIds.length > 0 ? (
                       <div className="mt-1.5 space-y-1">
                         {message.fileAttachmentIds.map((attId) => (
                           <a
@@ -1529,17 +1579,24 @@ export function LessonDetailPage() {
                           </a>
                         ))}
                       </div>
-                    )}
+                    ) : null}
                     {message.files && message.files.length > 0 && (
                       <div className="mt-1 md:mt-1.5 space-y-1">
                         {message.files.map((file, idx) => (
-                          <div key={idx}>
+                          <a
+                            key={idx}
+                            href={file.url || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block"
+                          >
                             {file.type.startsWith('image/') && file.url ? (
                               <img 
                                 src={file.url} 
                                 alt={file.name}
                                 loading="lazy"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.preventDefault();
                                   const imageFiles = (message.files || []).filter(f => f.type.startsWith('image/') && f.url);
                                   const imageList = imageFiles.map(f => ({ url: f.url!, name: f.name }));
                                   const clickedIdx = imageFiles.findIndex(f => f.url === file.url);
@@ -1549,15 +1606,15 @@ export function LessonDetailPage() {
                               />
                             ) : (
                               <div
-                                className={`flex items-center gap-1.5 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-[10px] md:text-xs ${
-                                  message.author === 'student' ? 'bg-white/20' : 'bg-[var(--sky-soft)]/30'
+                                className={`flex items-center gap-1.5 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-[10px] md:text-xs transition-colors ${
+                                  message.author === 'student' ? 'bg-white/20 hover:bg-white/30' : 'bg-[var(--sky-soft)]/30 hover:bg-[var(--sky-soft)]/50'
                                 }`}
                               >
-                                <File className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                                <span className="truncate max-w-[100px] md:max-w-[120px]">{file.name}</span>
+                                <Download className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                                <span className="truncate max-w-[200px]">{file.name}</span>
                               </div>
                             )}
-                          </div>
+                          </a>
                         ))}
                       </div>
                     )}

@@ -40,6 +40,7 @@ interface ReplyMessage {
   audioMimeType?: string;
   audioAttachmentId?: string;
   fileAttachmentIds?: string[];
+  fileAttachments?: Array<{id: string; originalName: string; mimeType: string}>;
 }
 
 function parseReplyHistory(reply: string | null): ReplyMessage[] {
@@ -941,7 +942,22 @@ function ChatDialog({
                         {msg.audioAttachmentId && msg.text && msg.text !== '🎤 Голосовое сообщение' && (
                           <p className="whitespace-pre-wrap text-sm md:text-base mt-2">{msg.text}</p>
                         )}
-                        {msg.fileAttachmentIds && msg.fileAttachmentIds.length > 0 && (
+                        {msg.fileAttachments && msg.fileAttachments.length > 0 ? (
+                          <div className="mt-2 space-y-1.5">
+                            {msg.fileAttachments.map((att) => (
+                              <a
+                                key={att.id}
+                                href={`/api/public/attachments/${dialog.type === 'diary' ? 'diary' : 'note'}/${att.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-lg px-3 py-2 transition-colors"
+                              >
+                                <Download className="w-4 h-4 flex-shrink-0" />
+                                <span className="text-sm truncate">{att.originalName}</span>
+                              </a>
+                            ))}
+                          </div>
+                        ) : msg.fileAttachmentIds && msg.fileAttachmentIds.length > 0 ? (
                           <div className="mt-2 space-y-1.5">
                             {msg.fileAttachmentIds.map((attId) => (
                               <a
@@ -956,7 +972,7 @@ function ChatDialog({
                               </a>
                             ))}
                           </div>
-                        )}
+                        ) : null}
                       </div>
                       <div className="flex items-center justify-end gap-2 mt-1">
                         <span className="text-xs text-[#3d3527]/50">{msg.authorName}</span>

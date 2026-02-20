@@ -505,7 +505,7 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
       select: { reply: true }
     });
 
-    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string; fileAttachmentIds?: string[] }> = [];
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string; fileAttachmentIds?: string[]; fileAttachments?: Array<{id: string; originalName: string; mimeType: string}> }> = [];
     
     if (existingDiary?.reply) {
       try {
@@ -532,7 +532,7 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string; fileAttachmentIds?: string[] } = {
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string; fileAttachmentIds?: string[]; fileAttachments?: Array<{id: string; originalName: string; mimeType: string}> } = {
       text: audioData ? '🎤 Голосовое сообщение' : reply,
       authorId: req.user!.id,
       authorName: req.user!.name,
@@ -561,6 +561,7 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
 
     if (attachments && attachments.length > 0) {
       const fileAttachmentIds: string[] = [];
+      const fileAttachments: Array<{id: string; originalName: string; mimeType: string}> = [];
       for (const att of attachments) {
         const cleanData = att.data.includes(',') ? att.data.split(',')[1] : att.data;
         const created = await prisma.diaryAttachment.create({
@@ -574,8 +575,10 @@ router.post('/diary/:id/reply', async (req: AuthRequest, res: Response) => {
           }
         });
         fileAttachmentIds.push(created.id);
+        fileAttachments.push({ id: created.id, originalName: att.originalName, mimeType: att.mimeType });
       }
       newMessage.fileAttachmentIds = fileAttachmentIds;
+      newMessage.fileAttachments = fileAttachments;
       if (!audioData && !reply.trim()) {
         newMessage.text = `📎 ${attachments.length > 1 ? `${attachments.length} файлов` : attachments[0].originalName}`;
       }
@@ -628,7 +631,7 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
       select: { reply: true }
     });
 
-    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string; fileAttachmentIds?: string[] }> = [];
+    let replyHistory: Array<{ text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string; fileAttachmentIds?: string[]; fileAttachments?: Array<{id: string; originalName: string; mimeType: string}> }> = [];
     
     if (existingNote?.reply) {
       try {
@@ -655,7 +658,7 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
       }
     }
 
-    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string; fileAttachmentIds?: string[] } = {
+    const newMessage: { text: string; authorId: string; authorName: string; authorRole: string; createdAt: string; audioData?: string; audioDuration?: number; audioMimeType?: string; audioAttachmentId?: string; fileAttachmentIds?: string[]; fileAttachments?: Array<{id: string; originalName: string; mimeType: string}> } = {
       text: audioData ? '🎤 Голосовое сообщение' : reply,
       authorId: req.user!.id,
       authorName: req.user!.name,
@@ -684,6 +687,7 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
 
     if (attachments && attachments.length > 0) {
       const fileAttachmentIds: string[] = [];
+      const fileAttachments: Array<{id: string; originalName: string; mimeType: string}> = [];
       for (const att of attachments) {
         const cleanData = att.data.includes(',') ? att.data.split(',')[1] : att.data;
         const created = await prisma.noteAttachment.create({
@@ -697,8 +701,10 @@ router.post('/note/:id/reply', async (req: AuthRequest, res: Response) => {
           }
         });
         fileAttachmentIds.push(created.id);
+        fileAttachments.push({ id: created.id, originalName: att.originalName, mimeType: att.mimeType });
       }
       newMessage.fileAttachmentIds = fileAttachmentIds;
+      newMessage.fileAttachments = fileAttachments;
       if (!audioData && !reply.trim()) {
         newMessage.text = `📎 ${attachments.length > 1 ? `${attachments.length} файлов` : attachments[0].originalName}`;
       }

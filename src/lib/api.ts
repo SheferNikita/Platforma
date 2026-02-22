@@ -1,5 +1,6 @@
 const API_BASE = '/api';
 const REQUEST_TIMEOUT = 15000;
+const UPLOAD_TIMEOUT = 120000;
 
 function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
@@ -37,6 +38,13 @@ function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = REQU
   });
 }
 
+function hasLargePayload(data: any): boolean {
+  if (!data) return false;
+  if (data.audioData) return true;
+  if (data.attachments && data.attachments.length > 0) return true;
+  return false;
+}
+
 export const api = {
   get: async <T>(url: string): Promise<T> => {
     const response = await fetchWithTimeout(`${API_BASE}${url}`, {
@@ -47,22 +55,24 @@ export const api = {
   },
 
   post: async <T>(url: string, data?: any): Promise<T> => {
+    const timeout = hasLargePayload(data) ? UPLOAD_TIMEOUT : REQUEST_TIMEOUT;
     const response = await fetchWithTimeout(`${API_BASE}${url}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       credentials: 'include',
       body: data ? JSON.stringify(data) : undefined,
-    });
+    }, timeout);
     return handleResponse<T>(response);
   },
 
   put: async <T>(url: string, data: any): Promise<T> => {
+    const timeout = hasLargePayload(data) ? UPLOAD_TIMEOUT : REQUEST_TIMEOUT;
     const response = await fetchWithTimeout(`${API_BASE}${url}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       credentials: 'include',
       body: JSON.stringify(data),
-    });
+    }, timeout);
     return handleResponse<T>(response);
   },
 

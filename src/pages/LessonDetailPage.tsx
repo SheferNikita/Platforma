@@ -1265,20 +1265,41 @@ export function LessonDetailPage() {
                     )}
                     {message.fileAttachments && message.fileAttachments.length > 0 ? (
                       <div className="mt-1.5 space-y-1">
-                        {message.fileAttachments.map((att) => (
-                          <a
-                            key={att.id}
-                            href={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[10px] md:text-xs transition-colors ${
-                              message.author === 'student' ? 'bg-white/20 hover:bg-white/30' : 'bg-[var(--sky-soft)]/30 hover:bg-[var(--sky-soft)]/50'
-                            }`}
-                          >
-                            <Download className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate max-w-[200px]">{att.originalName}</span>
-                          </a>
-                        ))}
+                        {message.fileAttachments.map((att) =>
+                          att.mimeType.startsWith('audio/') ? (
+                            <div key={att.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-md ${
+                              message.author === 'student' ? 'bg-white/20' : 'bg-[var(--sky-soft)]/30'
+                            }`}>
+                              <audio controls preload="none" className="h-8 max-w-[180px] md:max-w-[250px]">
+                                <source src={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`} type={att.mimeType} />
+                              </audio>
+                              <a
+                                href={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`p-1 rounded transition-colors flex-shrink-0 ${
+                                  message.author === 'student' ? 'hover:bg-white/20' : 'hover:bg-[var(--sky-soft)]/50'
+                                }`}
+                                title="Скачать"
+                              >
+                                <Download className="w-3 h-3" />
+                              </a>
+                            </div>
+                          ) : (
+                            <a
+                              key={att.id}
+                              href={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[10px] md:text-xs transition-colors ${
+                                message.author === 'student' ? 'bg-white/20 hover:bg-white/30' : 'bg-[var(--sky-soft)]/30 hover:bg-[var(--sky-soft)]/50'
+                              }`}
+                            >
+                              <Download className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate max-w-[200px]">{att.originalName}</span>
+                            </a>
+                          )
+                        )}
                       </div>
                     ) : message.fileAttachmentIds && message.fileAttachmentIds.length > 0 ? (
                       <div className="mt-1.5 space-y-1">
@@ -1300,15 +1321,34 @@ export function LessonDetailPage() {
                     ) : null}
                     {message.files && message.files.length > 0 && (
                       <div className="mt-1 md:mt-1.5 space-y-1">
-                        {message.files.map((file, idx) => (
-                          <a
-                            key={idx}
-                            href={file.url || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block"
-                          >
-                            {file.type.startsWith('image/') && file.url ? (
+                        {message.files.map((file, idx) =>
+                          file.type.startsWith('audio/') && file.url ? (
+                            <div key={idx} className={`flex items-center gap-2 px-2 py-1.5 rounded-md ${
+                              message.author === 'student' ? 'bg-white/20' : 'bg-[var(--sky-soft)]/30'
+                            }`}>
+                              <audio controls preload="none" className="h-8 max-w-[180px] md:max-w-[250px]">
+                                <source src={file.url} type={file.type} />
+                              </audio>
+                              <a
+                                href={file.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`p-1 rounded transition-colors flex-shrink-0 ${
+                                  message.author === 'student' ? 'hover:bg-white/20' : 'hover:bg-[var(--sky-soft)]/50'
+                                }`}
+                                title="Скачать"
+                              >
+                                <Download className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                              </a>
+                            </div>
+                          ) : file.type.startsWith('image/') && file.url ? (
+                            <a
+                              key={idx}
+                              href={file.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block"
+                            >
                               <img 
                                 src={file.url} 
                                 alt={file.name}
@@ -1322,7 +1362,15 @@ export function LessonDetailPage() {
                                 }}
                                 className="max-w-full max-h-48 md:max-h-64 rounded-lg mt-1 border border-white/20 cursor-pointer hover:opacity-90 transition-opacity object-contain"
                               />
-                            ) : (
+                            </a>
+                          ) : (
+                            <a
+                              key={idx}
+                              href={file.url || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block"
+                            >
                               <div
                                 className={`flex items-center gap-1.5 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-[10px] md:text-xs transition-colors ${
                                   message.author === 'student' ? 'bg-white/20 hover:bg-white/30' : 'bg-[var(--sky-soft)]/30 hover:bg-[var(--sky-soft)]/50'
@@ -1331,9 +1379,9 @@ export function LessonDetailPage() {
                                 <Download className="w-2.5 h-2.5 md:w-3 md:h-3" />
                                 <span className="truncate max-w-[200px]">{file.name}</span>
                               </div>
-                            )}
-                          </a>
-                        ))}
+                            </a>
+                          )
+                        )}
                       </div>
                     )}
                     <p
@@ -1547,20 +1595,41 @@ export function LessonDetailPage() {
                     )}
                     {message.fileAttachments && message.fileAttachments.length > 0 ? (
                       <div className="mt-1.5 space-y-1">
-                        {message.fileAttachments.map((att) => (
-                          <a
-                            key={att.id}
-                            href={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[10px] md:text-xs transition-colors ${
-                              message.author === 'student' ? 'bg-white/20 hover:bg-white/30' : 'bg-[var(--sky-soft)]/30 hover:bg-[var(--sky-soft)]/50'
-                            }`}
-                          >
-                            <Download className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate max-w-[200px]">{att.originalName}</span>
-                          </a>
-                        ))}
+                        {message.fileAttachments.map((att) =>
+                          att.mimeType.startsWith('audio/') ? (
+                            <div key={att.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-md ${
+                              message.author === 'student' ? 'bg-white/20' : 'bg-[var(--sky-soft)]/30'
+                            }`}>
+                              <audio controls preload="none" className="h-8 max-w-[180px] md:max-w-[250px]">
+                                <source src={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`} type={att.mimeType} />
+                              </audio>
+                              <a
+                                href={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`p-1 rounded transition-colors flex-shrink-0 ${
+                                  message.author === 'student' ? 'hover:bg-white/20' : 'hover:bg-[var(--sky-soft)]/50'
+                                }`}
+                                title="Скачать"
+                              >
+                                <Download className="w-3 h-3" />
+                              </a>
+                            </div>
+                          ) : (
+                            <a
+                              key={att.id}
+                              href={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md text-[10px] md:text-xs transition-colors ${
+                                message.author === 'student' ? 'bg-white/20 hover:bg-white/30' : 'bg-[var(--sky-soft)]/30 hover:bg-[var(--sky-soft)]/50'
+                              }`}
+                            >
+                              <Download className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate max-w-[200px]">{att.originalName}</span>
+                            </a>
+                          )
+                        )}
                       </div>
                     ) : message.fileAttachmentIds && message.fileAttachmentIds.length > 0 ? (
                       <div className="mt-1.5 space-y-1">
@@ -1582,15 +1651,34 @@ export function LessonDetailPage() {
                     ) : null}
                     {message.files && message.files.length > 0 && (
                       <div className="mt-1 md:mt-1.5 space-y-1">
-                        {message.files.map((file, idx) => (
-                          <a
-                            key={idx}
-                            href={file.url || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block"
-                          >
-                            {file.type.startsWith('image/') && file.url ? (
+                        {message.files.map((file, idx) =>
+                          file.type.startsWith('audio/') && file.url ? (
+                            <div key={idx} className={`flex items-center gap-2 px-2 py-1.5 rounded-md ${
+                              message.author === 'student' ? 'bg-white/20' : 'bg-[var(--sky-soft)]/30'
+                            }`}>
+                              <audio controls preload="none" className="h-8 max-w-[180px] md:max-w-[250px]">
+                                <source src={file.url} type={file.type} />
+                              </audio>
+                              <a
+                                href={file.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`p-1 rounded transition-colors flex-shrink-0 ${
+                                  message.author === 'student' ? 'hover:bg-white/20' : 'hover:bg-[var(--sky-soft)]/50'
+                                }`}
+                                title="Скачать"
+                              >
+                                <Download className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                              </a>
+                            </div>
+                          ) : file.type.startsWith('image/') && file.url ? (
+                            <a
+                              key={idx}
+                              href={file.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block"
+                            >
                               <img 
                                 src={file.url} 
                                 alt={file.name}
@@ -1604,7 +1692,15 @@ export function LessonDetailPage() {
                                 }}
                                 className="max-w-full max-h-48 md:max-h-64 rounded-lg mt-1 border border-white/20 cursor-pointer hover:opacity-90 transition-opacity object-contain"
                               />
-                            ) : (
+                            </a>
+                          ) : (
+                            <a
+                              key={idx}
+                              href={file.url || '#'}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="block"
+                            >
                               <div
                                 className={`flex items-center gap-1.5 px-1.5 py-0.5 md:px-2 md:py-1 rounded-md text-[10px] md:text-xs transition-colors ${
                                   message.author === 'student' ? 'bg-white/20 hover:bg-white/30' : 'bg-[var(--sky-soft)]/30 hover:bg-[var(--sky-soft)]/50'
@@ -1613,9 +1709,9 @@ export function LessonDetailPage() {
                                 <Download className="w-2.5 h-2.5 md:w-3 md:h-3" />
                                 <span className="truncate max-w-[200px]">{file.name}</span>
                               </div>
-                            )}
-                          </a>
-                        ))}
+                            </a>
+                          )
+                        )}
                       </div>
                     )}
                     <p

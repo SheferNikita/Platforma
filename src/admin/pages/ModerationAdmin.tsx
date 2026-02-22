@@ -318,7 +318,19 @@ export function ModerationAdmin() {
     }
   }
 
-  async function submitAudioReply(audioData: string, duration: number, mimeType?: string) {
+  function downloadAudioBlob(blob: Blob, mime: string) {
+    const ext = mime.includes('mp4') ? 'mp4' : mime.includes('ogg') ? 'ogg' : 'webm';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `voice_${new Date().toISOString().slice(0, 19).replace(/[:.]/g, '-')}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function submitAudioReply(audioData: string, duration: number, mimeType?: string, blob?: Blob) {
     const targetItem = getTargetItem();
     if (!targetItem) return;
 
@@ -337,7 +349,13 @@ export function ModerationAdmin() {
       toast.success('Голосовое сообщение отправлено');
       await Promise.all([reloadDialogItems(), loadDialogs(0, true)]);
     } catch (error) {
-      toast.error('Ошибка отправки голосового сообщения');
+      const mime = mimeType || 'audio/webm';
+      if (blob) {
+        toast.error('Ошибка отправки голосового сообщения. Скачайте запись, чтобы не потерять её, и загрузите через скрепку.', { duration: 10000 });
+        downloadAudioBlob(blob, mime);
+      } else {
+        toast.error('Ошибка отправки голосового сообщения');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -673,7 +691,7 @@ function ChatDialog({
   hasUnanswered: boolean;
   onClose: () => void;
   onSubmitReply: (files?: File[]) => void;
-  onSubmitAudioReply: (audioData: string, duration: number, mimeType?: string) => void;
+  onSubmitAudioReply: (audioData: string, duration: number, mimeType?: string, blob?: Blob) => void;
   onMarkAsViewed: () => void;
 }) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -806,10 +824,11 @@ function ChatDialog({
   const sendAudioMessage = async () => {
     if (!audioBlob) return;
 
+    const blobCopy = audioBlob;
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = (reader.result as string).split(',')[1];
-      onSubmitAudioReply(base64, recordingTime, audioMimeType);
+      onSubmitAudioReply(base64, recordingTime, audioMimeType, blobCopy);
       cancelRecording();
     };
     reader.readAsDataURL(audioBlob);
@@ -944,18 +963,35 @@ function ChatDialog({
                         )}
                         {msg.fileAttachments && msg.fileAttachments.length > 0 ? (
                           <div className="mt-2 space-y-1.5">
-                            {msg.fileAttachments.map((att) => (
-                              <a
-                                key={att.id}
-                                href={`/api/public/attachments/${dialog.type === 'diary' ? 'diary' : 'note'}/${att.id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-lg px-3 py-2 transition-colors"
-                              >
-                                <Download className="w-4 h-4 flex-shrink-0" />
-                                <span className="text-sm truncate">{att.originalName}</span>
-                              </a>
-                            ))}
+                            {msg.fileAttachments.map((att) =>
+                              att.mimeType.startsWith('audio/') ? (
+                                <div key={att.id} className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-2">
+                                  <audio controls preload="none" className="h-8 max-w-[200px] md:max-w-[300px]">
+                                    <source src={`/api/public/attachments/${dialog.type === 'diary' ? 'diary' : 'note'}/${att.id}`} type={att.mimeType} />
+                                  </audio>
+                                  <a
+                                    href={`/api/public/attachments/${dialog.type === 'diary' ? 'diary' : 'note'}/${att.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1 hover:bg-white/20 rounded transition-colors flex-shrink-0"
+                                    title="Скачать"
+                                  >
+                                    <Download className="w-4 h-4" />
+                                  </a>
+                                </div>
+                              ) : (
+                                <a
+                                  key={att.id}
+                                  href={`/api/public/attachments/${dialog.type === 'diary' ? 'diary' : 'note'}/${att.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-lg px-3 py-2 transition-colors"
+                                >
+                                  <Download className="w-4 h-4 flex-shrink-0" />
+                                  <span className="text-sm truncate">{att.originalName}</span>
+                                </a>
+                              )
+                            )}
                           </div>
                         ) : msg.fileAttachmentIds && msg.fileAttachmentIds.length > 0 ? (
                           <div className="mt-2 space-y-1.5">

@@ -556,6 +556,7 @@ export function ModerationAdmin() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-[#3d3527]/50">{format(new Date(dialog.latestDate), 'd MMM yyyy, HH:mm', { locale: ru })}</span>
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${typeConfig[dialog.type]?.color || 'bg-gray-100'}`}>
                           <TypeIcon className="w-3 h-3" />
                           {typeConfig[dialog.type]?.label || dialog.type}
@@ -587,7 +588,6 @@ export function ModerationAdmin() {
                     </div>
                     <p className="text-xs text-[#3d3527]/60 truncate">{dialog.lesson.title}</p>
                     <p className="text-sm text-[#3d3527] line-clamp-2">{dialog.latestContent || 'Без содержания'}</p>
-                    <p className="text-xs text-[#3d3527]/50">{format(new Date(dialog.latestDate), 'd MMM yyyy', { locale: ru })}</p>
                   </div>
                 );
               })}
@@ -598,13 +598,13 @@ export function ModerationAdmin() {
               <table className="w-full">
                 <thead className="bg-[#f5f3ed]">
                   <tr>
+                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Дата</th>
                     <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Тип</th>
                     <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Ученик</th>
                     <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Урок</th>
                     <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Записи</th>
                     <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Статус</th>
                     <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Последнее</th>
-                    <th className="text-left p-4 text-sm font-medium text-[#3d3527]">Дата</th>
                     <th className="p-4"></th>
                   </tr>
                 </thead>
@@ -618,6 +618,10 @@ export function ModerationAdmin() {
                         className="border-t border-[#d4c9b0]/30 hover:bg-[#f5f3ed]/50 cursor-pointer"
                         onClick={() => openDialog(dialog)}
                       >
+                        <td className="p-4 text-sm text-[#3d3527]/70 whitespace-nowrap">
+                          <div>{format(new Date(dialog.latestDate), 'd MMM yyyy', { locale: ru })}</div>
+                          <div className="text-xs text-[#3d3527]/50">{format(new Date(dialog.latestDate), 'HH:mm', { locale: ru })}</div>
+                        </td>
                         <td className="p-4">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${typeConfig[dialog.type]?.color || 'bg-gray-100'}`}>
                             <TypeIcon className="w-3 h-3" />
@@ -658,9 +662,6 @@ export function ModerationAdmin() {
                           )}
                         </td>
                         <td className="p-4 text-sm text-[#3d3527] max-w-xs truncate">{dialog.latestContent || 'Без содержания'}</td>
-                        <td className="p-4 text-sm text-[#3d3527]/60 whitespace-nowrap">
-                          {format(new Date(dialog.latestDate), 'd MMM yyyy', { locale: ru })}
-                        </td>
                         <td className="p-4">
                           <button
                             onClick={(e) => {

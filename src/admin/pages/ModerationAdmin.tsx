@@ -132,13 +132,23 @@ function getRecordCountLabel(count: number): string {
 }
 
 export function ModerationAdmin() {
-  const [dialogs, setDialogs] = useState<DialogSummary[]>([]);
-  const [total, setTotal] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'answered'>('all');
+  const [activeTab, setActiveTab] = useState<'pending' | 'answered'>('pending');
+
+  const [pendingDialogs, setPendingDialogs] = useState<DialogSummary[]>([]);
+  const [pendingTotal, setPendingTotal] = useState(0);
+  const [pendingOffset, setPendingOffset] = useState(0);
+  const [pendingHasMore, setPendingHasMore] = useState(false);
+  const [pendingLoading, setPendingLoading] = useState(true);
+  const [pendingLoadingMore, setPendingLoadingMore] = useState(false);
+
+  const [answeredDialogs, setAnsweredDialogs] = useState<DialogSummary[]>([]);
+  const [answeredTotal, setAnsweredTotal] = useState(0);
+  const [answeredOffset, setAnsweredOffset] = useState(0);
+  const [answeredHasMore, setAnsweredHasMore] = useState(false);
+  const [answeredLoading, setAnsweredLoading] = useState(false);
+  const [answeredLoadingMore, setAnsweredLoadingMore] = useState(false);
+  const [answeredLoaded, setAnsweredLoaded] = useState(false);
+
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [miniGroupFilter, setMiniGroupFilter] = useState<string>('all');
   const [lessonFilter, setLessonFilter] = useState<string>('all');
@@ -152,15 +162,33 @@ export function ModerationAdmin() {
   const [submitting, setSubmitting] = useState(false);
   const emailSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const dialogs = activeTab === 'pending' ? pendingDialogs : answeredDialogs;
+  const loading = activeTab === 'pending' ? pendingLoading : answeredLoading;
+  const loadingMore = activeTab === 'pending' ? pendingLoadingMore : answeredLoadingMore;
+  const hasMore = activeTab === 'pending' ? pendingHasMore : answeredHasMore;
+  const total = activeTab === 'pending' ? pendingTotal : answeredTotal;
+
   useEffect(() => {
     loadMiniGroups();
   }, []);
 
   useEffect(() => {
-    setOffset(0);
-    setDialogs([]);
-    loadDialogs(0, true);
-  }, [statusFilter, typeFilter, miniGroupFilter, lessonFilter, emailSearchApplied]);
+    setPendingOffset(0);
+    setPendingDialogs([]);
+    loadTabDialogs('pending', 0, true);
+    if (answeredLoaded) {
+      setAnsweredOffset(0);
+      setAnsweredDialogs([]);
+      loadTabDialogs('answered', 0, true);
+    }
+  }, [typeFilter, miniGroupFilter, lessonFilter, emailSearchApplied]);
+
+  useEffect(() => {
+    if (activeTab === 'answered' && !answeredLoaded) {
+      loadTabDialogs('answered', 0, true);
+      setAnsweredLoaded(true);
+    }
+  }, [activeTab]);
 
   const handleEmailSearch = useCallback((value: string) => {
     setEmailSearch(value);
@@ -194,15 +222,22 @@ export function ModerationAdmin() {
     return Array.from(lessonMap.values()).sort((a, b) => a.title.localeCompare(b.title));
   }, [dialogs]);
 
-  async function loadDialogs(newOffset: number, replace: boolean) {
+  async function loadTabDialogs(tab: 'pending' | 'answered', newOffset: number, replace: boolean) {
+    const setDialogsFn = tab === 'pending' ? setPendingDialogs : setAnsweredDialogs;
+    const setTotalFn = tab === 'pending' ? setPendingTotal : setAnsweredTotal;
+    const setHasMoreFn = tab === 'pending' ? setPendingHasMore : setAnsweredHasMore;
+    const setOffsetFn = tab === 'pending' ? setPendingOffset : setAnsweredOffset;
+    const setLoadingFn = tab === 'pending' ? setPendingLoading : setAnsweredLoading;
+    const setLoadingMoreFn = tab === 'pending' ? setPendingLoadingMore : setAnsweredLoadingMore;
+
     try {
       if (replace) {
-        setLoading(true);
+        setLoadingFn(true);
       } else {
-        setLoadingMore(true);
+        setLoadingMoreFn(true);
       }
       const params = new URLSearchParams();
-      if (statusFilter !== 'all') params.append('status', statusFilter);
+      params.append('status', tab);
       if (typeFilter !== 'all') params.append('type', typeFilter);
       if (miniGroupFilter !== 'all') params.append('miniGroupId', miniGroupFilter);
       if (lessonFilter !== 'all') params.append('lessonId', lessonFilter);
@@ -212,23 +247,32 @@ export function ModerationAdmin() {
 
       const data = await api.get<DialogsResponse>(`/public/moderation?${params.toString()}`);
       if (replace) {
-        setDialogs(data.dialogs);
+        setDialogsFn(data.dialogs);
       } else {
-        setDialogs(prev => [...prev, ...data.dialogs]);
+        setDialogsFn(prev => [...prev, ...data.dialogs]);
       }
-      setTotal(data.total);
-      setHasMore(data.hasMore);
-      setOffset(newOffset + data.dialogs.length);
+      setTotalFn(data.total);
+      setHasMoreFn(data.hasMore);
+      setOffsetFn(newOffset + data.dialogs.length);
     } catch (error) {
       toast.error('Ошибка загрузки');
     } finally {
-      setLoading(false);
-      setLoadingMore(false);
+      setLoadingFn(false);
+      setLoadingMoreFn(false);
     }
   }
 
   function handleLoadMore() {
-    loadDialogs(offset, false);
+    const currentOffset = activeTab === 'pending' ? pendingOffset : answeredOffset;
+    loadTabDialogs(activeTab, currentOffset, false);
+  }
+
+  async function refreshDialogsAfterAction() {
+    const tasks = [loadTabDialogs('pending', 0, true)];
+    if (answeredLoaded) {
+      tasks.push(loadTabDialogs('answered', 0, true));
+    }
+    await Promise.all(tasks);
   }
 
   async function openDialog(dialog: DialogSummary) {
@@ -310,7 +354,7 @@ export function ModerationAdmin() {
       });
       toast.success('Сообщение отправлено');
       setReplyText('');
-      await Promise.all([reloadDialogItems(), loadDialogs(0, true)]);
+      await Promise.all([reloadDialogItems(), refreshDialogsAfterAction()]);
     } catch (error) {
       toast.error('Ошибка отправки');
     } finally {
@@ -347,7 +391,7 @@ export function ModerationAdmin() {
         audioMimeType: mimeType || 'audio/webm'
       });
       toast.success('Голосовое сообщение отправлено');
-      await Promise.all([reloadDialogItems(), loadDialogs(0, true)]);
+      await Promise.all([reloadDialogItems(), refreshDialogsAfterAction()]);
     } catch (error) {
       const mime = mimeType || 'audio/webm';
       if (blob) {
@@ -373,7 +417,7 @@ export function ModerationAdmin() {
 
       await api.post(endpoint, {});
       toast.success('Отмечено как просмотренное');
-      await Promise.all([reloadDialogItems(), loadDialogs(0, true)]);
+      await Promise.all([reloadDialogItems(), refreshDialogsAfterAction()]);
     } catch (error) {
       toast.error('Ошибка');
     } finally {
@@ -382,9 +426,8 @@ export function ModerationAdmin() {
   }
 
   const stats = {
-    total: total,
-    pending: dialogs.filter(d => d.unansweredCount > 0).length,
-    answered: dialogs.filter(d => d.unansweredCount === 0).length
+    pending: pendingTotal,
+    answered: answeredLoaded ? answeredTotal : 0,
   };
 
   return (
@@ -396,31 +439,44 @@ export function ModerationAdmin() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 md:gap-4">
-        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-2 md:p-4">
-          <p className="text-xs md:text-sm text-[#3d3527]/60">Всего диалогов</p>
-          <p className="text-lg md:text-2xl font-bold text-[#3d3527]">{stats.total}</p>
-        </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-2 md:p-4">
-          <p className="text-xs md:text-sm text-[#3d3527]/60">Ожидают ответа</p>
-          <p className="text-lg md:text-2xl font-bold text-orange-600">{stats.pending}</p>
-        </div>
-        <div className="bg-white/80 backdrop-blur-md rounded-xl border border-[#d4c9b0]/30 p-2 md:p-4">
-          <p className="text-xs md:text-sm text-[#3d3527]/60">Все отвечены</p>
-          <p className="text-lg md:text-2xl font-bold text-green-600">{stats.answered}</p>
-        </div>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setActiveTab('pending')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            activeTab === 'pending'
+              ? 'bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-md'
+              : 'bg-white/80 border border-[#d4c9b0]/30 text-[#3d3527]/70 hover:bg-[#f5f3ed]'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          <span>Новые</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+            activeTab === 'pending' ? 'bg-white/25' : 'bg-orange-100 text-orange-700'
+          }`}>
+            {stats.pending}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('answered')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            activeTab === 'answered'
+              ? 'bg-gradient-to-r from-green-600 to-green-500 text-white shadow-md'
+              : 'bg-white/80 border border-[#d4c9b0]/30 text-[#3d3527]/70 hover:bg-[#f5f3ed]'
+          }`}
+        >
+          <CheckCircle className="w-4 h-4" />
+          <span>Отвеченные</span>
+          {answeredLoaded && (
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+              activeTab === 'answered' ? 'bg-white/25' : 'bg-green-100 text-green-700'
+            }`}>
+              {stats.answered}
+            </span>
+          )}
+        </button>
       </div>
 
       <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4">
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as any)}
-          className="px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base"
-        >
-          <option value="all">Все статусы</option>
-          <option value="pending">Ожидают ответа</option>
-          <option value="answered">С ответом</option>
-        </select>
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
@@ -483,7 +539,7 @@ export function ModerationAdmin() {
         ) : dialogs.length === 0 ? (
           <div className="text-center py-12 text-[#3d3527]/60">
             <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Диалогов не найдено</p>
+            <p>{activeTab === 'pending' ? 'Нет новых диалогов' : 'Нет отвеченных диалогов'}</p>
           </div>
         ) : (
           <>
@@ -674,7 +730,7 @@ export function ModerationAdmin() {
               : `/public/moderation/note/${targetItem.id}/reply`;
             await api.post(endpoint, { reply: text });
             toast.success('Сообщение отправлено');
-            await Promise.all([reloadDialogItems(), loadDialogs(0, true)]);
+            await Promise.all([reloadDialogItems(), refreshDialogsAfterAction()]);
           }}
         />
       )}

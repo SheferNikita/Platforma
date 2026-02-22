@@ -1070,7 +1070,6 @@ function ChatDialog({
                     ref={fileInputRef}
                     type="file"
                     multiple
-                    accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
                     className="hidden"
                     onChange={(e) => {
                       const files = e.target.files;
@@ -1080,13 +1079,16 @@ function ChatDialog({
                       e.target.value = '';
                     }}
                   />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-3 bg-[#f5f3ed] text-[#a67c52] rounded-xl hover:bg-[#ebe7dd] transition-all border border-[#d4c9b0]"
-                    title="Прикрепить файл"
-                  >
-                    <Paperclip className="w-5 h-5" />
-                  </button>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-3 bg-[#f5f3ed] text-[#a67c52] rounded-xl hover:bg-[#ebe7dd] transition-all border border-[#d4c9b0]"
+                      title="Прикрепить файл"
+                    >
+                      <Paperclip className="w-5 h-5" />
+                    </button>
+                    <span className="text-[10px] text-[#3d3527]/40 whitespace-nowrap">до 35 МБ</span>
+                  </div>
                   <button
                     onClick={startRecording}
                     className="p-3 bg-[#f5f3ed] text-[#a67c52] rounded-xl hover:bg-[#ebe7dd] transition-all border border-[#d4c9b0]"

@@ -154,8 +154,8 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-const MAX_TOTAL_SIZE = 30 * 1024 * 1024;
+const MAX_FILE_SIZE = 35 * 1024 * 1024;
+const MAX_TOTAL_SIZE = 35 * 1024 * 1024;
 const MAX_IMAGE_DIMENSION = 1920;
 const IMAGE_QUALITY = 0.8;
 

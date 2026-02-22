@@ -1075,10 +1075,12 @@ function ChatDialog({
                           <div className="mt-2 space-y-1.5">
                             {msg.fileAttachments.map((att) =>
                               att.mimeType.startsWith('audio/') ? (
-                                <div key={att.id} className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-2">
-                                  <audio controls preload="none" className="h-8 max-w-[200px] md:max-w-[300px]">
-                                    <source src={`/api/public/attachments/${dialog.type === 'diary' ? 'diary' : 'note'}/${att.id}`} type={att.mimeType} />
-                                  </audio>
+                                <div key={att.id} className="flex items-center gap-2">
+                                  <AudioPlayer
+                                    audioUrl={`/api/public/attachments/${dialog.type === 'diary' ? 'diary' : 'note'}/${att.id}`}
+                                    mimeType={att.mimeType}
+                                    variant="dark"
+                                  />
                                   <a
                                     href={`/api/public/attachments/${dialog.type === 'diary' ? 'diary' : 'note'}/${att.id}`}
                                     target="_blank"

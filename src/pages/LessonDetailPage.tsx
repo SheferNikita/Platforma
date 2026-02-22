@@ -1268,12 +1268,12 @@ export function LessonDetailPage() {
                       <div className="mt-1.5 space-y-1">
                         {message.fileAttachments.map((att) =>
                           att.mimeType.startsWith('audio/') ? (
-                            <div key={att.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-md ${
-                              message.author === 'student' ? 'bg-white/20' : 'bg-[var(--sky-soft)]/30'
-                            }`}>
-                              <audio controls preload="none" className="h-8 max-w-[180px] md:max-w-[250px]">
-                                <source src={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`} type={att.mimeType} />
-                              </audio>
+                            <div key={att.id} className="flex items-center gap-2">
+                              <AudioPlayer
+                                audioUrl={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`}
+                                mimeType={att.mimeType}
+                                variant={message.author === 'student' ? 'dark' : 'light'}
+                              />
                               <a
                                 href={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`}
                                 target="_blank"
@@ -1598,12 +1598,12 @@ export function LessonDetailPage() {
                       <div className="mt-1.5 space-y-1">
                         {message.fileAttachments.map((att) =>
                           att.mimeType.startsWith('audio/') ? (
-                            <div key={att.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-md ${
-                              message.author === 'student' ? 'bg-white/20' : 'bg-[var(--sky-soft)]/30'
-                            }`}>
-                              <audio controls preload="none" className="h-8 max-w-[180px] md:max-w-[250px]">
-                                <source src={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`} type={att.mimeType} />
-                              </audio>
+                            <div key={att.id} className="flex items-center gap-2">
+                              <AudioPlayer
+                                audioUrl={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`}
+                                mimeType={att.mimeType}
+                                variant={message.author === 'student' ? 'dark' : 'light'}
+                              />
                               <a
                                 href={`/api/public/attachments/${message.chatType === 'diary' ? 'diary' : 'note'}/${att.id}`}
                                 target="_blank"

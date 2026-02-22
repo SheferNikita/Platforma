@@ -83,6 +83,7 @@ interface DialogSummary {
   unansweredCount: number;
   latestContent: string;
   latestDate: string;
+  lastActivityDate: string;
   hasAttachments: boolean;
 }
 
@@ -556,7 +557,7 @@ export function ModerationAdmin() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-[#3d3527]/50">{format(new Date(dialog.latestDate), 'd MMM yyyy, HH:mm', { locale: ru })}</span>
+                        <span className="text-xs text-[#3d3527]/50">{format(new Date(activeTab === 'answered' ? dialog.lastActivityDate : dialog.latestDate), 'd MMM yyyy, HH:mm', { locale: ru })}</span>
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${typeConfig[dialog.type]?.color || 'bg-gray-100'}`}>
                           <TypeIcon className="w-3 h-3" />
                           {typeConfig[dialog.type]?.label || dialog.type}
@@ -619,8 +620,8 @@ export function ModerationAdmin() {
                         onClick={() => openDialog(dialog)}
                       >
                         <td className="p-4 text-sm text-[#3d3527]/70 whitespace-nowrap">
-                          <div>{format(new Date(dialog.latestDate), 'd MMM yyyy', { locale: ru })}</div>
-                          <div className="text-xs text-[#3d3527]/50">{format(new Date(dialog.latestDate), 'HH:mm', { locale: ru })}</div>
+                          <div>{format(new Date(activeTab === 'answered' ? dialog.lastActivityDate : dialog.latestDate), 'd MMM yyyy', { locale: ru })}</div>
+                          <div className="text-xs text-[#3d3527]/50">{format(new Date(activeTab === 'answered' ? dialog.lastActivityDate : dialog.latestDate), 'HH:mm', { locale: ru })}</div>
                         </td>
                         <td className="p-4">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${typeConfig[dialog.type]?.color || 'bg-gray-100'}`}>

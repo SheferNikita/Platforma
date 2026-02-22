@@ -146,6 +146,7 @@ interface DialogSummary {
   unansweredCount: number;
   latestContent: string;
   latestDate: string;
+  lastActivityDate: string;
   hasAttachments: boolean;
 }
 
@@ -211,14 +212,14 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     if (includeDiary) {
       const dWhere = diaryWhere.length > 0 ? `WHERE ${diaryWhere.join(' AND ')}` : '';
       unions.push(`
-        SELECT d."studentId", d."lessonId", 'diary'::text as type, d.content, d.reply, d."createdAt",
+        SELECT d."studentId", d."lessonId", 'diary'::text as type, d.content, d.reply, d."createdAt", d."repliedAt",
                EXISTS(SELECT 1 FROM "DiaryAttachment" da WHERE da."diaryId" = d.id) as "hasAtt"
         FROM "Diary" d ${dWhere}
       `);
     }
     if (includeNotes) {
       unions.push(`
-        SELECT sn."studentId", sn."lessonId", COALESCE(sn."noteType", 'question')::text as type, sn.content, sn.reply, sn."createdAt",
+        SELECT sn."studentId", sn."lessonId", COALESCE(sn."noteType", 'question')::text as type, sn.content, sn.reply, sn."createdAt", sn."repliedAt",
                EXISTS(SELECT 1 FROM "NoteAttachment" na WHERE na."noteId" = sn.id) as "hasAtt"
         FROM "StudentNote" sn WHERE ${noteWhere.join(' AND ')}
       `);
@@ -240,6 +241,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
           COUNT(*)::int as "totalCount",
           COUNT(*) FILTER (WHERE c.reply IS NULL)::int as "unansweredCount",
           MAX(c."createdAt") as "latestDate",
+          GREATEST(MAX(c."createdAt"), MAX(c."repliedAt")) as "lastActivityDate",
           BOOL_OR(c."hasAtt") as "hasAttachments"
         FROM combined c
         GROUP BY c."studentId", c."lessonId", c.type
@@ -254,6 +256,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         g."totalCount",
         g."unansweredCount",
         g."latestDate",
+        g."lastActivityDate",
         g."hasAttachments",
         u.name as "studentName",
         u.email as "studentEmail",
@@ -294,6 +297,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       unansweredCount: row.unansweredCount,
       latestContent: row.latestContent || '',
       latestDate: row.latestDate instanceof Date ? row.latestDate.toISOString() : String(row.latestDate),
+      lastActivityDate: row.lastActivityDate instanceof Date ? row.lastActivityDate.toISOString() : String(row.lastActivityDate || row.latestDate),
       hasAttachments: row.hasAttachments || false
     }));
 

@@ -458,6 +458,7 @@ export function LessonDetailPage() {
         });
       }
     });
+    messages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
     return messages;
   };
 

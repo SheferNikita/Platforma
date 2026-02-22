@@ -898,61 +898,98 @@ function ChatDialog({
             <div className="flex justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#a67c52]"></div>
             </div>
-          ) : (
-            items.map((item, itemIndex) => (
-              <React.Fragment key={item.id}>
-                {/* Student Message - left side */}
-                <div className="flex justify-start">
-                  <div className="max-w-[85%] md:max-w-[75%]">
-                    <div className={`bg-gradient-to-br from-[#8b9abc] to-[#a5b0cc] text-white rounded-2xl rounded-tl-md px-4 py-3 shadow-sm ${!item.reply ? 'ring-2 ring-orange-300 ring-offset-1' : ''}`}>
-                      <p className="whitespace-pre-wrap text-sm md:text-base">{item.content}</p>
+          ) : (() => {
+            const flatMessages: Array<{
+              key: string;
+              side: 'student' | 'mentor';
+              timestamp: number;
+              studentContent?: string;
+              studentName?: string;
+              hasReply?: boolean;
+              attachments?: ModerationItem['attachments'];
+              itemType?: string;
+              msg?: ReplyMessage;
+            }> = [];
 
-                      {item.attachments && item.attachments.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          {item.attachments.map((att) => {
-                            const attachmentUrl = getAttachmentUrl(att, item.type);
-                            return (
-                              <div key={att.id}>
-                                {isImageFile(att.mimeType) ? (
-                                  <img
-                                    src={attachmentUrl}
-                                    alt={att.originalName}
-                                    className="max-w-full rounded-lg max-h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                    onClick={() => openImageViewer(att.id)}
-                                  />
-                                ) : (
-                                  <a
-                                    href={attachmentUrl}
-                                    download={att.originalName}
-                                    className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-lg px-3 py-2 transition-colors"
-                                  >
-                                    <File className="w-4 h-4" />
-                                    <span className="text-sm truncate flex-1">{att.originalName}</span>
-                                    <span className="text-xs opacity-70">{formatFileSize(att.size)}</span>
-                                    <Download className="w-4 h-4" />
-                                  </a>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-[#3d3527]/50">{item.student.user.name}</span>
-                      <span className="text-xs text-[#3d3527]/40">
-                        {formatDistanceToNow(new Date(item.createdAt), { locale: ru, addSuffix: true })}
-                      </span>
-                      {!item.reply && (
-                        <span className="text-xs text-orange-500 font-medium">● без ответа</span>
-                      )}
+            items.forEach(item => {
+              flatMessages.push({
+                key: `student-${item.id}`,
+                side: 'student',
+                timestamp: new Date(item.createdAt).getTime(),
+                studentContent: item.content,
+                studentName: item.student.user.name,
+                hasReply: !!item.reply,
+                attachments: item.attachments,
+                itemType: item.type,
+              });
+
+              parseReplyHistory(item.reply).forEach((msg, idx) => {
+                flatMessages.push({
+                  key: `reply-${item.id}-${idx}`,
+                  side: 'mentor',
+                  timestamp: new Date(msg.createdAt).getTime(),
+                  msg,
+                });
+              });
+            });
+
+            flatMessages.sort((a, b) => a.timestamp - b.timestamp);
+
+            return flatMessages.map(entry => {
+              if (entry.side === 'student') {
+                return (
+                  <div key={entry.key} className="flex justify-start">
+                    <div className="max-w-[85%] md:max-w-[75%]">
+                      <div className={`bg-gradient-to-br from-[#8b9abc] to-[#a5b0cc] text-white rounded-2xl rounded-tl-md px-4 py-3 shadow-sm ${!entry.hasReply ? 'ring-2 ring-orange-300 ring-offset-1' : ''}`}>
+                        <p className="whitespace-pre-wrap text-sm md:text-base">{entry.studentContent}</p>
+
+                        {entry.attachments && entry.attachments.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {entry.attachments.map((att) => {
+                              const attachmentUrl = getAttachmentUrl(att, (entry.itemType || 'diary') as 'diary' | 'question' | 'report' | 'personal');
+                              return (
+                                <div key={att.id}>
+                                  {isImageFile(att.mimeType) ? (
+                                    <img
+                                      src={attachmentUrl}
+                                      alt={att.originalName}
+                                      className="max-w-full rounded-lg max-h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                      onClick={() => openImageViewer(att.id)}
+                                    />
+                                  ) : (
+                                    <a
+                                      href={attachmentUrl}
+                                      download={att.originalName}
+                                      className="flex items-center gap-2 bg-white/20 hover:bg-white/30 rounded-lg px-3 py-2 transition-colors"
+                                    >
+                                      <File className="w-4 h-4" />
+                                      <span className="text-sm truncate flex-1">{att.originalName}</span>
+                                      <span className="text-xs opacity-70">{formatFileSize(att.size)}</span>
+                                      <Download className="w-4 h-4" />
+                                    </a>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-[#3d3527]/50">{entry.studentName}</span>
+                        <span className="text-xs text-[#3d3527]/40">
+                          {formatDistanceToNow(new Date(entry.timestamp), { locale: ru, addSuffix: true })}
+                        </span>
+                        {!entry.hasReply && (
+                          <span className="text-xs text-orange-500 font-medium">● без ответа</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                {/* Mentor Replies for this item - right side */}
-                {parseReplyHistory(item.reply).map((msg, index) => (
-                  <div key={`${item.id}-reply-${index}`} className="flex justify-end">
+                );
+              } else {
+                const msg = entry.msg!;
+                return (
+                  <div key={entry.key} className="flex justify-end">
                     <div className="max-w-[85%] md:max-w-[75%]">
                       <div className="bg-gradient-to-br from-[#a67c52] to-[#c4a57b] text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-sm">
                         {msg.audioAttachmentId ? (
@@ -1033,10 +1070,10 @@ function ChatDialog({
                       </div>
                     </div>
                   </div>
-                ))}
-              </React.Fragment>
-            ))
-          )}
+                );
+              }
+            });
+          })()}
         </div>
 
         {/* Reply Input Area */}

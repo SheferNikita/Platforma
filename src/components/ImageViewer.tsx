@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, ChevronLeft, ChevronRight, RotateCw, RotateCcw, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, RotateCw, RotateCcw, ZoomIn, ZoomOut, Maximize, Send } from 'lucide-react';
 
 interface ImageViewerProps {
   images: { url: string; name?: string }[];
   initialIndex: number;
   onClose: () => void;
+  onSendMessage?: (text: string) => Promise<void>;
+  sendPlaceholder?: string;
 }
 
 const MIN_SCALE = 1;
@@ -14,7 +16,7 @@ const ZOOM_STEP = 0.5;
 const MAX_PAN_OVERFLOW = 100;
 const DRAG_THRESHOLD = 5;
 
-export default function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps) {
+export default function ImageViewer({ images, initialIndex, onClose, onSendMessage, sendPlaceholder }: ImageViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [rotation, setRotation] = useState(0);
   const [scale, setScale] = useState(1);
@@ -34,10 +36,15 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const currentIndexRef = useRef(currentIndex);
   const scaleRef = useRef(scale);
   currentIndexRef.current = currentIndex;
   scaleRef.current = scale;
+
+  const [messageText, setMessageText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
 
   const currentImage = images[currentIndex];
   const hasMultiple = images.length > 1;
@@ -96,8 +103,30 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
     if (currentIndexRef.current < images.length - 1) goTo(currentIndexRef.current + 1);
   }, [goTo, images.length]);
 
+  const handleSend = useCallback(async () => {
+    if (!onSendMessage || !messageText.trim() || sending) return;
+    setSending(true);
+    try {
+      await onSendMessage(messageText.trim());
+      setMessageText('');
+      if (inputRef.current) {
+        inputRef.current.style.height = 'auto';
+      }
+    } catch {
+    } finally {
+      setSending(false);
+    }
+  }, [onSendMessage, messageText, sending]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (inputFocused) {
+        if (e.key === 'Escape') {
+          inputRef.current?.blur();
+          e.stopPropagation();
+        }
+        return;
+      }
       switch (e.key) {
         case 'Escape': onClose(); break;
         case 'ArrowLeft': if (!isZoomed) goPrev(); break;
@@ -114,7 +143,7 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
       document.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = '';
     };
-  }, [onClose, goPrev, goNext, zoomIn, zoomOut, resetZoom, isZoomed]);
+  }, [onClose, goPrev, goNext, zoomIn, zoomOut, resetZoom, isZoomed, inputFocused]);
 
   useEffect(() => {
     const container = imageContainerRef.current;
@@ -280,6 +309,20 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
     }
   }, []);
 
+  const handleTextareaKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  }, [handleSend]);
+
+  const handleTextareaInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const el = e.target;
+    setMessageText(el.value);
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 80) + 'px';
+  }, []);
+
   return createPortal(
     <div
       ref={containerRef}
@@ -287,7 +330,7 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
       style={{ margin: 0 }}
       onClick={handleBackdropClick}
     >
-      <div className="flex items-center justify-between px-4 py-3 relative z-10" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-between px-2 md:px-4 py-2 md:py-3 relative z-10" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2">
           {hasMultiple && (
             <span className="text-white/70 text-sm font-medium">
@@ -301,59 +344,59 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
           )}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 md:gap-1">
           <button
             onClick={zoomOut}
             disabled={scale <= MIN_SCALE}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all disabled:opacity-30 disabled:hover:bg-white/10"
+            className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all disabled:opacity-30 disabled:hover:bg-white/10"
             title="Уменьшить"
           >
-            <ZoomOut className="w-5 h-5" />
+            <ZoomOut className="w-4 h-4 md:w-5 md:h-5" />
           </button>
           <button
             onClick={zoomIn}
             disabled={scale >= MAX_SCALE}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all disabled:opacity-30 disabled:hover:bg-white/10"
+            className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all disabled:opacity-30 disabled:hover:bg-white/10"
             title="Увеличить"
           >
-            <ZoomIn className="w-5 h-5" />
+            <ZoomIn className="w-4 h-4 md:w-5 md:h-5" />
           </button>
           {isZoomed && (
             <button
               onClick={resetZoom}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
+              className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
               title="Сбросить масштаб"
             >
-              <Maximize className="w-5 h-5" />
+              <Maximize className="w-4 h-4 md:w-5 md:h-5" />
             </button>
           )}
-          <div className="w-px h-6 bg-white/20 mx-1" />
+          <div className="w-px h-5 md:h-6 bg-white/20 mx-0.5 md:mx-1" />
           <button
             onClick={() => setRotation(r => r - 90)}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
+            className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
             title="Повернуть влево"
           >
-            <RotateCcw className="w-5 h-5" />
+            <RotateCcw className="w-4 h-4 md:w-5 md:h-5" />
           </button>
           <button
             onClick={() => setRotation(r => r + 90)}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
+            className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
             title="Повернуть вправо"
           >
-            <RotateCw className="w-5 h-5" />
+            <RotateCw className="w-4 h-4 md:w-5 md:h-5" />
           </button>
           <button
             onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all ml-2"
+            className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white transition-all ml-1 md:ml-2"
             title="Закрыть"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5 md:w-6 md:h-6" />
           </button>
         </div>
       </div>
 
       <div
-        className="flex-1 flex items-center justify-center relative overflow-hidden select-none"
+        className={`flex-1 flex items-center justify-center relative overflow-hidden select-none ${onSendMessage ? 'pb-0' : ''}`}
         onClick={handleBackdropClick}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -385,7 +428,7 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
           <img
             src={currentImage.url}
             alt={currentImage.name || 'Изображение'}
-            className="max-w-full max-h-[calc(100vh-100px)] w-auto h-auto object-contain rounded-lg"
+            className={`max-w-full w-auto h-auto object-contain rounded-lg ${onSendMessage ? 'max-h-[calc(100vh-160px)] md:max-h-[calc(100vh-140px)]' : 'max-h-[calc(100vh-100px)]'}`}
             style={{
               transform: `rotate(${rotation}deg) scale(${scale}) translate(${panOffset.x / scale}px, ${panOffset.y / scale}px)`,
               transition: isPanning || pinchStartDistRef.current !== null ? 'none' : 'transform 0.3s ease',
@@ -413,7 +456,7 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
         )}
       </div>
 
-      {hasMultiple && (
+      {hasMultiple && !onSendMessage && (
         <div className="flex justify-center gap-1.5 pb-4" onClick={(e) => e.stopPropagation()}>
           {images.map((_, idx) => (
             <button
@@ -424,6 +467,50 @@ export default function ImageViewer({ images, initialIndex, onClose }: ImageView
               }`}
             />
           ))}
+        </div>
+      )}
+
+      {onSendMessage && (
+        <div
+          className="relative z-10 px-3 md:px-6 py-2 md:py-3 bg-black/80 border-t border-white/10"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {hasMultiple && (
+            <div className="flex justify-center gap-1.5 pb-2">
+              {images.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => goTo(idx)}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    idx === currentIndex ? 'bg-white w-4' : 'bg-white/40 hover:bg-white/60'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+          <div className="flex items-end gap-2">
+            <textarea
+              ref={inputRef}
+              value={messageText}
+              onChange={handleTextareaInput}
+              onKeyDown={handleTextareaKeyDown}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              placeholder={sendPlaceholder || 'Написать ответ...'}
+              rows={1}
+              className="flex-1 bg-white/10 text-white placeholder-white/40 rounded-xl px-4 py-2.5 text-sm md:text-base resize-none outline-none focus:bg-white/15 focus:ring-1 focus:ring-white/30 transition-all"
+              style={{ maxHeight: '80px' }}
+              disabled={sending}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!messageText.trim() || sending}
+              className="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-full bg-blue-500 hover:bg-blue-400 disabled:bg-white/10 disabled:text-white/30 text-white transition-all"
+              title="Отправить"
+            >
+              <Send className={`w-5 h-5 ${sending ? 'animate-pulse' : ''}`} />
+            </button>
+          </div>
         </div>
       )}
     </div>,

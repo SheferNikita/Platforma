@@ -663,6 +663,19 @@ export function ModerationAdmin() {
           onSubmitReply={submitReply}
           onSubmitAudioReply={submitAudioReply}
           onMarkAsViewed={markAsViewed}
+          onViewerSendMessage={async (text: string) => {
+            const targetItem = getTargetItem();
+            if (!targetItem) {
+              toast.error('Нет записи для ответа');
+              return;
+            }
+            const endpoint = targetItem.type === 'diary'
+              ? `/public/moderation/diary/${targetItem.id}/reply`
+              : `/public/moderation/note/${targetItem.id}/reply`;
+            await api.post(endpoint, { reply: text });
+            toast.success('Сообщение отправлено');
+            await Promise.all([reloadDialogItems(), loadDialogs(0, true)]);
+          }}
         />
       )}
     </div>
@@ -680,7 +693,8 @@ function ChatDialog({
   onClose,
   onSubmitReply,
   onSubmitAudioReply,
-  onMarkAsViewed
+  onMarkAsViewed,
+  onViewerSendMessage
 }: {
   dialog: DialogSummary;
   items: ModerationItem[];
@@ -693,6 +707,7 @@ function ChatDialog({
   onSubmitReply: (files?: File[]) => void;
   onSubmitAudioReply: (audioData: string, duration: number, mimeType?: string, blob?: Blob) => void;
   onMarkAsViewed: () => void;
+  onViewerSendMessage: (text: string) => Promise<void>;
 }) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1177,6 +1192,8 @@ function ChatDialog({
           images={viewerImages}
           initialIndex={viewerIndex}
           onClose={() => setViewerOpen(false)}
+          onSendMessage={onViewerSendMessage}
+          sendPlaceholder="Написать ответ по фото..."
         />
       )}
     </div>

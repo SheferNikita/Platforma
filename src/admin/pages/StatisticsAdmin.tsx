@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
-import { api } from '../../lib/api';
 import {
   BarChart3,
   Search,
@@ -98,7 +97,19 @@ export function StatisticsAdmin() {
       const params = new URLSearchParams();
       if (searchApplied) params.append('search', searchApplied);
       if (groupFilter) params.append('miniGroupId', groupFilter);
-      const result = await api.get<StatisticsResponse>(`/public/statistics?${params.toString()}`);
+      const token = localStorage.getItem('auth_token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      const response = await fetch(`/api/public/statistics?${params.toString()}`, {
+        credentials: 'include',
+        headers,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (!response.ok) throw new Error('Ошибка загрузки');
+      const result = await response.json() as StatisticsResponse;
       setData(result);
     } catch (error) {
       console.error('Error loading statistics:', error);

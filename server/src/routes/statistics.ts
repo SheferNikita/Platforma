@@ -49,6 +49,7 @@ async function getMentorStudentIds(userId: string, role?: string): Promise<strin
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
+    const startTime = Date.now();
     const user = req.user!;
     const role = user.role;
     const isAdmin = ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'ADMIN_ASSISTANT'].includes(role);
@@ -113,17 +114,6 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         id: true,
         tariff: true,
         user: { select: { id: true, name: true, email: true } },
-        progress: {
-          where: { isCompleted: true },
-          select: { id: true }
-        },
-        diaries: {
-          select: {
-            id: true,
-            reply: true,
-            repliedById: true
-          }
-        },
         miniGroups: {
           select: {
             miniGroup: {
@@ -131,23 +121,77 @@ router.get('/', async (req: AuthRequest, res: Response) => {
             }
           }
         },
-        studentNotes: {
+        _count: {
           select: {
-            id: true,
-            reply: true,
-            repliedById: true
+            progress: { where: { isCompleted: true } },
+            diaries: true,
+            studentNotes: true
           }
         }
       }
     });
 
-    let mentorNames: Record<string, string> = {};
-    if (isAdmin) {
+    const studentIds = students.map(s => s.id);
+
+    const noReplyFilter = { OR: [{ reply: null }, { reply: '' }] };
+    const hasReplyFilter = { reply: { not: null }, NOT: { reply: '' } };
+
+    const [uncheckedDiariesCounts, uncheckedNotesCounts] = await Promise.all([
+      prisma.diary.groupBy({
+        by: ['studentId'],
+        where: { studentId: { in: studentIds }, ...noReplyFilter },
+        _count: { id: true }
+      }),
+      prisma.studentNote.groupBy({
+        by: ['studentId'],
+        where: { studentId: { in: studentIds }, ...noReplyFilter },
+        _count: { id: true }
+      })
+    ]);
+
+    const uncheckedDiariesMap: Record<string, number> = {};
+    uncheckedDiariesCounts.forEach(d => { uncheckedDiariesMap[d.studentId] = d._count.id; });
+    const uncheckedNotesMap: Record<string, number> = {};
+    uncheckedNotesCounts.forEach(n => { uncheckedNotesMap[n.studentId] = n._count.id; });
+
+    let mentorBreakdownMap: Record<string, { mentorId: string; mentorName: string; count: number }[]> = {};
+    let checkedMap: Record<string, number> = {};
+    
+    if (isAdmin && studentIds.length > 0) {
+      const [diaryReplies, noteReplies] = await Promise.all([
+        prisma.diary.groupBy({
+          by: ['studentId', 'repliedById'],
+          where: { studentId: { in: studentIds }, ...hasReplyFilter, repliedById: { not: null } },
+          _count: { id: true }
+        }),
+        prisma.studentNote.groupBy({
+          by: ['studentId', 'repliedById'],
+          where: { studentId: { in: studentIds }, ...hasReplyFilter, repliedById: { not: null } },
+          _count: { id: true }
+        })
+      ]);
+
+      const [checkedDiaries, checkedNotes] = await Promise.all([
+        prisma.diary.groupBy({
+          by: ['studentId'],
+          where: { studentId: { in: studentIds }, ...hasReplyFilter },
+          _count: { id: true }
+        }),
+        prisma.studentNote.groupBy({
+          by: ['studentId'],
+          where: { studentId: { in: studentIds }, ...hasReplyFilter },
+          _count: { id: true }
+        })
+      ]);
+
+      checkedDiaries.forEach(d => { checkedMap[d.studentId] = (checkedMap[d.studentId] || 0) + d._count.id; });
+      checkedNotes.forEach(n => { checkedMap[n.studentId] = (checkedMap[n.studentId] || 0) + n._count.id; });
+
       const replierIds = new Set<string>();
-      students.forEach(s => {
-        s.diaries.forEach(d => { if (d.repliedById) replierIds.add(d.repliedById); });
-        s.studentNotes.forEach(n => { if (n.repliedById) replierIds.add(n.repliedById); });
-      });
+      diaryReplies.forEach(d => { if (d.repliedById) replierIds.add(d.repliedById); });
+      noteReplies.forEach(n => { if (n.repliedById) replierIds.add(n.repliedById); });
+
+      let mentorNames: Record<string, string> = {};
       if (replierIds.size > 0) {
         const repliers = await prisma.user.findMany({
           where: { id: { in: Array.from(replierIds) } },
@@ -155,37 +199,33 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         });
         repliers.forEach(r => { mentorNames[r.id] = r.name; });
       }
+
+      const mentorCountsPerStudent: Record<string, Record<string, number>> = {};
+      diaryReplies.forEach(d => {
+        if (!d.repliedById) return;
+        if (!mentorCountsPerStudent[d.studentId]) mentorCountsPerStudent[d.studentId] = {};
+        mentorCountsPerStudent[d.studentId][d.repliedById] = (mentorCountsPerStudent[d.studentId][d.repliedById] || 0) + d._count.id;
+      });
+      noteReplies.forEach(n => {
+        if (!n.repliedById) return;
+        if (!mentorCountsPerStudent[n.studentId]) mentorCountsPerStudent[n.studentId] = {};
+        mentorCountsPerStudent[n.studentId][n.repliedById] = (mentorCountsPerStudent[n.studentId][n.repliedById] || 0) + n._count.id;
+      });
+
+      for (const [sid, counts] of Object.entries(mentorCountsPerStudent)) {
+        mentorBreakdownMap[sid] = Object.entries(counts)
+          .map(([mentorId, count]) => ({
+            mentorId,
+            mentorName: mentorNames[mentorId] || 'Неизвестный',
+            count
+          }))
+          .sort((a, b) => b.count - a.count);
+      }
     }
 
     const formattedStudents = students.map(s => {
-      const lessonsCompleted = s.progress.length;
-      const diariesSubmitted = s.diaries.length;
-      const notesSubmitted = s.studentNotes.length;
-      const uncheckedDiaries = s.diaries.filter(d => !d.reply).length;
-      const uncheckedNotes = s.studentNotes.filter(n => !n.reply).length;
-      const pendingReview = uncheckedDiaries + uncheckedNotes;
-
-      let mentorBreakdown: { mentorId: string; mentorName: string; count: number }[] = [];
-      if (isAdmin) {
-        const mentorCounts: Record<string, number> = {};
-        s.diaries.forEach(d => {
-          if (d.repliedById) {
-            mentorCounts[d.repliedById] = (mentorCounts[d.repliedById] || 0) + 1;
-          }
-        });
-        s.studentNotes.forEach(n => {
-          if (n.repliedById) {
-            mentorCounts[n.repliedById] = (mentorCounts[n.repliedById] || 0) + 1;
-          }
-        });
-        mentorBreakdown = Object.entries(mentorCounts).map(([mentorId, count]) => ({
-          mentorId,
-          mentorName: mentorNames[mentorId] || 'Неизвестный',
-          count
-        })).sort((a, b) => b.count - a.count);
-      }
-
-      const checkedByMentor = s.diaries.filter(d => d.reply).length + s.studentNotes.filter(n => n.reply).length;
+      const uncheckedDiaries = uncheckedDiariesMap[s.id] || 0;
+      const uncheckedNotes = uncheckedNotesMap[s.id] || 0;
 
       return {
         id: s.id,
@@ -194,21 +234,32 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         email: s.user.email,
         tariff: s.tariff,
         groups: s.miniGroups.map(mg => ({ id: mg.miniGroup.id, title: mg.miniGroup.title })),
-        lessonsCompleted,
-        diariesSubmitted,
-        pendingReview,
-        checkedByMentor,
-        mentorBreakdown
+        lessonsCompleted: s._count.progress,
+        diariesSubmitted: s._count.diaries,
+        pendingReview: uncheckedDiaries + uncheckedNotes,
+        checkedByMentor: checkedMap[s.id] || 0,
+        mentorBreakdown: mentorBreakdownMap[s.id] || []
       };
     });
 
     let tariffStats: any[] = [];
     if (isAdmin) {
-      const totalLessons = await prisma.lesson.count({
-        where: { isPublished: true }
-      });
+      const [totalLessons, tariffCounts, tariffProgress] = await Promise.all([
+        prisma.lesson.count({ where: { isPublished: true } }),
+        prisma.student.groupBy({
+          by: ['tariff'],
+          where: { user: { role: 'STUDENT' } },
+          _count: { id: true }
+        }),
+        prisma.student.findMany({
+          where: { user: { role: 'STUDENT' } },
+          select: {
+            tariff: true,
+            _count: { select: { progress: { where: { isCompleted: true } } } }
+          }
+        })
+      ]);
 
-      const tariffs = ['BASIC', 'FAMILY', 'RELATIVE', 'WITH_MENTOR', 'WITH_PSYCHOLOGIST', 'INDIVIDUAL_PSYCHOLOGIST'];
       const tariffLabels: Record<string, string> = {
         BASIC: 'Базовый',
         FAMILY: 'Семейный',
@@ -218,31 +269,29 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         INDIVIDUAL_PSYCHOLOGIST: 'Индивидуальный психолог'
       };
 
+      const tariffProgressMap: Record<string, { count: number; totalCompleted: number }> = {};
+      tariffCounts.forEach(tc => {
+        tariffProgressMap[tc.tariff] = { count: tc._count.id, totalCompleted: 0 };
+      });
+      tariffProgress.forEach(tp => {
+        if (tariffProgressMap[tp.tariff]) {
+          tariffProgressMap[tp.tariff].totalCompleted += tp._count.progress;
+        }
+      });
+
+      const tariffs = ['BASIC', 'FAMILY', 'RELATIVE', 'WITH_MENTOR', 'WITH_PSYCHOLOGIST', 'INDIVIDUAL_PSYCHOLOGIST'];
       for (const tariff of tariffs) {
-        const studentsInTariff = await prisma.student.findMany({
-          where: { tariff: tariff as any, user: { role: 'STUDENT' } },
-          select: {
-            id: true,
-            progress: {
-              where: { isCompleted: true },
-              select: { id: true }
-            }
-          }
-        });
-
-        const studentCount = studentsInTariff.length;
-        if (studentCount === 0) continue;
-
-        const totalCompleted = studentsInTariff.reduce((sum, s) => sum + s.progress.length, 0);
-        const maxPossible = studentCount * totalLessons;
-        const percentage = maxPossible > 0 ? Math.round((totalCompleted / maxPossible) * 100) : 0;
+        const data = tariffProgressMap[tariff];
+        if (!data || data.count === 0) continue;
+        const maxPossible = data.count * totalLessons;
+        const percentage = maxPossible > 0 ? Math.round((data.totalCompleted / maxPossible) * 100) : 0;
 
         tariffStats.push({
           tariff,
           label: tariffLabels[tariff] || tariff,
-          studentCount,
+          studentCount: data.count,
           totalLessons,
-          avgCompleted: studentCount > 0 ? Math.round(totalCompleted / studentCount) : 0,
+          avgCompleted: Math.round(data.totalCompleted / data.count),
           percentage
         });
       }
@@ -254,6 +303,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       orderBy: { title: 'asc' }
     }) : [];
 
+    console.log(`[Perf] GET /statistics: total=${Date.now() - startTime}ms, students=${students.length}`);
+
     res.json({
       students: formattedStudents,
       tariffStats,
@@ -261,7 +312,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       role: isAdmin ? 'admin' : 'mentor'
     });
   } catch (error) {
-    console.error('Statistics error:', error);
+    console.error('[Statistics] Error:', error);
     res.status(500).json({ error: 'Ошибка загрузки статистики' });
   }
 });

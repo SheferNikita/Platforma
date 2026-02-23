@@ -36,11 +36,13 @@ export default function ImageViewer({ images, initialIndex, onClose, onSendMessa
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imageContainerRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const currentIndexRef = useRef(currentIndex);
   const scaleRef = useRef(scale);
   currentIndexRef.current = currentIndex;
   scaleRef.current = scale;
+  const [rotationScale, setRotationScale] = useState(1);
 
   const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
@@ -50,12 +52,16 @@ export default function ImageViewer({ images, initialIndex, onClose, onSendMessa
   const hasMultiple = images.length > 1;
   const isZoomed = scale > 1;
 
+  const rotationScaleRef = useRef(rotationScale);
+  rotationScaleRef.current = rotationScale;
+
   const clampPan = useCallback((offset: { x: number; y: number }, s: number) => {
     const container = imageContainerRef.current;
-    if (!container || s <= 1) return { x: 0, y: 0 };
+    const effectiveScale = rotationScaleRef.current * s;
+    if (!container || effectiveScale <= 1) return { x: 0, y: 0 };
     const rect = container.getBoundingClientRect();
-    const maxX = (rect.width * (s - 1)) / 2 + MAX_PAN_OVERFLOW;
-    const maxY = (rect.height * (s - 1)) / 2 + MAX_PAN_OVERFLOW;
+    const maxX = (rect.width * (effectiveScale - 1)) / 2 + MAX_PAN_OVERFLOW;
+    const maxY = (rect.height * (effectiveScale - 1)) / 2 + MAX_PAN_OVERFLOW;
     return {
       x: Math.max(-maxX, Math.min(maxX, offset.x)),
       y: Math.max(-maxY, Math.min(maxY, offset.y)),
@@ -69,8 +75,39 @@ export default function ImageViewer({ images, initialIndex, onClose, onSendMessa
     setTouchDelta(0);
   }, []);
 
+  const computeRotationScale = useCallback(() => {
+    const img = imgRef.current;
+    const container = imageContainerRef.current;
+    if (!img || !container) return 1;
+    const normalizedRotation = ((rotation % 360) + 360) % 360;
+    const isSideways = normalizedRotation === 90 || normalizedRotation === 270;
+    if (!isSideways) return 1;
+    const contW = container.clientWidth;
+    const contH = container.clientHeight;
+    if (contW === 0 || contH === 0) return 1;
+    const natW = img.naturalWidth;
+    const natH = img.naturalHeight;
+    if (natW === 0 || natH === 0) return 1;
+    const normalFitW = Math.min(contW, natW);
+    const normalFitH = Math.min(contH, natH);
+    const normalScale = Math.min(normalFitW / natW, normalFitH / natH);
+    const renderedW = natW * normalScale;
+    const renderedH = natH * normalScale;
+    const fitScale = Math.min(contH / renderedW, contW / renderedH);
+    return Math.min(fitScale, 1);
+  }, [rotation]);
+
+  useEffect(() => {
+    const newRS = computeRotationScale();
+    setRotationScale(newRS);
+    const handleResize = () => setRotationScale(computeRotationScale());
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [rotation, currentIndex, computeRotationScale]);
+
   useEffect(() => {
     setRotation(0);
+    setRotationScale(1);
     resetZoom();
   }, [currentIndex, resetZoom]);
 
@@ -426,15 +463,20 @@ export default function ImageViewer({ images, initialIndex, onClose, onSendMessa
           }}
         >
           <img
+            ref={imgRef}
             src={currentImage.url}
             alt={currentImage.name || 'Изображение'}
             className={`max-w-full w-auto h-auto object-contain rounded-lg ${onSendMessage ? 'max-h-[calc(100vh-160px)] md:max-h-[calc(100vh-140px)]' : 'max-h-[calc(100vh-100px)]'}`}
             style={{
-              transform: `rotate(${rotation}deg) scale(${scale}) translate(${panOffset.x / scale}px, ${panOffset.y / scale}px)`,
+              transform: `rotate(${rotation}deg) scale(${rotationScale * scale}) translate(${panOffset.x / (rotationScale * scale)}px, ${panOffset.y / (rotationScale * scale)}px)`,
               transition: isPanning || pinchStartDistRef.current !== null ? 'none' : 'transform 0.3s ease',
               transformOrigin: 'center center',
             }}
             draggable={false}
+            onLoad={() => {
+              const newRS = computeRotationScale();
+              setRotationScale(newRS);
+            }}
             onDoubleClick={(e) => {
               e.stopPropagation();
               if (scale > 1) {

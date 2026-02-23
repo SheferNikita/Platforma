@@ -252,14 +252,6 @@ export function StatisticsAdmin() {
           <BarChart3 className="w-6 h-6 text-[#a67c52]" />
           Статистика
         </h1>
-        <button
-          onClick={exportToExcel}
-          disabled={!data || data.students.length === 0}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#8b6542] text-white rounded-xl hover:shadow-lg transition-all text-sm disabled:opacity-50"
-        >
-          <Download className="w-4 h-4" />
-          Экспорт в Excel
-        </button>
       </div>
 
       {isAdmin && data!.tariffStats.length > 0 && (

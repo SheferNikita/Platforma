@@ -94,21 +94,43 @@ async function buildStudentFilter(
   }
 
   if (query.email && query.email.trim()) {
-    const foundUser = await prisma.user.findFirst({
-      where: { email: { equals: query.email.trim(), mode: 'insensitive' } },
-      select: { id: true }
-    });
-    if (!foundUser) return null;
-    const foundStudent = await prisma.student.findFirst({
-      where: { userId: foundUser.id },
-      select: { id: true }
-    });
-    if (!foundStudent) return null;
-    if (targetStudentIds) {
-      if (!targetStudentIds.includes(foundStudent.id)) return null;
-      targetStudentIds = [foundStudent.id];
+    const searchTerm = query.email.trim();
+    const isEmailSearch = searchTerm.includes('@');
+    let foundStudentIds: string[] = [];
+
+    if (isEmailSearch) {
+      const foundUser = await prisma.user.findFirst({
+        where: { email: { equals: searchTerm, mode: 'insensitive' } },
+        select: { id: true }
+      });
+      if (foundUser) {
+        const foundStudent = await prisma.student.findFirst({
+          where: { userId: foundUser.id },
+          select: { id: true }
+        });
+        if (foundStudent) foundStudentIds = [foundStudent.id];
+      }
     } else {
-      targetStudentIds = [foundStudent.id];
+      const foundUsers = await prisma.user.findMany({
+        where: { name: { contains: searchTerm, mode: 'insensitive' } },
+        select: { id: true }
+      });
+      if (foundUsers.length > 0) {
+        const foundStudents = await prisma.student.findMany({
+          where: { userId: { in: foundUsers.map(u => u.id) } },
+          select: { id: true }
+        });
+        foundStudentIds = foundStudents.map(s => s.id);
+      }
+    }
+
+    if (foundStudentIds.length === 0) return null;
+    if (targetStudentIds) {
+      const filtered = targetStudentIds.filter(id => foundStudentIds.includes(id));
+      if (filtered.length === 0) return null;
+      targetStudentIds = filtered;
+    } else {
+      targetStudentIds = foundStudentIds;
     }
   }
 
@@ -152,7 +174,7 @@ interface DialogSummary {
 
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { status, type, studentId, lessonId, miniGroupId, email, limit: limitStr, offset: offsetStr } = req.query;
+    const { status, type, studentId, lessonId, miniGroupId, email, sortBy, limit: limitStr, offset: offsetStr } = req.query;
     const user = req.user!;
     const limit = Math.max(1, Math.min(parseInt(limitStr as string) || 50, 100));
     const offset = Math.max(0, parseInt(offsetStr as string) || 0);
@@ -275,7 +297,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       JOIN "User" u ON u.id = s."userId"
       JOIN "Lesson" l ON l.id = g."lessonId"
       CROSS JOIN total_count tc
-      ORDER BY g."latestDate" DESC
+      ORDER BY ${sortBy === 'lastActivity' ? 'g."lastActivityDate"' : 'g."latestDate"'} DESC
       LIMIT $${paramIdx} OFFSET $${paramIdx + 1}
     `;
     params.push(limit, offset);

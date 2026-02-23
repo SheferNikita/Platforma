@@ -41,6 +41,7 @@ const ModerationAdmin = lazy(() => import('./admin/pages/ModerationAdmin').then(
 const AuditLogAdmin = lazy(() => import('./admin/pages/AuditLogAdmin').then(m => ({ default: m.AuditLogAdmin })));
 const DistributionAdmin = lazy(() => import('./admin/pages/DistributionAdmin').then(m => ({ default: m.DistributionAdmin })));
 const SettingsAdmin = lazy(() => import('./admin/pages/SettingsAdmin').then(m => ({ default: m.SettingsAdmin })));
+const StatisticsAdmin = lazy(() => import('./admin/pages/StatisticsAdmin').then(m => ({ default: m.StatisticsAdmin })));
 
 function PageLoader() {
   return (
@@ -161,6 +162,7 @@ export default function App() {
             <Route path="admins" element={<AdminsAdmin />} />
             <Route path="audit" element={<AuditLogAdmin />} />
             <Route path="distribution" element={<DistributionAdmin />} />
+            <Route path="statistics" element={<StatisticsAdmin />} />
             <Route path="settings" element={<SettingsAdmin />} />
           </Route>
           

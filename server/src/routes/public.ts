@@ -6,6 +6,7 @@ import ordersRouter from './orders';
 import moderationRouter from './moderation';
 import auditRouter from './audit';
 import distributionRouter from './distribution';
+import statisticsRouter from './statistics';
 import { optionalAuthenticate, AuthRequest } from '../middleware/auth';
 
 const router = Router();
@@ -71,6 +72,7 @@ router.use('/orders', ordersRouter);
 router.use('/moderation', moderationRouter);
 router.use('/audit', auditRouter);
 router.use('/distribution', distributionRouter);
+router.use('/statistics', statisticsRouter);
 
 interface DecodedToken {
   id: string;

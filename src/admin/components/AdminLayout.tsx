@@ -21,7 +21,8 @@ import {
   History,
   UserPlus,
   Menu,
-  X
+  X,
+  BarChart3
 } from 'lucide-react';
 import { Toaster } from 'sonner';
 
@@ -46,6 +47,7 @@ const navItems: {
   { path: '/admin/students', label: 'Ученики', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'ADMIN_ASSISTANT'] },
   { path: '/admin/distribution', label: 'Распределение', icon: UserPlus, showDistributionBadge: true, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR'] },
   { path: '/admin/moderation', label: 'Обратная связь', icon: MessageCircle, showBadge: true, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR'] },
+  { path: '/admin/statistics', label: 'Статистика', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'ADMIN_ASSISTANT'] },
   { path: '/admin/products', label: 'Продукты', icon: ShoppingBag, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { path: '/admin/crm', label: 'CRM', icon: ClipboardList, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { path: '/admin/payments', label: 'Платежи', icon: CreditCard, roles: ['SUPER_ADMIN', 'ADMIN'] },

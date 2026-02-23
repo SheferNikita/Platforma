@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye, Paperclip, Image, File, Download, Mic, Square, Play, Pause, Search, Users, List } from 'lucide-react';
 import AudioPlayer from '../../components/AudioPlayer';
@@ -133,7 +134,10 @@ function getRecordCountLabel(count: number): string {
 }
 
 export function ModerationAdmin() {
-  const [activeTab, setActiveTab] = useState<'pending' | 'answered' | 'all'>('pending');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialEmail = searchParams.get('email') || '';
+
+  const [activeTab, setActiveTab] = useState<'pending' | 'answered' | 'all'>(initialEmail ? 'all' : 'pending');
 
   const [pendingDialogs, setPendingDialogs] = useState<DialogSummary[]>([]);
   const [pendingTotal, setPendingTotal] = useState(0);
@@ -161,8 +165,8 @@ export function ModerationAdmin() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [miniGroupFilter, setMiniGroupFilter] = useState<string>('all');
   const [lessonFilter, setLessonFilter] = useState<string>('all');
-  const [emailSearch, setEmailSearch] = useState('');
-  const [emailSearchApplied, setEmailSearchApplied] = useState('');
+  const [emailSearch, setEmailSearch] = useState(initialEmail);
+  const [emailSearchApplied, setEmailSearchApplied] = useState(initialEmail);
   const [miniGroups, setMiniGroups] = useState<{ id: string; title: string }[]>([]);
   const [selectedDialog, setSelectedDialog] = useState<DialogSummary | null>(null);
   const [dialogItems, setDialogItems] = useState<ModerationItem[]>([]);
@@ -179,6 +183,9 @@ export function ModerationAdmin() {
 
   useEffect(() => {
     loadMiniGroups();
+    if (initialEmail) {
+      setSearchParams({}, { replace: true });
+    }
   }, []);
 
   useEffect(() => {

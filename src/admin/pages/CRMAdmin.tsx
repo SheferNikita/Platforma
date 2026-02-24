@@ -99,11 +99,11 @@ const initialFilters: Filters = {
 
 const tariffLabels: Record<string, string> = {
   BASIC: 'Базовый',
-  FAMILY: 'Семейный',
-  RELATIVE: 'Родственник участника',
+  FAMILY: 'Для родственников',
+  RELATIVE: 'Родственник',
   WITH_MENTOR: 'С наставником',
   WITH_PSYCHOLOGIST: 'С психологом',
-  INDIVIDUAL_PSYCHOLOGIST: 'Индивидуальный'
+  INDIVIDUAL_PSYCHOLOGIST: 'Индивид. психолог'
 };
 
 const studentStatusConfig: Record<string, { label: string; color: string }> = {

@@ -18,10 +18,10 @@ interface LibraryItem {
 const TARIFF_OPTIONS = [
   { value: 'BASIC', label: 'Базовый', short: 'Базовый', color: 'bg-blue-50 text-blue-700 border-blue-200' },
   { value: 'FAMILY', label: 'Для родственников', short: 'Родств.', color: 'bg-pink-50 text-pink-700 border-pink-200' },
-  { value: 'RELATIVE', label: 'Родственник участника', short: 'Родств. уч.', color: 'bg-violet-50 text-violet-700 border-violet-200' },
+  { value: 'RELATIVE', label: 'Родственник', short: 'Родств.', color: 'bg-violet-50 text-violet-700 border-violet-200' },
   { value: 'WITH_MENTOR', label: 'С наставником', short: 'Настав.', color: 'bg-amber-50 text-amber-700 border-amber-200' },
   { value: 'WITH_PSYCHOLOGIST', label: 'С психологом', short: 'Психол.', color: 'bg-teal-50 text-teal-700 border-teal-200' },
-  { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивидуальный с психологом', short: 'Инд. псих.', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивид. психолог', short: 'Инд. псих.', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
 ];
 
 function TariffBadges({ tariffs }: { tariffs: string[] }) {

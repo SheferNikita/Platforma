@@ -12,11 +12,11 @@ interface VisibilitySetting {
 const TARIFF_OPTIONS = [
   { value: 'ALL', label: 'Все тарифы' },
   { value: 'BASIC', label: 'Базовый' },
-  { value: 'FAMILY', label: 'Семейный' },
+  { value: 'FAMILY', label: 'Для родственников' },
   { value: 'RELATIVE', label: 'Родственник' },
   { value: 'WITH_MENTOR', label: 'С наставником' },
   { value: 'WITH_PSYCHOLOGIST', label: 'С психологом' },
-  { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивидуальный психолог' },
+  { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивид. психолог' },
 ];
 
 const SECTION_ICONS: Record<string, string> = {

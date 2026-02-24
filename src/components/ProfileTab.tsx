@@ -8,10 +8,10 @@ import { toast } from 'sonner';
 const TARIFF_LABELS: Record<string, string> = {
   BASIC: 'Базовый',
   FAMILY: 'Для родственников',
-  RELATIVE: 'Родственник участника',
+  RELATIVE: 'Родственник',
   WITH_MENTOR: 'С наставником',
   WITH_PSYCHOLOGIST: 'С психологом',
-  INDIVIDUAL_PSYCHOLOGIST: 'Индивидуально с психологом'
+  INDIVIDUAL_PSYCHOLOGIST: 'Индивид. психолог'
 };
 
 interface ProfileData {

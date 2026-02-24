@@ -24,11 +24,11 @@ const ADDICTION_LABELS: Record<string, string> = {
 
 const TARIFF_LABELS: Record<string, string> = {
   BASIC: 'Базовый',
-  FAMILY: 'Семейный',
+  FAMILY: 'Для родственников',
   RELATIVE: 'Родственник',
   WITH_MENTOR: 'С наставником',
   WITH_PSYCHOLOGIST: 'С психологом',
-  INDIVIDUAL_PSYCHOLOGIST: 'Индивидуальный'
+  INDIVIDUAL_PSYCHOLOGIST: 'Индивид. психолог'
 };
 
 const ADDICTION_OPTIONS = [

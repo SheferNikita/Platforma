@@ -262,11 +262,11 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
       const tariffLabels: Record<string, string> = {
         BASIC: 'Базовый',
-        FAMILY: 'Семейный',
+        FAMILY: 'Для родственников',
         RELATIVE: 'Родственник',
         WITH_MENTOR: 'С наставником',
         WITH_PSYCHOLOGIST: 'С психологом',
-        INDIVIDUAL_PSYCHOLOGIST: 'Индивидуальный психолог'
+        INDIVIDUAL_PSYCHOLOGIST: 'Индивид. психолог'
       };
 
       const tariffProgressMap: Record<string, { count: number; totalCompleted: number }> = {};

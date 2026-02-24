@@ -103,11 +103,11 @@ interface BulkFilters {
 
 const TARIFF_LABELS: Record<string, string> = {
   BASIC: 'Базовый',
-  FAMILY: 'Семейный',
-  RELATIVE: 'Родственник участника',
-  WITH_MENTOR: 'Идем с наставником',
-  WITH_PSYCHOLOGIST: 'Идем с психологом',
-  INDIVIDUAL_PSYCHOLOGIST: 'Индивидуально с психологом'
+  FAMILY: 'Для родственников',
+  RELATIVE: 'Родственник',
+  WITH_MENTOR: 'С наставником',
+  WITH_PSYCHOLOGIST: 'С психологом',
+  INDIVIDUAL_PSYCHOLOGIST: 'Индивид. психолог'
 };
 
 const GENDER_LABELS: Record<string, string> = {
@@ -1153,10 +1153,11 @@ export function EmailAdmin() {
                 >
                   <option value="ALL">Все тарифы</option>
                   <option value="BASIC">Базовый</option>
-                  <option value="WITH_MENTOR">Идем с наставником</option>
-                  <option value="WITH_PSYCHOLOGIST">Идем с психологом</option>
-                  <option value="INDIVIDUAL_PSYCHOLOGIST">Индивидуально с психологом</option>
-                  <option value="FAMILY">Семейный</option>
+                  <option value="FAMILY">Для родственников</option>
+                  <option value="RELATIVE">Родственник</option>
+                  <option value="WITH_MENTOR">С наставником</option>
+                  <option value="WITH_PSYCHOLOGIST">С психологом</option>
+                  <option value="INDIVIDUAL_PSYCHOLOGIST">Индивид. психолог</option>
                 </select>
                 <input
                   type="number"

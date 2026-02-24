@@ -62,11 +62,11 @@ type SortDir = 'asc' | 'desc';
 
 const tariffLabels: Record<string, string> = {
   BASIC: 'Базовый',
-  FAMILY: 'Семейный',
+  FAMILY: 'Для родственников',
   RELATIVE: 'Родственник',
   WITH_MENTOR: 'С наставником',
   WITH_PSYCHOLOGIST: 'С психологом',
-  INDIVIDUAL_PSYCHOLOGIST: 'Индив. психолог'
+  INDIVIDUAL_PSYCHOLOGIST: 'Индивид. психолог'
 };
 
 const tariffColors: Record<string, string> = {

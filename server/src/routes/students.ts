@@ -16,11 +16,11 @@ const studentTariffs = ['BASIC', 'FAMILY', 'RELATIVE', 'WITH_MENTOR', 'WITH_PSYC
 
 const TARIFF_NAMES: Record<string, string> = {
   BASIC: 'Базовый',
-  FAMILY: 'Семейный',
-  RELATIVE: 'Родственник участника',
-  WITH_MENTOR: 'Идем с наставником',
-  WITH_PSYCHOLOGIST: 'Идем с психологом',
-  INDIVIDUAL_PSYCHOLOGIST: 'Индивидуально с психологом'
+  FAMILY: 'Для родственников',
+  RELATIVE: 'Родственник',
+  WITH_MENTOR: 'С наставником',
+  WITH_PSYCHOLOGIST: 'С психологом',
+  INDIVIDUAL_PSYCHOLOGIST: 'Индивид. психолог'
 };
 
 const TARIFF_PAYMENT_LINKS: Record<string, string> = {
@@ -440,11 +440,11 @@ router.get('/export', async (req: AuthRequest, res: Response) => {
 
     const tariffLabels: Record<string, string> = {
       BASIC: 'Базовый',
-      FAMILY: 'Семейный',
-      RELATIVE: 'Родственник участника',
-      WITH_MENTOR: 'Идем с наставником',
-      WITH_PSYCHOLOGIST: 'Идем с психологом',
-      INDIVIDUAL_PSYCHOLOGIST: 'Индивидуально с психологом'
+      FAMILY: 'Для родственников',
+      RELATIVE: 'Родственник',
+      WITH_MENTOR: 'С наставником',
+      WITH_PSYCHOLOGIST: 'С психологом',
+      INDIVIDUAL_PSYCHOLOGIST: 'Индивид. психолог'
     };
 
     const genderLabels: Record<string, string> = {

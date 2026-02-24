@@ -97,7 +97,8 @@ export function StatisticsAdmin() {
       const params = new URLSearchParams();
       if (searchApplied) params.append('search', searchApplied);
       if (groupFilter) params.append('miniGroupId', groupFilter);
-      const token = localStorage.getItem('auth_token');
+      let token: string | null = null;
+      try { token = localStorage.getItem('auth_token'); } catch {}
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       const controller = new AbortController();

@@ -35,7 +35,7 @@ The backend is powered by **Express.js (Node.js)**, utilizing **Prisma ORM 5.22.
 -   **Prepayment Tracking System:** Products and students can be marked with a prepayment status using specific naming conventions and tags in notes.
 -   **Module Access Control:** System for managing student access to specific modules with expiration dates.
 -   **Mini-Groups:** Enhanced management including curator assignment and chat links.
--   **Authentication:** Dual mechanism using HttpOnly cookies and `localStorage` fallback for iframe compatibility.
+-   **Authentication:** Dual mechanism using HttpOnly cookies and `localStorage` fallback for iframe compatibility. All `localStorage` access is wrapped in try-catch (via `src/lib/safeStorage.ts`) to prevent Safari WebView crashes in Telegram/Instagram/VK In-App Browsers.
 -   **UI/UX:** Warm, beige color scheme with rounded corners and glassmorphism effect.
 -   **Mobile Responsiveness:** Fully responsive design for the admin panel, adapting tables to cards, full-screen modals, and responsive grids.
 -   **Platform Settings System:** Centralized configuration management for general settings, SOS features, section visibility, and email templates, with history tracking and rollback.

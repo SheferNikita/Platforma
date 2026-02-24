@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../lib/auth';
 import { useSettings } from '../../lib/settings';
+import { safeStorage } from '../../lib/safeStorage';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -18,7 +19,7 @@ export function AdminLogin() {
   useEffect(() => {
     // If user is logged in but not admin, log them out first
     if (user && !isAdmin && !authLoading) {
-      localStorage.removeItem('auth_token');
+      safeStorage.removeItem('auth_token');
     }
   }, [user, isAdmin, authLoading]);
 
@@ -33,7 +34,7 @@ export function AdminLogin() {
 
     try {
       // Clear any existing token before login
-      localStorage.removeItem('auth_token');
+      safeStorage.removeItem('auth_token');
       await login(email, password);
       toast.success('Успешный вход!');
       // Use window.location for full reload to ensure fresh state

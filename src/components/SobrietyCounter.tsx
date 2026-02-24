@@ -3,6 +3,7 @@ import { Calendar, Check, Award } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { safeStorage } from '../lib/safeStorage';
 
 interface ProfileData {
   id: string;
@@ -35,13 +36,13 @@ export function SobrietyCounter() {
         setUserId(currentUserId);
         
         // Clear old shared localStorage key (migration from old system)
-        localStorage.removeItem('sobrietyData');
+        safeStorage.removeItem('sobrietyData');
         
         if (profile.sobrietyDate) {
           const dateStr = new Date(profile.sobrietyDate).toISOString().split('T')[0];
           setStartDate(dateStr);
           calculateDays(dateStr);
-          const saved = localStorage.getItem(getStorageKey(currentUserId));
+          const saved = safeStorage.getItem(getStorageKey(currentUserId));
           if (saved) {
             const data = JSON.parse(saved);
             setLastCheckIn(data.lastCheckIn);
@@ -50,7 +51,7 @@ export function SobrietyCounter() {
           return;
         }
         
-        const saved = localStorage.getItem(getStorageKey(currentUserId));
+        const saved = safeStorage.getItem(getStorageKey(currentUserId));
         if (saved) {
           const data = JSON.parse(saved);
           setStartDate(data.startDate);
@@ -118,7 +119,7 @@ export function SobrietyCounter() {
     setStartDate(today);
     setLastCheckIn(today);
     setDays(0);
-    localStorage.setItem(getStorageKey(userId), JSON.stringify({
+    safeStorage.setItem(getStorageKey(userId), JSON.stringify({
       startDate: today,
       lastCheckIn: today
     }));
@@ -131,7 +132,7 @@ export function SobrietyCounter() {
     const today = new Date().toISOString().split('T')[0];
     setLastCheckIn(today);
     calculateDays(startDate);
-    localStorage.setItem(getStorageKey(userId), JSON.stringify({
+    safeStorage.setItem(getStorageKey(userId), JSON.stringify({
       startDate,
       lastCheckIn: today
     }));
@@ -144,7 +145,7 @@ export function SobrietyCounter() {
       setStartDate(today);
       setLastCheckIn(today);
       setDays(0);
-      localStorage.setItem(getStorageKey(userId), JSON.stringify({
+      safeStorage.setItem(getStorageKey(userId), JSON.stringify({
         startDate: today,
         lastCheckIn: today
       }));
@@ -164,7 +165,7 @@ export function SobrietyCounter() {
     calculateDays(customDate);
     // Preserve existing lastCheckIn or keep null if not set
     const currentCheckIn = lastCheckIn;
-    localStorage.setItem(getStorageKey(userId), JSON.stringify({
+    safeStorage.setItem(getStorageKey(userId), JSON.stringify({
       startDate: customDate,
       lastCheckIn: currentCheckIn
     }));

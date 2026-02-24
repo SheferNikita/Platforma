@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { api } from './api';
+import { safeStorage } from './safeStorage';
 
 interface User {
   id: string;
@@ -41,13 +42,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function login(email: string, password: string) {
     const { user, token } = await api.post<{ user: User; token: string }>('/auth/login', { email, password });
-    localStorage.setItem('auth_token', token);
+    safeStorage.setItem('auth_token', token);
     setUser(user);
   }
 
   async function logout() {
     await api.post('/auth/logout');
-    localStorage.removeItem('auth_token');
+    safeStorage.removeItem('auth_token');
     setUser(null);
   }
 

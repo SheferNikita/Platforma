@@ -33,7 +33,7 @@ export function LessonsTab() {
   const [error, setError] = useState<string | null>(null);
   const [completedLessons, setCompletedLessons] = useState<Set<string>>(new Set());
   const [sortOrder, setSortOrder] = useState<SortOrder>(() => {
-    return (localStorage.getItem(SORT_KEY) as SortOrder) || 'oldest';
+    try { return (localStorage.getItem(SORT_KEY) as SortOrder) || 'oldest'; } catch { return 'oldest'; }
   });
 
   const sortedModules = useMemo(() => {
@@ -46,7 +46,7 @@ export function LessonsTab() {
 
   const handleSortChange = (order: SortOrder) => {
     setSortOrder(order);
-    localStorage.setItem(SORT_KEY, order);
+    try { localStorage.setItem(SORT_KEY, order); } catch {}
   };
 
   useEffect(() => {

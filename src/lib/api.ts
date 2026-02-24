@@ -1,10 +1,12 @@
+import { safeStorage } from './safeStorage';
+
 const API_BASE = '/api';
 const REQUEST_TIMEOUT = 15000;
 const UPLOAD_TIMEOUT = 120000;
 
 function getAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
-  const token = localStorage.getItem('auth_token');
+  const token = safeStorage.getItem('auth_token');
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }

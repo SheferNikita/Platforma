@@ -30,7 +30,8 @@ function formatTimeAgo(dateString: string): string {
 }
 
 function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+  let token: string | null = null;
+  try { token = localStorage.getItem('auth_token') || localStorage.getItem('token'); } catch {}
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
@@ -55,7 +56,8 @@ export function NotificationBell() {
         setLoading(true);
         setError(null);
       }
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
+      let token: string | null = null;
+      try { token = localStorage.getItem('auth_token') || localStorage.getItem('token'); } catch {}
       if (!token) {
         setNotifications([]);
         setLoading(false);

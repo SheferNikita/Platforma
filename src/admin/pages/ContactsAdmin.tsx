@@ -305,7 +305,8 @@ function ContactForm({ contact, onSave, onClose }: { contact: Contact | null; on
       const formData = new FormData();
       formData.append('avatar', file);
       
-      const token = localStorage.getItem('token');
+      let token: string | null = null;
+      try { token = localStorage.getItem('token'); } catch {}
       const headers: Record<string, string> = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;

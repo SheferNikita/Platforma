@@ -224,7 +224,8 @@ export function StudentsAdmin() {
           <button
             onClick={async () => {
               try {
-                const token = localStorage.getItem('auth_token');
+                let token: string | null = null;
+                try { token = localStorage.getItem('auth_token'); } catch {}
                 const res = await fetch('/api/students/export', {
                   credentials: 'include',
                   headers: token ? { Authorization: `Bearer ${token}` } : {}

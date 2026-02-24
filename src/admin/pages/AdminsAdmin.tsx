@@ -83,7 +83,8 @@ export function AdminsAdmin() {
   async function exportStaff() {
     setExporting(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      let token: string | null = null;
+      try { token = localStorage.getItem('auth_token'); } catch {}
       const headers: Record<string, string> = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       const response = await fetch('/api/admin/export-staff', {

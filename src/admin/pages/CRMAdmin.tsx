@@ -220,7 +220,8 @@ export function CRMAdmin() {
 
   async function exportToCSV() {
     try {
-      const token = localStorage.getItem('auth_token');
+      let token: string | null = null;
+      try { token = localStorage.getItem('auth_token'); } catch {}
       const response = await fetch('/api/public/orders/admin/export', {
         credentials: 'include',
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}

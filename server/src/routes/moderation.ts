@@ -85,12 +85,21 @@ async function buildStudentFilter(
   let targetStudentIds: string[] | null = null;
 
   if (query.miniGroupId) {
-    const groupMembers = await prisma.miniGroupMember.findMany({
-      where: { miniGroupId: query.miniGroupId },
-      select: { studentId: true }
-    });
-    targetStudentIds = groupMembers.map(m => m.studentId);
-    if (targetStudentIds.length === 0) return null;
+    if (query.miniGroupId === 'individual') {
+      const individualStudents = await prisma.student.findMany({
+        where: { tariff: 'INDIVIDUAL_PSYCHOLOGIST' },
+        select: { id: true }
+      });
+      targetStudentIds = individualStudents.map(s => s.id);
+      if (targetStudentIds.length === 0) return null;
+    } else {
+      const groupMembers = await prisma.miniGroupMember.findMany({
+        where: { miniGroupId: query.miniGroupId },
+        select: { studentId: true }
+      });
+      targetStudentIds = groupMembers.map(m => m.studentId);
+      if (targetStudentIds.length === 0) return null;
+    }
   }
 
   if (query.email && query.email.trim()) {

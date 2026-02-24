@@ -541,6 +541,7 @@ export function ModerationAdmin() {
           className="px-3 md:px-4 py-2 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm md:text-base max-w-[200px]"
         >
           <option value="all">Все мини-группы</option>
+          <option value="individual">Индивидуальные</option>
           {miniGroups.map(group => (
             <option key={group.id} value={group.id}>
               {group.title}

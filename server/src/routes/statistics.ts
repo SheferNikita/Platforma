@@ -72,16 +72,20 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     }
 
     if (miniGroupId && isAdmin) {
-      const groupMembers = await prisma.miniGroupMember.findMany({
-        where: { miniGroupId },
-        select: { studentId: true }
-      });
-      const groupStudentIds = groupMembers.map(m => m.studentId);
-      if (studentFilter.id) {
-        const existing = studentFilter.id.in as string[];
-        studentFilter.id = { in: existing.filter((id: string) => groupStudentIds.includes(id)) };
+      if (miniGroupId === 'individual') {
+        studentFilter.tariff = 'INDIVIDUAL_PSYCHOLOGIST';
       } else {
-        studentFilter.id = { in: groupStudentIds };
+        const groupMembers = await prisma.miniGroupMember.findMany({
+          where: { miniGroupId },
+          select: { studentId: true }
+        });
+        const groupStudentIds = groupMembers.map(m => m.studentId);
+        if (studentFilter.id) {
+          const existing = studentFilter.id.in as string[];
+          studentFilter.id = { in: existing.filter((id: string) => groupStudentIds.includes(id)) };
+        } else {
+          studentFilter.id = { in: groupStudentIds };
+        }
       }
     }
 

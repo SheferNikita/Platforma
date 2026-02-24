@@ -319,6 +319,7 @@ export function StatisticsAdmin() {
                 className="pl-9 pr-8 py-2 w-full sm:w-auto border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] text-sm bg-white appearance-none cursor-pointer min-w-[180px]"
               >
                 <option value="">Все группы</option>
+                <option value="individual">Индивидуальные</option>
                 {data!.groups.map(g => (
                   <option key={g.id} value={g.id}>{g.title}</option>
                 ))}

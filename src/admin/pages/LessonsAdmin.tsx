@@ -25,7 +25,7 @@ interface Lesson {
   isPublished: boolean;
   isTextOnly: boolean;
   publishAt: string | null;
-  updatedAt: string;
+  publishedAt: string | null;
   videos: LessonVideo[];
   showDiary: boolean;
   showNotes: boolean;
@@ -446,10 +446,10 @@ export function LessonsAdmin() {
                               {new Date(new Date(lesson.publishAt).getTime() + 3 * 60 * 60 * 1000).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} МСК
                             </span>
                           )}
-                          {lesson.isPublished && !(lesson.publishAt && new Date(lesson.publishAt) > new Date()) && (
+                          {lesson.isPublished && lesson.publishedAt && !(lesson.publishAt && new Date(lesson.publishAt) > new Date()) && (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
                               <Calendar className="w-3 h-3" />
-                              {new Date(new Date(lesson.publishAt || lesson.updatedAt).getTime() + 3 * 60 * 60 * 1000).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} МСК
+                              {new Date(new Date(lesson.publishedAt).getTime() + 3 * 60 * 60 * 1000).toLocaleString('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} МСК
                             </span>
                           )}
                         </div>

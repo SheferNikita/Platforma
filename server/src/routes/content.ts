@@ -267,11 +267,14 @@ router.put('/lessons/:id', moderatorRoles, async (req: AuthRequest & Request<IdP
       }
     }
     
+    const isBeingPublished = lessonData.isPublished === true && oldLesson && !oldLesson.isPublished;
+
     const lesson = await prisma.lesson.update({ 
       where: { id }, 
       data: {
         ...lessonData,
-        ...(publishAt !== undefined && { publishAt: publishAt ? new Date(publishAt) : null })
+        ...(publishAt !== undefined && { publishAt: publishAt ? new Date(publishAt) : null }),
+        ...(isBeingPublished && !oldLesson.publishedAt && { publishedAt: new Date() })
       },
       include: {
         videos: {

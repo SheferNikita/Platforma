@@ -32,7 +32,8 @@ export async function publishScheduledLessons(): Promise<number> {
         where: { id: lesson.id },
         data: {
           isPublished: true,
-          publishAt: null
+          publishAt: null,
+          publishedAt: new Date()
         }
       });
       invalidateModulesCache();

@@ -29,7 +29,7 @@ The backend is powered by **Express.js (Node.js)**, utilizing **Prisma ORM 5.22.
     -   Product creation, payment CRM, and email system with customizable and scheduled templates.
     -   Rich Text Editor for lessons (TipTap, Kinescope, file attachments).
     -   Diary and Notes Attachments stored as base64 in the database.
-    -   Scheduled Lesson Publishing and Content Reordering.
+    -   Scheduled Lesson Publishing with `publishedAt` tracking and Content Reordering.
     -   In-App Notification System for real-time alerts.
 -   **Student Tariff System:** Six-tier access control (`BASIC`, `FAMILY`, `RELATIVE`, `WITH_MENTOR`, `WITH_PSYCHOLOGIST`, `INDIVIDUAL_PSYCHOLOGIST`) affecting feature access.
 -   **Prepayment Tracking System:** Products and students can be marked with a prepayment status using specific naming conventions and tags in notes.

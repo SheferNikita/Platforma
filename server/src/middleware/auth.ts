@@ -48,6 +48,23 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     }
 
     req.user = user;
+
+    const tokenExp = (decoded as any).exp;
+    if (tokenExp) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const remaining = tokenExp - nowSec;
+      const halfLife = 3.5 * 24 * 60 * 60;
+      if (remaining < halfLife) {
+        const newToken = generateToken(user);
+        res.cookie('token', newToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: 'none',
+          maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+      }
+    }
+
     next();
   } catch (error) {
     return res.status(401).json({ error: 'Недействительный токен' });

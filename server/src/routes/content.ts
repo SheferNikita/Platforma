@@ -213,6 +213,7 @@ router.post('/lessons', moderatorRoles, async (req: AuthRequest, res: Response) 
       data: {
         ...lessonData,
         publishAt: publishAt ? new Date(publishAt) : null,
+        ...(lessonData.isPublished && { publishedAt: new Date() }),
         videos: videos && videos.length > 0 ? {
           create: videos.map((v, i) => ({
             title: v.title || null,

@@ -751,7 +751,9 @@ router.post('/migrate-communities', adminOnly, async (req: AuthRequest, res: Res
       ADD COLUMN IF NOT EXISTS "time" VARCHAR(20),
       ADD COLUMN IF NOT EXISTS "leader" VARCHAR(255),
       ADD COLUMN IF NOT EXISTS "leaderContact" VARCHAR(255),
-      ADD COLUMN IF NOT EXISTS "link" VARCHAR(500)
+      ADD COLUMN IF NOT EXISTS "link" VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS "allowedTariffs" TEXT[] DEFAULT '{}',
+      ADD COLUMN IF NOT EXISTS "shortDescription" TEXT
     `);
     res.json({ message: 'Migration completed successfully' });
   } catch (error) {
@@ -763,8 +765,8 @@ router.post('/migrate-communities', adminOnly, async (req: AuthRequest, res: Res
 router.get('/communities', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
     const communities = await prisma.$queryRaw`
-      SELECT id, name, description, address, city, phone, schedule, "isPublished", "createdAt", "updatedAt",
-             format, "communityType", "dayOfWeek", time, leader, "leaderContact", link
+      SELECT id, name, description, "shortDescription", address, city, phone, schedule, "isPublished", "createdAt", "updatedAt",
+             format, "communityType", "dayOfWeek", time, leader, "leaderContact", link, "allowedTariffs"
       FROM "Community" ORDER BY name ASC
     `;
     res.json(communities);
@@ -776,11 +778,12 @@ router.get('/communities', moderatorRoles, async (req: AuthRequest, res: Respons
 
 router.post('/communities', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
-    const { name, format, communityType, dayOfWeek, time, city, address, link, leader, leaderContact } = req.body;
+    const { name, format, communityType, dayOfWeek, time, city, address, link, leader, leaderContact, allowedTariffs, shortDescription } = req.body;
     const id = crypto.randomUUID();
+    const tariffs = allowedTariffs || [];
     await prisma.$executeRaw`
-      INSERT INTO "Community" (id, name, format, "communityType", "dayOfWeek", time, city, address, link, leader, "leaderContact", "isPublished", "createdAt", "updatedAt")
-      VALUES (${id}, ${name}, ${format || 'offline'}, ${communityType || 'mixed'}, ${dayOfWeek || null}, ${time || null}, ${city || null}, ${address || null}, ${link || null}, ${leader || null}, ${leaderContact || null}, true, NOW(), NOW())
+      INSERT INTO "Community" (id, name, format, "communityType", "dayOfWeek", time, city, address, link, leader, "leaderContact", "isPublished", "allowedTariffs", "shortDescription", "createdAt", "updatedAt")
+      VALUES (${id}, ${name}, ${format || 'offline'}, ${communityType || 'mixed'}, ${dayOfWeek || null}, ${time || null}, ${city || null}, ${address || null}, ${link || null}, ${leader || null}, ${leaderContact || null}, true, ${tariffs}, ${shortDescription || null}, NOW(), NOW())
     `;
     const [community] = await prisma.$queryRaw<any[]>`SELECT * FROM "Community" WHERE id = ${id}`;
     res.status(201).json(community);
@@ -793,10 +796,11 @@ router.post('/communities', moderatorRoles, async (req: AuthRequest, res: Respon
 router.put('/communities/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
-    const { name, format, communityType, dayOfWeek, time, city, address, link, leader, leaderContact, isPublished } = req.body;
+    const { name, format, communityType, dayOfWeek, time, city, address, link, leader, leaderContact, isPublished, allowedTariffs, shortDescription } = req.body;
     
     const [oldCommunity] = await prisma.$queryRaw<any[]>`SELECT * FROM "Community" WHERE id = ${id}`;
     
+    const tariffsValue = allowedTariffs !== undefined ? allowedTariffs : null;
     await prisma.$executeRaw`
       UPDATE "Community" SET
         name = COALESCE(${name}, name),
@@ -810,6 +814,8 @@ router.put('/communities/:id', moderatorRoles, async (req: AuthRequest & Request
         leader = ${leader},
         "leaderContact" = ${leaderContact},
         "isPublished" = COALESCE(${isPublished}, "isPublished"),
+        "allowedTariffs" = COALESCE(${tariffsValue}, "allowedTariffs"),
+        "shortDescription" = COALESCE(${shortDescription !== undefined ? shortDescription : null}, "shortDescription"),
         "updatedAt" = NOW()
       WHERE id = ${id}
     `;

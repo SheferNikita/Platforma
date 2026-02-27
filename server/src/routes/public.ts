@@ -485,13 +485,19 @@ router.get('/communities', async (req, res) => {
       return res.json({ hidden: true, communities: [] });
     }
     
-    const communities = await prisma.$queryRaw`
-      SELECT id, name, description, address, city, phone, schedule, "isPublished", "createdAt", "updatedAt",
-             format, "communityType", "dayOfWeek", time, leader, "leaderContact", link
+    const tariff = req.query.tariff as string | undefined;
+    const allCommunities = await prisma.$queryRaw<any[]>`
+      SELECT id, name, description, "shortDescription", address, city, phone, schedule, "isPublished", "createdAt", "updatedAt",
+             format, "communityType", "dayOfWeek", time, leader, "leaderContact", link, "allowedTariffs"
       FROM "Community" 
       WHERE "isPublished" = true 
       ORDER BY name ASC
     `;
+    const communities = allCommunities.filter(c => {
+      if (!c.allowedTariffs || c.allowedTariffs.length === 0) return true;
+      if (!tariff) return true;
+      return c.allowedTariffs.includes(tariff);
+    });
     res.json({ hidden: false, communities });
   } catch (error) {
     console.error('Get public communities error:', error);

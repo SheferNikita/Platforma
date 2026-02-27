@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Users, Calendar, Phone, Globe, Navigation, Loader2 } from 'lucide-react';
 import { api } from '../lib/api';
+import { useAuth } from '../lib/auth';
 
 interface Community {
   id: string;
@@ -15,6 +16,7 @@ interface Community {
   leader?: string;
   leaderContact?: string;
   description?: string;
+  shortDescription?: string;
 }
 
 interface CommunitiesResponse {
@@ -23,6 +25,7 @@ interface CommunitiesResponse {
 }
 
 export function CommunitiesTab() {
+  const { user } = useAuth();
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,12 +34,13 @@ export function CommunitiesTab() {
 
   useEffect(() => {
     loadCommunities();
-  }, []);
+  }, [user?.tariff]);
 
   async function loadCommunities() {
     try {
       setLoading(true);
-      const data = await api.get<CommunitiesResponse>('/public/communities');
+      const tariffParam = user?.tariff ? `?tariff=${user.tariff}` : '';
+      const data = await api.get<CommunitiesResponse>(`/public/communities${tariffParam}`);
       setHidden(data.hidden);
       setCommunities(data.communities || []);
       setError(null);
@@ -149,9 +153,9 @@ export function CommunitiesTab() {
               )}
             </div>
 
-            {community.description && (
+            {(community.shortDescription || community.description) && (
               <p className="text-xs md:text-sm mb-4 md:mb-5 opacity-80 leading-relaxed">
-                {community.description}
+                {community.shortDescription || community.description}
               </p>
             )}
 

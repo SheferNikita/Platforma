@@ -16,6 +16,8 @@ interface Community {
   leader: string;
   leaderContact: string;
   isPublished: boolean;
+  allowedTariffs: string[];
+  shortDescription?: string;
 }
 
 const FORMAT_OPTIONS = [
@@ -32,6 +34,34 @@ const TYPE_OPTIONS = [
 const DAY_OPTIONS = [
   'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'
 ];
+
+const TARIFF_OPTIONS = [
+  { value: 'BASIC', label: 'Базовый', short: 'Базовый', color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  { value: 'FAMILY', label: 'Для родственников', short: 'Родств.', color: 'bg-pink-50 text-pink-700 border-pink-200' },
+  { value: 'RELATIVE', label: 'Родственник', short: 'Родств.', color: 'bg-violet-50 text-violet-700 border-violet-200' },
+  { value: 'WITH_MENTOR', label: 'С наставником', short: 'Настав.', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  { value: 'WITH_PSYCHOLOGIST', label: 'С психологом', short: 'Психол.', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+  { value: 'INDIVIDUAL_PSYCHOLOGIST', label: 'Индивид. психолог', short: 'Инд. псих.', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+];
+
+function TariffBadges({ tariffs }: { tariffs: string[] }) {
+  if (!tariffs || tariffs.length === 0 || tariffs.length === TARIFF_OPTIONS.length) {
+    return <span className="text-xs px-1.5 py-0.5 rounded border bg-gray-50 text-gray-500 border-gray-200">Все тарифы</span>;
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {tariffs.map(t => {
+        const opt = TARIFF_OPTIONS.find(o => o.value === t);
+        if (!opt) return null;
+        return (
+          <span key={t} className={`text-xs px-1.5 py-0.5 rounded border ${opt.color}`}>
+            {opt.short}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 export function CommunitiesAdmin() {
   const [communities, setCommunities] = useState<Community[]>([]);
@@ -181,9 +211,16 @@ export function CommunitiesAdmin() {
               
               <h3 className="font-bold text-[#3d3527] text-lg">{community.name}</h3>
               
-              <span className="inline-block mt-2 px-2 py-0.5 text-xs rounded-full bg-[#f5f3ed] text-[#3d3527]/80">
-                {getTypeLabel(community.communityType)}
-              </span>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <span className="inline-block px-2 py-0.5 text-xs rounded-full bg-[#f5f3ed] text-[#3d3527]/80">
+                  {getTypeLabel(community.communityType)}
+                </span>
+                <TariffBadges tariffs={community.allowedTariffs || []} />
+              </div>
+
+              {community.shortDescription && (
+                <p className="mt-2 text-xs text-[#3d3527]/60 line-clamp-2">{community.shortDescription}</p>
+              )}
               
               <div className="mt-3 space-y-1.5 text-sm text-[#3d3527]/80">
                 {community.dayOfWeek && community.time && (
@@ -270,6 +307,16 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
   const [link, setLink] = useState(community?.link || '');
   const [leader, setLeader] = useState(community?.leader || '');
   const [leaderContact, setLeaderContact] = useState(community?.leaderContact || '');
+  const [shortDescription, setShortDescription] = useState(community?.shortDescription || '');
+  const [allowedTariffs, setAllowedTariffs] = useState<string[]>(community?.allowedTariffs || []);
+
+  const toggleTariff = (tariff: string) => {
+    setAllowedTariffs(prev => 
+      prev.includes(tariff) 
+        ? prev.filter(t => t !== tariff) 
+        : [...prev, tariff]
+    );
+  };
 
   const handleSave = () => {
     if (!name.trim()) {
@@ -286,7 +333,9 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
       address: format === 'offline' ? address : null,
       link: format === 'online' ? link : null,
       leader, 
-      leaderContact 
+      leaderContact,
+      shortDescription: shortDescription || null,
+      allowedTariffs
     });
   };
 
@@ -295,6 +344,17 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
       <div>
         <label className="block text-sm font-medium text-[#3d3527] mb-1">Название *</label>
         <input value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none" />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-[#3d3527] mb-1">Краткое описание</label>
+        <textarea 
+          value={shortDescription} 
+          onChange={(e) => setShortDescription(e.target.value)} 
+          className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none" 
+          rows={2}
+          placeholder="Краткое описание общины"
+        />
       </div>
       
       <div className="grid grid-cols-2 gap-4">
@@ -385,6 +445,24 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
           className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none" 
           placeholder="Телефон или ссылка на ТГ"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-[#3d3527] mb-2">Кому доступен</label>
+        <div className="space-y-2 bg-[#f5f3ed]/50 rounded-xl p-3">
+          {TARIFF_OPTIONS.map(tariff => (
+            <label key={tariff.value} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allowedTariffs.includes(tariff.value)}
+                onChange={() => toggleTariff(tariff.value)}
+                className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+              />
+              <span className="text-sm text-[#3d3527]">{tariff.label}</span>
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-[#3d3527]/50 mt-1">Если не выбрано ни одного — доступен всем</p>
       </div>
       
       <div className="flex justify-end gap-3 pt-2">

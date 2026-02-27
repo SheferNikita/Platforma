@@ -9,7 +9,7 @@ export function SOSPage() {
   const { user } = useAuth();
   const { settings, isSectionVisible, loading: settingsLoading } = useSettings();
 
-  if (!settingsLoading && !isSectionVisible('sos', user?.tariff)) {
+  if (!settingsLoading && !isSectionVisible('sos', user?.tariff, user?.role)) {
     return <Navigate to="/" replace />;
   }
 

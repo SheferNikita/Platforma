@@ -128,7 +128,7 @@ export function MentorResponsesPage() {
   const audioMimeTypeRef = useRef<string>('audio/webm');
 
   // Проверка видимости раздела
-  const isSectionEnabled = isSectionVisible('mentor_responses', user?.tariff);
+  const isSectionEnabled = isSectionVisible('mentor_responses', user?.tariff, user?.role);
 
   useEffect(() => {
     const fetchData = async () => {

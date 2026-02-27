@@ -13,7 +13,7 @@ export function SectionGuard({ section, children }: SectionGuardProps) {
   const { isSectionVisible, loading } = useSettings();
   const { user } = useAuth();
   
-  const isVisible = loading ? true : isSectionVisible(section, user?.tariff);
+  const isVisible = loading ? true : isSectionVisible(section, user?.tariff, user?.role);
   
   if (!isVisible) {
     return (

@@ -47,9 +47,9 @@ export function MiniGroupPage() {
   const [loading, setLoading] = useState(true);
 
   // Проверка доступа по тарифу
-  const hasMiniGroupAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST';
-  // Проверка видимости раздела
-  const isSectionEnabled = isSectionVisible('mini_group', user?.tariff);
+  const isAdminUser = user?.role !== 'STUDENT';
+  const hasMiniGroupAccess = isAdminUser || user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST';
+  const isSectionEnabled = isSectionVisible('mini_group', user?.tariff, user?.role);
 
   useEffect(() => {
     if (hasMiniGroupAccess && isSectionEnabled) {

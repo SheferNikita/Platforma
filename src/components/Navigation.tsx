@@ -20,8 +20,8 @@ export function Navigation() {
     setMoreOpen(false);
   }, [location.pathname]);
   
-  const hasMiniGroupAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST';
-  const hasMentorResponsesAccess = user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST' || user?.tariff === 'INDIVIDUAL_PSYCHOLOGIST';
+  const hasMiniGroupAccess = isAdmin || user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST';
+  const hasMentorResponsesAccess = isAdmin || user?.tariff === 'WITH_MENTOR' || user?.tariff === 'WITH_PSYCHOLOGIST' || user?.tariff === 'INDIVIDUAL_PSYCHOLOGIST';
   
   const allNavItems = [
     { path: '/', label: 'Уроки', icon: BookOpen, section: 'lessons' as const },
@@ -36,7 +36,7 @@ export function Navigation() {
 
   const navItems = allNavItems.filter(item => {
     if (item.tariffCheck === false) return false;
-    return isSectionVisible(item.section, userTariff);
+    return isSectionVisible(item.section, userTariff, user?.role);
   });
 
   const mobilePrimaryPaths = ['/', '/chats', '/library', '/sos'];
@@ -56,7 +56,7 @@ export function Navigation() {
 
   const filteredMobileItems = allMobileItems.filter(item => {
     if (item.tariffCheck === false) return false;
-    return isSectionVisible(item.section, userTariff);
+    return isSectionVisible(item.section, userTariff, user?.role);
   });
 
   const mobileMainItems = filteredMobileItems.filter(item => mobilePrimaryPaths.includes(item.path));
@@ -119,7 +119,7 @@ export function Navigation() {
                 </NavLink>
               )}
               {!isMobile && <NotificationBell />}
-              {isSectionVisible('sos', userTariff) && (
+              {isSectionVisible('sos', userTariff, user?.role) && (
                 <NavLink
                   to="/sos"
                   className="px-3 lg:px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:shadow-[0_8px_20px_rgba(239,68,68,0.45)] transition-all duration-300 text-xs lg:text-sm font-medium transform hover:scale-105 active:scale-95 flex items-center gap-1.5 lg:gap-2"

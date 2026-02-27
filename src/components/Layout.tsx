@@ -14,8 +14,8 @@ export function Layout() {
   const { user } = useAuth();
   const userTariff = user?.tariff;
   
-  const showSchedule = isSectionVisible('schedule', userTariff);
-  const showContacts = isSectionVisible('contacts', userTariff);
+  const showSchedule = isSectionVisible('schedule', userTariff, user?.role);
+  const showContacts = isSectionVisible('contacts', userTariff, user?.role);
 
   // Scroll to top on route change
   React.useEffect(() => {

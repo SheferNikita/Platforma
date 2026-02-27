@@ -34,7 +34,7 @@ interface SettingsContextType {
   settings: PlatformSettings;
   loading: boolean;
   refresh: () => Promise<void>;
-  isSectionVisible: (section: keyof VisibilitySettings, userTariff?: string) => boolean;
+  isSectionVisible: (section: keyof VisibilitySettings, userTariff?: string, userRole?: string) => boolean;
 }
 
 const defaultVisibility: VisibilitySetting = { enabled: true, tariffs: ['ALL'] };
@@ -122,9 +122,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  function isSectionVisible(section: keyof VisibilitySettings, userTariff?: string): boolean {
+  function isSectionVisible(section: keyof VisibilitySettings, userTariff?: string, userRole?: string): boolean {
     const visibility = settings.visibility[section];
     if (!visibility.enabled) return false;
+    if (userRole && userRole !== 'STUDENT') return true;
     if (visibility.tariffs.includes('ALL')) return true;
     if (!userTariff) return false;
     return visibility.tariffs.includes(userTariff);

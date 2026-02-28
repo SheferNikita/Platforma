@@ -820,4 +820,128 @@ router.post('/note/:id/view', async (req: AuthRequest, res: Response) => {
   }
 });
 
+router.delete('/diary/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const diary = await prisma.diary.findUnique({ where: { id } });
+    if (!diary) {
+      return res.status(404).json({ error: 'Запись не найдена' });
+    }
+    await prisma.diary.delete({ where: { id } });
+    res.json({ message: 'Запись удалена' });
+  } catch (error) {
+    console.error('Delete diary error:', error);
+    res.status(500).json({ error: 'Ошибка удаления' });
+  }
+});
+
+router.delete('/note/:id', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const note = await prisma.studentNote.findUnique({ where: { id } });
+    if (!note) {
+      return res.status(404).json({ error: 'Запись не найдена' });
+    }
+    await prisma.studentNote.delete({ where: { id } });
+    res.json({ message: 'Запись удалена' });
+  } catch (error) {
+    console.error('Delete note error:', error);
+    res.status(500).json({ error: 'Ошибка удаления' });
+  }
+});
+
+router.delete('/diary/:id/reply/:index', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const index = parseInt(req.params.index as string, 10);
+    const diary = await prisma.diary.findUnique({ where: { id }, select: { reply: true } });
+    if (!diary) {
+      return res.status(404).json({ error: 'Запись не найдена' });
+    }
+
+    let replyHistory: any[] = [];
+    if (diary.reply) {
+      try {
+        const parsed = JSON.parse(diary.reply);
+        replyHistory = Array.isArray(parsed) ? parsed : [{ text: diary.reply, authorId: 'legacy', authorName: 'Наставник', authorRole: 'MENTOR', createdAt: new Date().toISOString() }];
+      } catch {
+        replyHistory = [{ text: diary.reply, authorId: 'legacy', authorName: 'Наставник', authorRole: 'MENTOR', createdAt: new Date().toISOString() }];
+      }
+    }
+
+    if (index < 0 || index >= replyHistory.length) {
+      return res.status(400).json({ error: 'Неверный индекс сообщения' });
+    }
+
+    const removed = replyHistory[index];
+    if (removed.audioAttachmentId) {
+      await prisma.diaryAttachment.delete({ where: { id: removed.audioAttachmentId } }).catch(() => {});
+    }
+    if (removed.fileAttachmentIds && Array.isArray(removed.fileAttachmentIds)) {
+      for (const attId of removed.fileAttachmentIds) {
+        await prisma.diaryAttachment.delete({ where: { id: attId } }).catch(() => {});
+      }
+    }
+
+    replyHistory.splice(index, 1);
+
+    await prisma.diary.update({
+      where: { id },
+      data: { reply: replyHistory.length > 0 ? JSON.stringify(replyHistory) : null }
+    });
+
+    res.json({ message: 'Сообщение удалено' });
+  } catch (error) {
+    console.error('Delete diary reply error:', error);
+    res.status(500).json({ error: 'Ошибка удаления' });
+  }
+});
+
+router.delete('/note/:id/reply/:index', async (req: AuthRequest, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const index = parseInt(req.params.index as string, 10);
+    const note = await prisma.studentNote.findUnique({ where: { id }, select: { reply: true } });
+    if (!note) {
+      return res.status(404).json({ error: 'Запись не найдена' });
+    }
+
+    let replyHistory: any[] = [];
+    if (note.reply) {
+      try {
+        const parsed = JSON.parse(note.reply);
+        replyHistory = Array.isArray(parsed) ? parsed : [{ text: note.reply, authorId: 'legacy', authorName: 'Наставник', authorRole: 'MENTOR', createdAt: new Date().toISOString() }];
+      } catch {
+        replyHistory = [{ text: note.reply, authorId: 'legacy', authorName: 'Наставник', authorRole: 'MENTOR', createdAt: new Date().toISOString() }];
+      }
+    }
+
+    if (index < 0 || index >= replyHistory.length) {
+      return res.status(400).json({ error: 'Неверный индекс сообщения' });
+    }
+
+    const removed = replyHistory[index];
+    if (removed.audioAttachmentId) {
+      await prisma.noteAttachment.delete({ where: { id: removed.audioAttachmentId } }).catch(() => {});
+    }
+    if (removed.fileAttachmentIds && Array.isArray(removed.fileAttachmentIds)) {
+      for (const attId of removed.fileAttachmentIds) {
+        await prisma.noteAttachment.delete({ where: { id: attId } }).catch(() => {});
+      }
+    }
+
+    replyHistory.splice(index, 1);
+
+    await prisma.studentNote.update({
+      where: { id },
+      data: { reply: replyHistory.length > 0 ? JSON.stringify(replyHistory) : null }
+    });
+
+    res.json({ message: 'Сообщение удалено' });
+  } catch (error) {
+    console.error('Delete note reply error:', error);
+    res.status(500).json({ error: 'Ошибка удаления' });
+  }
+});
+
 export default router;

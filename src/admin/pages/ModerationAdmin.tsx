@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye, Paperclip, Image, File, Download, Mic, Square, Play, Pause, Search, Users, List } from 'lucide-react';
+import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye, Paperclip, Image, File, Download, Mic, Square, Play, Pause, Search, Users, List, Trash2 } from 'lucide-react';
 import AudioPlayer from '../../components/AudioPlayer';
 import ImageViewer from '../../components/ImageViewer';
 import { toast } from 'sonner';
@@ -782,6 +782,9 @@ export function ModerationAdmin() {
             toast.success('Сообщение отправлено');
             await Promise.all([reloadDialogItems(), refreshDialogsAfterAction()]);
           }}
+          onDeleteComplete={async () => {
+            await Promise.all([reloadDialogItems(), refreshDialogsAfterAction()]);
+          }}
         />
       )}
     </div>
@@ -800,7 +803,8 @@ function ChatDialog({
   onSubmitReply,
   onSubmitAudioReply,
   onMarkAsViewed,
-  onViewerSendMessage
+  onViewerSendMessage,
+  onDeleteComplete
 }: {
   dialog: DialogSummary;
   items: ModerationItem[];
@@ -814,6 +818,7 @@ function ChatDialog({
   onSubmitAudioReply: (audioData: string, duration: number, mimeType?: string, blob?: Blob) => void;
   onMarkAsViewed: () => void;
   onViewerSendMessage: (text: string) => Promise<void>;
+  onDeleteComplete: () => Promise<void>;
 }) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -823,6 +828,99 @@ function ChatDialog({
   const [viewerImages, setViewerImages] = useState<{ url: string; name?: string }[]>([]);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [viewerOpen, setViewerOpen] = useState(false);
+
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedForDelete, setSelectedForDelete] = useState<Set<string>>(new Set());
+  const [deletingCountdown, setDeletingCountdown] = useState<number | null>(null);
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deleteIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const toggleDeleteMode = useCallback(() => {
+    if (deleteTimerRef.current) { clearTimeout(deleteTimerRef.current); deleteTimerRef.current = null; }
+    if (deleteIntervalRef.current) { clearInterval(deleteIntervalRef.current); deleteIntervalRef.current = null; }
+    setDeleteMode(prev => !prev);
+    setSelectedForDelete(new Set());
+    setDeletingCountdown(null);
+  }, []);
+
+  const toggleSelectMessage = useCallback((key: string) => {
+    setSelectedForDelete(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const cancelBatchDelete = useCallback(() => {
+    setDeletingCountdown(null);
+    if (deleteTimerRef.current) { clearTimeout(deleteTimerRef.current); deleteTimerRef.current = null; }
+    if (deleteIntervalRef.current) { clearInterval(deleteIntervalRef.current); deleteIntervalRef.current = null; }
+  }, []);
+
+  const confirmBatchDelete = useCallback(() => {
+    if (selectedForDelete.size === 0) return;
+    const keysToDelete = Array.from(selectedForDelete);
+    setDeletingCountdown(5);
+
+    deleteIntervalRef.current = setInterval(() => {
+      setDeletingCountdown(prev => {
+        if (prev === null || prev <= 1) return prev;
+        return prev - 1;
+      });
+    }, 1000);
+
+    deleteTimerRef.current = setTimeout(async () => {
+      if (deleteIntervalRef.current) { clearInterval(deleteIntervalRef.current); deleteIntervalRef.current = null; }
+      let successCount = 0;
+      const endpointBase = dialog.type === 'diary' ? 'diary' : 'note';
+      const studentKeys = keysToDelete.filter(k => k.startsWith('student-'));
+      const replyKeys = keysToDelete.filter(k => k.startsWith('reply-'));
+      const replyByItem = new Map<string, number[]>();
+      for (const key of replyKeys) {
+        const withoutPrefix = key.substring('reply-'.length);
+        const lastDash = withoutPrefix.lastIndexOf('-');
+        const itemId = withoutPrefix.substring(0, lastDash);
+        const idx = parseInt(withoutPrefix.substring(lastDash + 1), 10);
+        if (!replyByItem.has(itemId)) replyByItem.set(itemId, []);
+        replyByItem.get(itemId)!.push(idx);
+      }
+      for (const key of studentKeys) {
+        try {
+          const itemId = key.replace('student-', '');
+          await api.delete(`/public/moderation/${endpointBase}/${itemId}`);
+          successCount++;
+          replyByItem.delete(itemId);
+        } catch (err) {
+          console.error('Delete error:', err);
+        }
+      }
+      for (const [itemId, indices] of replyByItem) {
+        indices.sort((a, b) => b - a);
+        for (const idx of indices) {
+          try {
+            await api.delete(`/public/moderation/${endpointBase}/${itemId}/reply/${idx}`);
+            successCount++;
+          } catch (err) {
+            console.error('Delete error:', err);
+          }
+        }
+      }
+      if (successCount > 0) toast.success(`Удалено: ${successCount}`);
+      if (successCount < keysToDelete.length) toast.error(`Не удалось удалить: ${keysToDelete.length - successCount}`);
+      setDeleteMode(false);
+      setSelectedForDelete(new Set());
+      setDeletingCountdown(null);
+      deleteTimerRef.current = null;
+      await onDeleteComplete();
+    }, 5000);
+  }, [selectedForDelete, dialog.type, onDeleteComplete]);
+
+  useEffect(() => {
+    return () => {
+      if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current);
+      if (deleteIntervalRef.current) clearInterval(deleteIntervalRef.current);
+    };
+  }, []);
 
   const openImageViewer = useCallback((clickedId: string) => {
     const allImages: { url: string; name?: string; id: string }[] = [];
@@ -990,10 +1088,42 @@ function ChatDialog({
               <p className="text-xs text-[#3d3527]/60">{dialog.student.user.email}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg flex-shrink-0">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              onClick={toggleDeleteMode}
+              className={`p-2 rounded-lg transition-colors ${deleteMode ? 'bg-red-100 text-red-600' : 'hover:bg-gray-100 text-[#3d3527]/60'}`}
+              title={deleteMode ? 'Отмена удаления' : 'Удалить сообщения'}
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
+
+        {deleteMode && (
+          <div className="px-4 md:px-6 py-2 bg-red-50 border-b border-red-200 flex items-center gap-3">
+            {selectedForDelete.size > 0 && deletingCountdown === null && (
+              <button
+                onClick={confirmBatchDelete}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-500 text-white text-xs hover:bg-red-600 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Удалить ({selectedForDelete.size})
+              </button>
+            )}
+            {deletingCountdown !== null && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-xs">
+                <span className="text-red-600">Удаление через {deletingCountdown}с</span>
+                <button onClick={cancelBatchDelete} className="text-red-700 underline hover:no-underline">Отмена</button>
+              </div>
+            )}
+            {selectedForDelete.size === 0 && deletingCountdown === null && (
+              <span className="text-xs text-red-600">Выберите сообщения для удаления</span>
+            )}
+          </div>
+        )}
 
         {/* Chat Messages Area */}
         <div
@@ -1044,7 +1174,15 @@ function ChatDialog({
             return flatMessages.map(entry => {
               if (entry.side === 'student') {
                 return (
-                  <div key={entry.key} className="flex justify-start">
+                  <div key={entry.key} className="flex justify-start items-start gap-2">
+                    {deleteMode && deletingCountdown === null && (
+                      <button
+                        onClick={() => toggleSelectMessage(entry.key)}
+                        className={`mt-3 w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${selectedForDelete.has(entry.key) ? 'bg-red-500 border-red-500 text-white' : 'border-gray-300 hover:border-red-400'}`}
+                      >
+                        {selectedForDelete.has(entry.key) && <span className="text-xs font-bold">✓</span>}
+                      </button>
+                    )}
                     <div className="max-w-[85%] md:max-w-[75%]">
                       <div className={`bg-gradient-to-br from-[#8b9abc] to-[#a5b0cc] text-white rounded-2xl rounded-tl-md px-4 py-3 shadow-sm ${!entry.hasReply ? 'ring-2 ring-orange-300 ring-offset-1' : ''}`}>
                         <p className="whitespace-pre-wrap text-sm md:text-base">{entry.studentContent}</p>
@@ -1095,7 +1233,7 @@ function ChatDialog({
               } else {
                 const msg = entry.msg!;
                 return (
-                  <div key={entry.key} className="flex justify-end">
+                  <div key={entry.key} className="flex justify-end items-start gap-2">
                     <div className="max-w-[85%] md:max-w-[75%]">
                       <div className="bg-gradient-to-br from-[#a67c52] to-[#c4a57b] text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-sm">
                         {msg.audioAttachmentId ? (
@@ -1177,6 +1315,14 @@ function ChatDialog({
                         </span>
                       </div>
                     </div>
+                    {deleteMode && deletingCountdown === null && (
+                      <button
+                        onClick={() => toggleSelectMessage(entry.key)}
+                        className={`mt-3 w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${selectedForDelete.has(entry.key) ? 'bg-red-500 border-red-500 text-white' : 'border-gray-300 hover:border-red-400'}`}
+                      >
+                        {selectedForDelete.has(entry.key) && <span className="text-xs font-bold">✓</span>}
+                      </button>
+                    )}
                   </div>
                 );
               }

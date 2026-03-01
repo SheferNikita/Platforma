@@ -269,7 +269,7 @@ export function CommunitiesTab() {
                     >
                       <Phone className="w-3.5 h-3.5 md:w-4 md:h-4 relative z-10" />
                       <span className="relative z-10">
-                        {communityLeaders.length > 1 && l.name ? `Связаться с ${l.name}` : 'Связаться'}
+                        {communityLeaders.length > 1 && l.name ? `${l.name}: связаться` : 'Связаться'}
                       </span>
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                     </a>

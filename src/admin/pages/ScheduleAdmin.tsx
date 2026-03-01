@@ -76,15 +76,17 @@ export function ScheduleAdmin() {
     setSaving(true);
     try {
       if (editingEvent?.id && !editingEvent.id.startsWith('copy_')) {
-        await api.put(`/content/schedule/${editingEvent.id}`, data);
+        const updated = await api.put<ScheduleEvent>(`/content/schedule/${editingEvent.id}`, data);
+        setEvents(prev => prev.map(e => e.id === editingEvent.id ? updated : e));
         toast.success('Событие обновлено');
       } else {
-        await api.post('/content/schedule', data);
+        const created = await api.post<ScheduleEvent>('/content/schedule', data);
+        setEvents(prev => [created, ...prev]);
         toast.success('Событие создано');
       }
-      loadEvents();
       setShowModal(false);
       setEditingEvent(null);
+      loadEvents();
     } catch (error) { toast.error('Ошибка сохранения'); }
     finally { setSaving(false); }
   }

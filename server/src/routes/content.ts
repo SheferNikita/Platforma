@@ -588,12 +588,13 @@ router.post('/schedule', moderatorRoles, async (req: AuthRequest, res: Response)
 
     const eventWithTariffs = { ...event, allowedTariffs: tariffs };
 
-    await prisma.$executeRaw`
-      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "newData", "createdAt")
-      VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'SCHEDULE', ${event.id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(eventWithTariffs)}::jsonb, NOW())
-    `;
-
     res.status(201).json(eventWithTariffs);
+
+    const userId = req.user!.id;
+    prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${userId}, 'CREATE', 'SCHEDULE', ${event.id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(eventWithTariffs)}::jsonb, NOW())
+    `.catch(err => console.error('Background AdminLog error (create schedule):', err));
 
     if (event.isPublished) {
       prisma.student.findMany({
@@ -634,13 +635,14 @@ router.put('/schedule/:id', moderatorRoles, async (req: AuthRequest & Request<Id
 
     const [updated] = await prisma.$queryRaw<any[]>`SELECT "allowedTariffs" FROM "ScheduleEvent" WHERE id = ${id}`;
     const eventWithTariffs = { ...event, allowedTariffs: updated?.allowedTariffs || [] };
-    
-    await prisma.$executeRaw`
-      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
-      VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'SCHEDULE', ${id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(oldEvent)}::jsonb, ${JSON.stringify(eventWithTariffs)}::jsonb, NOW())
-    `;
 
     res.json(eventWithTariffs);
+
+    const userId = req.user!.id;
+    prisma.$executeRaw`
+      INSERT INTO "AdminLog" (id, "userId", action, entity, "entityId", details, "oldData", "newData", "createdAt")
+      VALUES (gen_random_uuid(), ${userId}, 'UPDATE', 'SCHEDULE', ${id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(oldEvent)}::jsonb, ${JSON.stringify(eventWithTariffs)}::jsonb, NOW())
+    `.catch(err => console.error('Background AdminLog error (update schedule):', err));
 
     if (!prismaOldEvent?.isPublished && event.isPublished) {
       prisma.student.findMany({

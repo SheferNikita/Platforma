@@ -28,6 +28,26 @@ startScheduledEmailJob();
         }
       }
     }
+
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "Community"
+      ADD COLUMN IF NOT EXISTS "leaders" TEXT,
+      ADD COLUMN IF NOT EXISTS "contactButtonLabel" VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS "joinButtonLabel" VARCHAR(100)
+    `);
+
+    const offlineKey = 'communities_offline_visible';
+    const onlineKey = 'communities_online_visible';
+    const offlineSetting = await prisma.setting.findUnique({ where: { key: offlineKey } });
+    if (!offlineSetting) {
+      await prisma.setting.create({ data: { key: offlineKey, value: 'true' } });
+      console.log(`[Init] Created setting ${offlineKey} = true`);
+    }
+    const onlineSetting = await prisma.setting.findUnique({ where: { key: onlineKey } });
+    if (!onlineSetting) {
+      await prisma.setting.create({ data: { key: onlineKey, value: 'true' } });
+      console.log(`[Init] Created setting ${onlineKey} = true`);
+    }
   } catch (err) {
     console.error('[Sync] communities visibility sync error:', err);
   }
@@ -776,7 +796,10 @@ router.post('/migrate-communities', adminOnly, async (req: AuthRequest, res: Res
       ADD COLUMN IF NOT EXISTS "leaderContact" VARCHAR(255),
       ADD COLUMN IF NOT EXISTS "link" VARCHAR(500),
       ADD COLUMN IF NOT EXISTS "allowedTariffs" TEXT[] DEFAULT '{}',
-      ADD COLUMN IF NOT EXISTS "shortDescription" TEXT
+      ADD COLUMN IF NOT EXISTS "shortDescription" TEXT,
+      ADD COLUMN IF NOT EXISTS "leaders" TEXT,
+      ADD COLUMN IF NOT EXISTS "contactButtonLabel" VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS "joinButtonLabel" VARCHAR(100)
     `);
     res.json({ message: 'Migration completed successfully' });
   } catch (error) {
@@ -789,7 +812,8 @@ router.get('/communities', moderatorRoles, async (req: AuthRequest, res: Respons
   try {
     const communities = await prisma.$queryRaw`
       SELECT id, name, description, "shortDescription", address, city, phone, schedule, "isPublished", "createdAt", "updatedAt",
-             format, "communityType", "dayOfWeek", time, leader, "leaderContact", link, "allowedTariffs"
+             format, "communityType", "dayOfWeek", time, leader, "leaderContact", link, "allowedTariffs",
+             leaders, "contactButtonLabel", "joinButtonLabel"
       FROM "Community" ORDER BY name ASC
     `;
     res.json(communities);
@@ -801,12 +825,13 @@ router.get('/communities', moderatorRoles, async (req: AuthRequest, res: Respons
 
 router.post('/communities', moderatorRoles, async (req: AuthRequest, res: Response) => {
   try {
-    const { name, format, communityType, dayOfWeek, time, city, address, link, leader, leaderContact, allowedTariffs, shortDescription } = req.body;
+    const { name, format, communityType, dayOfWeek, time, city, address, link, leader, leaderContact, allowedTariffs, shortDescription, leaders, contactButtonLabel, joinButtonLabel } = req.body;
     const id = crypto.randomUUID();
     const tariffs = allowedTariffs || [];
+    const leadersJson = leaders ? JSON.stringify(leaders) : null;
     await prisma.$executeRaw`
-      INSERT INTO "Community" (id, name, format, "communityType", "dayOfWeek", time, city, address, link, leader, "leaderContact", "isPublished", "allowedTariffs", "shortDescription", "createdAt", "updatedAt")
-      VALUES (${id}, ${name}, ${format || 'offline'}, ${communityType || 'mixed'}, ${dayOfWeek || null}, ${time || null}, ${city || null}, ${address || null}, ${link || null}, ${leader || null}, ${leaderContact || null}, true, ${tariffs}, ${shortDescription || null}, NOW(), NOW())
+      INSERT INTO "Community" (id, name, format, "communityType", "dayOfWeek", time, city, address, link, leader, "leaderContact", "isPublished", "allowedTariffs", "shortDescription", leaders, "contactButtonLabel", "joinButtonLabel", "createdAt", "updatedAt")
+      VALUES (${id}, ${name}, ${format || 'offline'}, ${communityType || 'mixed'}, ${dayOfWeek || null}, ${time || null}, ${city || null}, ${address || null}, ${link || null}, ${leader || null}, ${leaderContact || null}, true, ${tariffs}, ${shortDescription || null}, ${leadersJson}, ${contactButtonLabel || null}, ${joinButtonLabel || null}, NOW(), NOW())
     `;
     const [community] = await prisma.$queryRaw<any[]>`SELECT * FROM "Community" WHERE id = ${id}`;
     res.status(201).json(community);
@@ -819,11 +844,15 @@ router.post('/communities', moderatorRoles, async (req: AuthRequest, res: Respon
 router.put('/communities/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
-    const { name, format, communityType, dayOfWeek, time, city, address, link, leader, leaderContact, isPublished, allowedTariffs, shortDescription } = req.body;
+    const { name, format, communityType, dayOfWeek, time, city, address, link, leader, leaderContact, isPublished, allowedTariffs, shortDescription, leaders, contactButtonLabel, joinButtonLabel } = req.body;
     
     const [oldCommunity] = await prisma.$queryRaw<any[]>`SELECT * FROM "Community" WHERE id = ${id}`;
     
     const tariffsValue = allowedTariffs !== undefined ? allowedTariffs : null;
+    const leadersJson = leaders !== undefined ? (leaders ? JSON.stringify(leaders) : null) : undefined;
+    const contactBtnVal = contactButtonLabel !== undefined ? (contactButtonLabel || null) : (oldCommunity?.contactButtonLabel || null);
+    const joinBtnVal = joinButtonLabel !== undefined ? (joinButtonLabel || null) : (oldCommunity?.joinButtonLabel || null);
+    const leadersVal = leadersJson !== undefined ? leadersJson : (oldCommunity?.leaders || null);
     await prisma.$executeRaw`
       UPDATE "Community" SET
         name = COALESCE(${name}, name),
@@ -839,6 +868,9 @@ router.put('/communities/:id', moderatorRoles, async (req: AuthRequest & Request
         "isPublished" = COALESCE(${isPublished}, "isPublished"),
         "allowedTariffs" = COALESCE(${tariffsValue}, "allowedTariffs"),
         "shortDescription" = COALESCE(${shortDescription !== undefined ? shortDescription : null}, "shortDescription"),
+        leaders = ${leadersVal},
+        "contactButtonLabel" = ${contactBtnVal},
+        "joinButtonLabel" = ${joinBtnVal},
         "updatedAt" = NOW()
       WHERE id = ${id}
     `;

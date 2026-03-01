@@ -479,16 +479,23 @@ router.get('/contacts', async (req, res) => {
 
 router.get('/communities', async (req, res) => {
   try {
-    // Check visibility setting
     const setting = await prisma.setting.findUnique({ where: { key: 'communities_visible' } });
     if (setting?.value === 'false') {
-      return res.json({ hidden: true, communities: [] });
+      return res.json({ hidden: true, communities: [], offlineHidden: true, onlineHidden: true });
     }
+
+    const [offlineSetting, onlineSetting] = await Promise.all([
+      prisma.setting.findUnique({ where: { key: 'communities_offline_visible' } }),
+      prisma.setting.findUnique({ where: { key: 'communities_online_visible' } }),
+    ]);
+    const offlineHidden = offlineSetting?.value === 'false';
+    const onlineHidden = onlineSetting?.value === 'false';
     
     const tariff = req.query.tariff as string | undefined;
     const allCommunities = await prisma.$queryRaw<any[]>`
       SELECT id, name, description, "shortDescription", address, city, phone, schedule, "isPublished", "createdAt", "updatedAt",
-             format, "communityType", "dayOfWeek", time, leader, "leaderContact", link, "allowedTariffs"
+             format, "communityType", "dayOfWeek", time, leader, "leaderContact", link, "allowedTariffs",
+             leaders, "contactButtonLabel", "joinButtonLabel"
       FROM "Community" 
       WHERE "isPublished" = true 
       ORDER BY name ASC
@@ -498,7 +505,7 @@ router.get('/communities', async (req, res) => {
       if (!tariff) return true;
       return c.allowedTariffs.includes(tariff);
     });
-    res.json({ hidden: false, communities });
+    res.json({ hidden: false, communities, offlineHidden, onlineHidden });
   } catch (error) {
     console.error('Get public communities error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

@@ -34,7 +34,7 @@ The backend is powered by **Express.js (Node.js)**, utilizing **Prisma ORM 5.22.
 -   **Student Tariff System:** Six-tier access control (`BASIC`, `FAMILY`, `RELATIVE`, `WITH_MENTOR`, `WITH_PSYCHOLOGIST`, `INDIVIDUAL_PSYCHOLOGIST`) affecting feature access.
 -   **Prepayment Tracking System:** Products and students can be marked with a prepayment status using specific naming conventions and tags in notes.
 -   **Module Access Control:** System for managing student access to specific modules with expiration dates.
--   **Communities:** Tariff-based visibility (`allowedTariffs` TEXT[]) and short description (`shortDescription` TEXT) per community. Empty tariffs array = visible to all.
+-   **Communities:** Tariff-based visibility (`allowedTariffs` TEXT[]) and short description (`shortDescription` TEXT) per community. Empty tariffs array = visible to all. Separate visibility toggles for "Очные" and "Онлайн" tabs (`communities_offline_visible`, `communities_online_visible` settings). Multiple leaders per community (`leaders` TEXT as JSON array of `[{name, contact}]`), customizable button labels (`contactButtonLabel`, `joinButtonLabel`). Russian-localized community type labels (`mixed`→Смешанная, `dependent`→Для зависимых, `codependent`→Для созависимых).
 -   **Mini-Groups:** Enhanced management including curator assignment and chat links.
 -   **Authentication:** Dual mechanism using HttpOnly cookies and `localStorage` fallback for iframe compatibility. All `localStorage` access is wrapped in try-catch (via `src/lib/safeStorage.ts`) to prevent Safari WebView crashes in Telegram/Instagram/VK In-App Browsers.
 -   **UI/UX:** Warm, beige color scheme with rounded corners and glassmorphism effect.

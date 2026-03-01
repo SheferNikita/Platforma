@@ -3,6 +3,11 @@ import { api } from '../../lib/api';
 import { Plus, Edit, Trash2, Building, Eye, EyeOff, MapPin, Globe, Clock, User, Phone, X } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface LeaderEntry {
+  name: string;
+  contact: string;
+}
+
 interface Community {
   id: string;
   name: string;
@@ -18,6 +23,9 @@ interface Community {
   isPublished: boolean;
   allowedTariffs: string[];
   shortDescription?: string;
+  leaders?: string;
+  contactButtonLabel?: string;
+  joinButtonLabel?: string;
 }
 
 const FORMAT_OPTIONS = [
@@ -70,6 +78,8 @@ export function CommunitiesAdmin() {
   const [editingCommunity, setEditingCommunity] = useState<Community | null>(null);
   const [activeTab, setActiveTab] = useState<'offline' | 'online'>('offline');
   const [sectionVisible, setSectionVisible] = useState(true);
+  const [offlineVisible, setOfflineVisible] = useState(true);
+  const [onlineVisible, setOnlineVisible] = useState(true);
 
   useEffect(() => { 
     loadAllData();
@@ -77,12 +87,16 @@ export function CommunitiesAdmin() {
 
   async function loadAllData() {
     try {
-      const [communitiesData, visibilityData] = await Promise.all([
+      const [communitiesData, visibilityData, offlineVis, onlineVis] = await Promise.all([
         api.get<Community[]>('/content/communities'),
-        api.get<{ value: string | null }>('/content/settings/communities_visible').catch(() => ({ value: null }))
+        api.get<{ value: string | null }>('/content/settings/communities_visible').catch(() => ({ value: null })),
+        api.get<{ value: string | null }>('/content/settings/communities_offline_visible').catch(() => ({ value: null })),
+        api.get<{ value: string | null }>('/content/settings/communities_online_visible').catch(() => ({ value: null }))
       ]);
       setCommunities(communitiesData);
       setSectionVisible(visibilityData.value !== 'false');
+      setOfflineVisible(offlineVis.value !== 'false');
+      setOnlineVisible(onlineVis.value !== 'false');
     } catch (error) { toast.error('Ошибка загрузки'); }
     finally { setLoading(false); }
   }
@@ -100,6 +114,24 @@ export function CommunitiesAdmin() {
       await api.put('/content/settings/communities_visible', { value: newValue ? 'true' : 'false' });
       setSectionVisible(newValue);
       toast.success(newValue ? 'Раздел отображается у учеников' : 'Раздел скрыт у учеников');
+    } catch (error) { toast.error('Ошибка сохранения'); }
+  }
+
+  async function toggleOfflineVisibility() {
+    try {
+      const newValue = !offlineVisible;
+      await api.put('/content/settings/communities_offline_visible', { value: newValue ? 'true' : 'false' });
+      setOfflineVisible(newValue);
+      toast.success(newValue ? 'Очные общины видны ученикам' : 'Очные общины скрыты от учеников');
+    } catch (error) { toast.error('Ошибка сохранения'); }
+  }
+
+  async function toggleOnlineVisibility() {
+    try {
+      const newValue = !onlineVisible;
+      await api.put('/content/settings/communities_online_visible', { value: newValue ? 'true' : 'false' });
+      setOnlineVisible(newValue);
+      toast.success(newValue ? 'Онлайн общины видны ученикам' : 'Онлайн общины скрыты от учеников');
     } catch (error) { toast.error('Ошибка сохранения'); }
   }
 
@@ -159,6 +191,24 @@ export function CommunitiesAdmin() {
             <Plus className="w-5 h-5" /> Добавить
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 bg-white/60 rounded-xl border border-[#d4c9b0]/30 p-3">
+        <span className="text-sm font-medium text-[#3d3527]/70">Видимость вкладок:</span>
+        <button
+          onClick={toggleOfflineVisibility}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${offlineVisible ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}
+        >
+          {offlineVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+          Очные {offlineVisible ? 'видны' : 'скрыты'}
+        </button>
+        <button
+          onClick={toggleOnlineVisibility}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs transition-colors ${onlineVisible ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-500'}`}
+        >
+          {onlineVisible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+          Онлайн {onlineVisible ? 'видны' : 'скрыты'}
+        </button>
       </div>
 
       <div className="flex gap-2 border-b border-[#d4c9b0]/30">
@@ -291,6 +341,19 @@ export function CommunitiesAdmin() {
   );
 }
 
+function parseLeaders(community: Community | null): LeaderEntry[] {
+  if (community?.leaders) {
+    try {
+      const parsed = JSON.parse(community.leaders);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {}
+  }
+  if (community?.leader || community?.leaderContact) {
+    return [{ name: community.leader || '', contact: community.leaderContact || '' }];
+  }
+  return [{ name: '', contact: '' }];
+}
+
 function CommunityForm({ community, onSave, onClose, defaultFormat }: { 
   community: Community | null; 
   onSave: (data: any) => void; 
@@ -305,10 +368,11 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
   const [city, setCity] = useState(community?.city || '');
   const [address, setAddress] = useState(community?.address || '');
   const [link, setLink] = useState(community?.link || '');
-  const [leader, setLeader] = useState(community?.leader || '');
-  const [leaderContact, setLeaderContact] = useState(community?.leaderContact || '');
   const [shortDescription, setShortDescription] = useState(community?.shortDescription || '');
   const [allowedTariffs, setAllowedTariffs] = useState<string[]>(community?.allowedTariffs || []);
+  const [leaders, setLeaders] = useState<LeaderEntry[]>(parseLeaders(community));
+  const [contactButtonLabel, setContactButtonLabel] = useState(community?.contactButtonLabel || '');
+  const [joinButtonLabel, setJoinButtonLabel] = useState(community?.joinButtonLabel || '');
 
   const toggleTariff = (tariff: string) => {
     setAllowedTariffs(prev => 
@@ -318,11 +382,25 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
     );
   };
 
+  const addLeader = () => {
+    setLeaders(prev => [...prev, { name: '', contact: '' }]);
+  };
+
+  const removeLeader = (index: number) => {
+    setLeaders(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateLeader = (index: number, field: 'name' | 'contact', value: string) => {
+    setLeaders(prev => prev.map((l, i) => i === index ? { ...l, [field]: value } : l));
+  };
+
   const handleSave = () => {
     if (!name.trim()) {
       toast.error('Введите название');
       return;
     }
+    const filteredLeaders = leaders.filter(l => l.name.trim() || l.contact.trim());
+    const firstLeader = filteredLeaders[0];
     onSave({ 
       name, 
       format, 
@@ -332,10 +410,13 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
       city: format === 'offline' ? city : null,
       address: format === 'offline' ? address : null,
       link: format === 'online' ? link : null,
-      leader, 
-      leaderContact,
+      leader: firstLeader?.name || '', 
+      leaderContact: firstLeader?.contact || '',
       shortDescription: shortDescription || null,
-      allowedTariffs
+      allowedTariffs,
+      leaders: filteredLeaders.length > 0 ? filteredLeaders : null,
+      contactButtonLabel: contactButtonLabel.trim() || null,
+      joinButtonLabel: joinButtonLabel.trim() || null,
     });
   };
 
@@ -433,18 +514,58 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
       )}
       
       <div>
-        <label className="block text-sm font-medium text-[#3d3527] mb-1">Ведущий</label>
-        <input value={leader} onChange={(e) => setLeader(e.target.value)} className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none" />
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-[#3d3527]">Ведущие</label>
+          <button type="button" onClick={addLeader} className="text-xs text-[#a67c52] hover:underline flex items-center gap-1">
+            <Plus className="w-3.5 h-3.5" /> Добавить ведущего
+          </button>
+        </div>
+        <div className="space-y-2">
+          {leaders.map((l, i) => (
+            <div key={i} className="flex gap-2 items-start">
+              <div className="flex-1 space-y-1">
+                <input
+                  value={l.name}
+                  onChange={(e) => updateLeader(i, 'name', e.target.value)}
+                  className="w-full px-3 py-1.5 border border-[#d4c9b0] rounded-lg focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none text-sm"
+                  placeholder="Имя"
+                />
+                <input
+                  value={l.contact}
+                  onChange={(e) => updateLeader(i, 'contact', e.target.value)}
+                  className="w-full px-3 py-1.5 border border-[#d4c9b0] rounded-lg focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none text-sm"
+                  placeholder="Контакт (телефон или ссылка на ТГ)"
+                />
+              </div>
+              {leaders.length > 1 && (
+                <button type="button" onClick={() => removeLeader(i)} className="p-1.5 hover:bg-red-50 rounded-lg mt-1">
+                  <X className="w-4 h-4 text-red-500" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-      
-      <div>
-        <label className="block text-sm font-medium text-[#3d3527] mb-1">Контакт ведущего</label>
-        <input 
-          value={leaderContact} 
-          onChange={(e) => setLeaderContact(e.target.value)} 
-          className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none" 
-          placeholder="Телефон или ссылка на ТГ"
-        />
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Название кнопки «Связаться»</label>
+          <input
+            value={contactButtonLabel}
+            onChange={(e) => setContactButtonLabel(e.target.value)}
+            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none"
+            placeholder="Связаться"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-[#3d3527] mb-1">Название кнопки «Присоединиться»</label>
+          <input
+            value={joinButtonLabel}
+            onChange={(e) => setJoinButtonLabel(e.target.value)}
+            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none"
+            placeholder="Присоединиться"
+          />
+        </div>
       </div>
 
       <div>

@@ -3,6 +3,11 @@ import { MapPin, Users, Calendar, Phone, Globe, Navigation, Loader2 } from 'luci
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 
+interface LeaderEntry {
+  name: string;
+  contact: string;
+}
+
 interface Community {
   id: string;
   name: string;
@@ -17,11 +22,41 @@ interface Community {
   leaderContact?: string;
   description?: string;
   shortDescription?: string;
+  leaders?: string;
+  contactButtonLabel?: string;
+  joinButtonLabel?: string;
 }
 
 interface CommunitiesResponse {
   hidden: boolean;
   communities: Community[];
+  offlineHidden?: boolean;
+  onlineHidden?: boolean;
+}
+
+const COMMUNITY_TYPE_LABELS: Record<string, string> = {
+  mixed: 'Смешанная',
+  dependent: 'Для зависимых',
+  codependent: 'Для созависимых',
+};
+
+function getLeaders(community: Community): LeaderEntry[] {
+  if (community.leaders) {
+    try {
+      const parsed = JSON.parse(community.leaders);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {}
+  }
+  if (community.leader || community.leaderContact) {
+    return [{ name: community.leader || '', contact: community.leaderContact || '' }];
+  }
+  return [];
+}
+
+function getContactHref(contact: string): string {
+  if (contact.startsWith('@')) return `https://t.me/${contact.replace('@', '')}`;
+  if (contact.startsWith('http')) return contact;
+  return `tel:${contact}`;
 }
 
 export function CommunitiesTab() {
@@ -30,6 +65,8 @@ export function CommunitiesTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hidden, setHidden] = useState(false);
+  const [offlineHidden, setOfflineHidden] = useState(false);
+  const [onlineHidden, setOnlineHidden] = useState(false);
   const [activeTab, setActiveTab] = useState<'offline' | 'online'>('offline');
 
   useEffect(() => {
@@ -43,6 +80,8 @@ export function CommunitiesTab() {
       const data = await api.get<CommunitiesResponse>(`/public/communities${tariffParam}`);
       setHidden(data.hidden);
       setCommunities(data.communities || []);
+      setOfflineHidden(!!data.offlineHidden);
+      setOnlineHidden(!!data.onlineHidden);
       setError(null);
     } catch (err) {
       setError('Не удалось загрузить общины');
@@ -88,17 +127,21 @@ export function CommunitiesTab() {
   }
 
   if (communities.length === 0) {
-    return (
-      <div className="text-center py-20">
-        <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-        <p className="text-gray-500">Информация будет появляться здесь по мере прохождения курса</p>
-      </div>
-    );
+    return null;
   }
 
   const offlineCommunities = communities.filter(c => c.format === 'offline' || !c.format);
   const onlineCommunities = communities.filter(c => c.format === 'online');
-  const filteredCommunities = activeTab === 'offline' ? offlineCommunities : onlineCommunities;
+
+  const showOfflineTab = !offlineHidden;
+  const showOnlineTab = !onlineHidden;
+
+  if (!showOfflineTab && !showOnlineTab) {
+    return null;
+  }
+
+  const effectiveTab = activeTab === 'offline' && !showOfflineTab ? 'online' : activeTab === 'online' && !showOnlineTab ? 'offline' : activeTab;
+  const filteredCommunities = effectiveTab === 'offline' ? offlineCommunities : onlineCommunities;
 
   return (
     <div className="animate-fade-in">
@@ -112,27 +155,28 @@ export function CommunitiesTab() {
         </p>
       </div>
 
+      {showOfflineTab && showOnlineTab && (
       <div className="flex gap-2 mb-6 border-b border-[var(--book-border)]/30">
         <button
           onClick={() => setActiveTab('offline')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === 'offline' ? 'text-[var(--button-lavender-dark)] border-b-2 border-[var(--button-lavender-dark)]' : 'text-gray-500 hover:text-gray-700'}`}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${effectiveTab === 'offline' ? 'text-[var(--button-lavender-dark)] border-b-2 border-[var(--button-lavender-dark)]' : 'text-gray-500 hover:text-gray-700'}`}
         >
           <MapPin className="w-4 h-4" />
           Очные ({offlineCommunities.length})
         </button>
         <button
           onClick={() => setActiveTab('online')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${activeTab === 'online' ? 'text-[var(--button-lavender-dark)] border-b-2 border-[var(--button-lavender-dark)]' : 'text-gray-500 hover:text-gray-700'}`}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${effectiveTab === 'online' ? 'text-[var(--button-lavender-dark)] border-b-2 border-[var(--button-lavender-dark)]' : 'text-gray-500 hover:text-gray-700'}`}
         >
           <Globe className="w-4 h-4" />
           Онлайн ({onlineCommunities.length})
         </button>
       </div>
+      )}
 
       {filteredCommunities.length === 0 ? (
         <div className="text-center py-12">
-          <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-          <p className="text-gray-500">Информация будет появляться здесь по мере прохождения курса</p>
+          <p className="text-gray-500 opacity-70">Нет общин в этой категории</p>
         </div>
       ) : (
       <div className="grid gap-6 md:grid-cols-2">
@@ -148,7 +192,7 @@ export function CommunitiesTab() {
               </div>
               {community.communityType && (
                 <span className={`inline-block px-3 md:px-4 py-1 md:py-1.5 rounded-full text-xs ${getCommunityTypeColor(community.communityType)}`}>
-                  {community.communityType}
+                  {COMMUNITY_TYPE_LABELS[community.communityType] || community.communityType}
                 </span>
               )}
             </div>
@@ -186,27 +230,54 @@ export function CommunitiesTab() {
                 </div>
               )}
 
-              {community.leader && (
-                <div className="flex items-center gap-2 opacity-70">
-                  <Users className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 text-[var(--icon-lavender)]" />
-                  <span className="leading-relaxed">Ведущий: {community.leader}</span>
-                </div>
-              )}
+              {(() => {
+                const communityLeaders = getLeaders(community);
+                if (communityLeaders.length === 0) return null;
+                if (communityLeaders.length === 1 && communityLeaders[0].name) {
+                  return (
+                    <div className="flex items-center gap-2 opacity-70">
+                      <Users className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 text-[var(--icon-lavender)]" />
+                      <span className="leading-relaxed">Ведущий: {communityLeaders[0].name}</span>
+                    </div>
+                  );
+                }
+                if (communityLeaders.length > 1) {
+                  return (
+                    <div className="flex items-start gap-2 opacity-70">
+                      <Users className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0 mt-0.5 text-[var(--icon-lavender)]" />
+                      <div className="leading-relaxed">
+                        <span>Ведущие: </span>
+                        {communityLeaders.filter(l => l.name).map(l => l.name).join(', ')}
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {community.leaderContact && (
-                <a
-                  href={community.leaderContact.startsWith('@') ? `https://t.me/${community.leaderContact.replace('@', '')}` : community.leaderContact.startsWith('http') ? community.leaderContact : `tel:${community.leaderContact}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_6px_16px_rgba(139,149,188,0.4)] transition-all duration-300 text-xs md:text-sm transform hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group"
-                >
-                  <Phone className="w-3.5 h-3.5 md:w-4 md:h-4 relative z-10" />
-                  <span className="relative z-10">Связаться</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-                </a>
-              )}
+              {(() => {
+                const communityLeaders = getLeaders(community);
+                const contactLabel = community.contactButtonLabel || 'Связаться';
+                return communityLeaders
+                  .filter(l => l.contact)
+                  .map((l, i) => (
+                    <a
+                      key={i}
+                      href={getContactHref(l.contact)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_6px_16px_rgba(139,149,188,0.4)] transition-all duration-300 text-xs md:text-sm transform hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group"
+                    >
+                      <Phone className="w-3.5 h-3.5 md:w-4 md:h-4 relative z-10" />
+                      <span className="relative z-10">
+                        {communityLeaders.length > 1 && l.name ? `${contactLabel} — ${l.name}` : contactLabel}
+                      </span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                    </a>
+                  ));
+              })()}
               
               {community.format === 'online' && community.link && (
                 <a
@@ -216,7 +287,7 @@ export function CommunitiesTab() {
                   className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 border-2 border-[var(--sky-light)]/50 rounded-xl hover:bg-gradient-to-r hover:from-[var(--book-bg)] hover:to-white transition-all duration-300 text-xs md:text-sm transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Globe className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                  Присоединиться
+                  {community.joinButtonLabel || 'Присоединиться'}
                 </a>
               )}
 
@@ -231,31 +302,6 @@ export function CommunitiesTab() {
         ))}
       </div>
       )}
-
-      <div className="mt-10 p-4 md:p-6 lg:p-8 bg-gradient-to-br from-[var(--button-lavender-light)]/10 to-[var(--button-lavender-dark)]/5 border-2 border-[var(--button-lavender-dark)]/30 rounded-2xl shadow-[0_4px_16px_rgba(122,132,171,0.08)]">
-        <h4 className="mb-3 text-[var(--button-lavender-dark)] text-base md:text-lg">Не нашли общину в своем городе?</h4>
-        <p className="text-xs md:text-sm opacity-80 mb-5 leading-relaxed">
-          Вы можете создать свою группу поддержки или присоединиться к онлайн-сообществам. 
-          Мы поможем вам организовать встречи.
-        </p>
-        <button className="px-5 py-2.5 bg-gradient-to-r from-[var(--button-lavender-dark)] to-[var(--button-lavender-light)] text-white rounded-xl hover:shadow-[0_6px_16px_rgba(139,149,188,0.4)] transition-all duration-300 text-sm transform hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden group">
-          <span className="relative z-10">Создать общину</span>
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
-        </button>
-      </div>
-
-      <div className="mt-6 p-4 md:p-6 lg:p-8 bg-white/60 border-2 border-[var(--sky-light)]/50 rounded-2xl shadow-[0_4px_16px_var(--book-shadow)]">
-        <h4 className="mb-4">О программе Анонимных Алкаголиков</h4>
-        <p className="text-sm opacity-80 mb-4 leading-relaxed">
-          АА — это международное сообщество мужчин и женщин, которые делятся друг с другом своим 
-          опытом, силами и надеждами, чтобы решить свою общую проблему и помочь другим избавиться от алкоголизма.
-        </p>
-        <p className="text-sm opacity-80 leading-relaxed">
-          Единственное условие для членства в АА — желание бросить пить. 
-          Членство в АА бесплатно, группы не связаны ни с какими сектами, религиозными течениями, 
-          политическими организациями или учреждениями.
-        </p>
-      </div>
     </div>
   );
 }

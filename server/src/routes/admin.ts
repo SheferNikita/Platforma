@@ -611,6 +611,18 @@ router.put('/settings/:key', settingsRoles, async (req: AuthRequest, res: Respon
     if (key === 'logo' || key === 'favicon') {
       invalidateMediaCache(key);
     }
+
+    if (key === 'visibility_communities' && value) {
+      try {
+        const parsed = JSON.parse(value);
+        const communityVisible = parsed.enabled ? 'true' : 'false';
+        await prisma.setting.upsert({
+          where: { key: 'communities_visible' },
+          update: { value: communityVisible },
+          create: { key: 'communities_visible', value: communityVisible }
+        });
+      } catch {}
+    }
     
     res.json(updated);
   } catch (error) {

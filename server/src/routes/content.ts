@@ -10,6 +10,29 @@ import { invalidateModulesCache } from './public';
 startScheduledPublishJob();
 startScheduledEmailJob();
 
+(async () => {
+  try {
+    const commVisible = await prisma.setting.findUnique({ where: { key: 'communities_visible' } });
+    if (commVisible) {
+      const isEnabled = commVisible.value !== 'false';
+      const existing = await prisma.platformSetting.findUnique({ where: { key: 'visibility_communities' } });
+      if (existing?.value) {
+        const parsed = JSON.parse(existing.value);
+        if (parsed.enabled !== isEnabled) {
+          parsed.enabled = isEnabled;
+          await prisma.platformSetting.update({
+            where: { key: 'visibility_communities' },
+            data: { value: JSON.stringify(parsed) }
+          });
+          console.log(`[Sync] visibility_communities.enabled synced to ${isEnabled}`);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[Sync] communities visibility sync error:', err);
+  }
+})();
+
 interface IdParams {
   id: string;
 }
@@ -870,6 +893,27 @@ router.put('/settings/:key', adminOnly, async (req: AuthRequest, res: Response) 
       update: { value },
       create: { key: req.params.key, value }
     });
+
+    if (req.params.key === 'communities_visible') {
+      const isEnabled = value === 'true';
+      const existing = await prisma.platformSetting.findUnique({ where: { key: 'visibility_communities' } });
+      let currentTariffs = ['ALL'];
+      if (existing?.value) {
+        try {
+          const parsed = JSON.parse(existing.value);
+          if (parsed.tariffs && Array.isArray(parsed.tariffs)) {
+            currentTariffs = parsed.tariffs;
+          }
+        } catch {}
+      }
+      const newVisibility = JSON.stringify({ enabled: isEnabled, tariffs: currentTariffs });
+      await prisma.platformSetting.upsert({
+        where: { key: 'visibility_communities' },
+        update: { value: newVisibility },
+        create: { key: 'visibility_communities', label: 'Общины', category: 'visibility', type: 'TEXT', value: newVisibility }
+      });
+    }
+
     res.json(setting);
   } catch (error) {
     console.error('Update setting error:', error);

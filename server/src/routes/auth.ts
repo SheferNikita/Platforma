@@ -46,7 +46,7 @@ router.post('/login', async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      maxAge: 90 * 24 * 60 * 60 * 1000
     });
 
     // Get surveyCompleted and tariff for students
@@ -113,7 +113,7 @@ router.post('/register', async (req, res) => {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      maxAge: 90 * 24 * 60 * 60 * 1000
     });
 
     const student = await prisma.student.findFirst({

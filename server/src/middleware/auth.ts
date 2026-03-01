@@ -19,7 +19,7 @@ export function generateToken(user: { id: string; email: string; name: string; r
   return jwt.sign(
     { id: user.id, email: user.email, name: user.name, role: user.role },
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '90d' }
   );
 }
 
@@ -53,15 +53,16 @@ export async function authenticate(req: AuthRequest, res: Response, next: NextFu
     if (tokenExp) {
       const nowSec = Math.floor(Date.now() / 1000);
       const remaining = tokenExp - nowSec;
-      const halfLife = 3.5 * 24 * 60 * 60;
+      const halfLife = 45 * 24 * 60 * 60;
       if (remaining < halfLife) {
         const newToken = generateToken(user);
         res.cookie('token', newToken, {
           httpOnly: true,
           secure: true,
           sameSite: 'none',
-          maxAge: 7 * 24 * 60 * 60 * 1000
+          maxAge: 90 * 24 * 60 * 60 * 1000
         });
+        res.setHeader('X-New-Token', newToken);
       }
     }
 

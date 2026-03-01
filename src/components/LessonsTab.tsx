@@ -57,6 +57,10 @@ export function LessonsTab() {
     try {
       setLoading(true);
       const data = await api.get<{ modules: Module[]; completedLessonIds: string[] }>('/public/modules-with-progress');
+      if (data.modules.length > 0 && data.modules.every(m => m.hasAccess === false)) {
+        navigate('/login', { replace: true });
+        return;
+      }
       setModules(data.modules);
       setCompletedLessons(new Set(data.completedLessonIds));
       setError(null);
@@ -319,7 +323,7 @@ export function LessonsTab() {
                           {isLocked && !isScheduled && (
                             <span className="text-sm italic opacity-60 flex items-center gap-2">
                               <Lock className="w-4 h-4 text-[var(--icon-lavender)]" />
-                              Пройдите предыдущие уроки, чтобы разблокировать
+                              Доступ ограничен
                             </span>
                           )}
                         </div>

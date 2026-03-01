@@ -14,6 +14,10 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
+  const newToken = response.headers.get('X-New-Token');
+  if (newToken) {
+    safeStorage.setItem('auth_token', newToken);
+  }
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Ошибка сервера' }));
     throw new Error(error.error || 'Ошибка сервера');

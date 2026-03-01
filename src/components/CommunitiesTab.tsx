@@ -23,8 +23,6 @@ interface Community {
   description?: string;
   shortDescription?: string;
   leaders?: string;
-  contactButtonLabel?: string;
-  joinButtonLabel?: string;
 }
 
 interface CommunitiesResponse {
@@ -259,7 +257,6 @@ export function CommunitiesTab() {
             <div className="flex flex-wrap gap-2">
               {(() => {
                 const communityLeaders = getLeaders(community);
-                const contactLabel = community.contactButtonLabel || 'Связаться';
                 return communityLeaders
                   .filter(l => l.contact)
                   .map((l, i) => (
@@ -272,7 +269,7 @@ export function CommunitiesTab() {
                     >
                       <Phone className="w-3.5 h-3.5 md:w-4 md:h-4 relative z-10" />
                       <span className="relative z-10">
-                        {communityLeaders.length > 1 && l.name ? `${contactLabel} — ${l.name}` : contactLabel}
+                        {communityLeaders.length > 1 && l.name ? `Связаться с ${l.name}` : 'Связаться'}
                       </span>
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                     </a>
@@ -287,7 +284,7 @@ export function CommunitiesTab() {
                   className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 border-2 border-[var(--sky-light)]/50 rounded-xl hover:bg-gradient-to-r hover:from-[var(--book-bg)] hover:to-white transition-all duration-300 text-xs md:text-sm transform hover:scale-[1.02] active:scale-[0.98]"
                 >
                   <Globe className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                  {community.joinButtonLabel || 'Присоединиться'}
+                  Присоединиться
                 </a>
               )}
 

@@ -371,8 +371,6 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
   const [shortDescription, setShortDescription] = useState(community?.shortDescription || '');
   const [allowedTariffs, setAllowedTariffs] = useState<string[]>(community?.allowedTariffs || []);
   const [leaders, setLeaders] = useState<LeaderEntry[]>(parseLeaders(community));
-  const [contactButtonLabel, setContactButtonLabel] = useState(community?.contactButtonLabel || '');
-  const [joinButtonLabel, setJoinButtonLabel] = useState(community?.joinButtonLabel || '');
 
   const toggleTariff = (tariff: string) => {
     setAllowedTariffs(prev => 
@@ -415,8 +413,6 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
       shortDescription: shortDescription || null,
       allowedTariffs,
       leaders: filteredLeaders.length > 0 ? filteredLeaders : null,
-      contactButtonLabel: contactButtonLabel.trim() || null,
-      joinButtonLabel: joinButtonLabel.trim() || null,
     });
   };
 
@@ -544,27 +540,6 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
               )}
             </div>
           ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-[#3d3527] mb-1">Название кнопки «Связаться»</label>
-          <input
-            value={contactButtonLabel}
-            onChange={(e) => setContactButtonLabel(e.target.value)}
-            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none"
-            placeholder="Связаться"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-[#3d3527] mb-1">Название кнопки «Присоединиться»</label>
-          <input
-            value={joinButtonLabel}
-            onChange={(e) => setJoinButtonLabel(e.target.value)}
-            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none"
-            placeholder="Присоединиться"
-          />
         </div>
       </div>
 

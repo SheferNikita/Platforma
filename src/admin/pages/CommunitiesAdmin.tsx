@@ -367,7 +367,8 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
   const [time, setTime] = useState(community?.time || '');
   const [city, setCity] = useState(community?.city || '');
   const [address, setAddress] = useState(community?.address || '');
-  const [link, setLink] = useState(community?.link || '');
+  const [link, setLink] = useState(community?.link === '__FROM_LEADER__' ? '' : (community?.link || ''));
+  const [linkFromLeader, setLinkFromLeader] = useState(community?.link === '__FROM_LEADER__');
   const [shortDescription, setShortDescription] = useState(community?.shortDescription || '');
   const [allowedTariffs, setAllowedTariffs] = useState<string[]>(community?.allowedTariffs || []);
   const [leaders, setLeaders] = useState<LeaderEntry[]>(parseLeaders(community));
@@ -407,7 +408,7 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
       time, 
       city: format === 'offline' ? city : null,
       address: format === 'offline' ? address : null,
-      link: format === 'online' ? link : null,
+      link: format === 'online' ? (linkFromLeader ? '__FROM_LEADER__' : link) : null,
       leader: firstLeader?.name || '', 
       leaderContact: firstLeader?.contact || '',
       shortDescription: shortDescription || null,
@@ -501,11 +502,21 @@ function CommunityForm({ community, onSave, onClose, defaultFormat }: {
         <div>
           <label className="block text-sm font-medium text-[#3d3527] mb-1">Ссылка</label>
           <input 
-            value={link} 
+            value={linkFromLeader ? '' : link} 
             onChange={(e) => setLink(e.target.value)} 
-            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none" 
-            placeholder="Ссылка на ТГ или 'можно получить у ведущего'"
+            className="w-full px-4 py-2 border border-[#d4c9b0] rounded-xl focus:ring-2 focus:ring-[#a67c52]/20 focus:border-[#a67c52] outline-none disabled:opacity-50 disabled:bg-[#f5f3ed]" 
+            placeholder="Ссылка на группу"
+            disabled={linkFromLeader}
           />
+          <label className="flex items-center gap-2 mt-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={linkFromLeader}
+              onChange={(e) => setLinkFromLeader(e.target.checked)}
+              className="w-4 h-4 rounded border-[#d4c9b0] text-[#a67c52] focus:ring-[#a67c52]"
+            />
+            <span className="text-sm text-[#3d3527]/70">Можно получить у ведущего</span>
+          </label>
         </div>
       )}
       

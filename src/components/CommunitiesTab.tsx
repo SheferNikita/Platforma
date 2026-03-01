@@ -276,7 +276,7 @@ export function CommunitiesTab() {
                   ));
               })()}
               
-              {community.format === 'online' && community.link && (
+              {community.format === 'online' && community.link && community.link !== '__FROM_LEADER__' && (
                 <a
                   href={community.link}
                   target="_blank"
@@ -286,6 +286,12 @@ export function CommunitiesTab() {
                   <Globe className="w-3.5 h-3.5 md:w-4 md:h-4" />
                   Присоединиться
                 </a>
+              )}
+              {community.format === 'online' && community.link === '__FROM_LEADER__' && (
+                <span className="inline-flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 border-2 border-[var(--sky-light)]/50 rounded-xl text-xs md:text-sm opacity-70">
+                  <Globe className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  Можно получить у ведущего
+                </span>
               )}
 
               {community.format === 'offline' && community.city && (

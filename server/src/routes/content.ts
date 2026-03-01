@@ -593,19 +593,20 @@ router.post('/schedule', moderatorRoles, async (req: AuthRequest, res: Response)
       VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'SCHEDULE', ${event.id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(eventWithTariffs)}::jsonb, NOW())
     `;
 
+    res.status(201).json(eventWithTariffs);
+
     if (event.isPublished) {
-      const activeStudents = await prisma.student.findMany({
+      prisma.student.findMany({
         where: { user: { isActive: true } },
         select: { userId: true }
-      });
-      await Promise.all(
-        activeStudents.map(s => 
-          notificationService.createForNewEvent(s.userId, event.title, event.id)
+      }).then(activeStudents => 
+        Promise.all(
+          activeStudents.map(s => 
+            notificationService.createForNewEvent(s.userId, event.title, event.id)
+          )
         )
-      );
+      ).catch(err => console.error('Background notifications error (create schedule):', err));
     }
-
-    res.status(201).json(eventWithTariffs);
   } catch (error) {
     console.error('Create schedule event error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -639,19 +640,20 @@ router.put('/schedule/:id', moderatorRoles, async (req: AuthRequest & Request<Id
       VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'SCHEDULE', ${id}, ${JSON.stringify({ title: event.title })}::jsonb, ${JSON.stringify(oldEvent)}::jsonb, ${JSON.stringify(eventWithTariffs)}::jsonb, NOW())
     `;
 
+    res.json(eventWithTariffs);
+
     if (!prismaOldEvent?.isPublished && event.isPublished) {
-      const activeStudents = await prisma.student.findMany({
+      prisma.student.findMany({
         where: { user: { isActive: true } },
         select: { userId: true }
-      });
-      await Promise.all(
-        activeStudents.map(s => 
-          notificationService.createForNewEvent(s.userId, event.title, event.id)
+      }).then(activeStudents => 
+        Promise.all(
+          activeStudents.map(s => 
+            notificationService.createForNewEvent(s.userId, event.title, event.id)
+          )
         )
-      );
+      ).catch(err => console.error('Background notifications error (update schedule):', err));
     }
-    
-    res.json(eventWithTariffs);
   } catch (error) {
     console.error('Update schedule event error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });

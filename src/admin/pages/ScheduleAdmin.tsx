@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Edit, Trash2, Calendar, Eye, EyeOff, Video, MapPin, Users2, X, Copy, Shield, Clock } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, Eye, EyeOff, Video, MapPin, Users2, X, Copy, Shield, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 function isEventPast(dateStr: string, timeStr: string): boolean {
@@ -70,7 +70,10 @@ export function ScheduleAdmin() {
     } catch (error) { toast.error('Ошибка загрузки'); }
   }
 
+  const [saving, setSaving] = useState(false);
+
   async function saveEvent(data: Partial<ScheduleEvent>) {
+    setSaving(true);
     try {
       if (editingEvent?.id && !editingEvent.id.startsWith('copy_')) {
         await api.put(`/content/schedule/${editingEvent.id}`, data);
@@ -83,6 +86,7 @@ export function ScheduleAdmin() {
       setShowModal(false);
       setEditingEvent(null);
     } catch (error) { toast.error('Ошибка сохранения'); }
+    finally { setSaving(false); }
   }
 
   async function deleteEvent(id: string) {
@@ -267,7 +271,8 @@ export function ScheduleAdmin() {
               event={editingEvent} 
               miniGroups={miniGroups}
               onSave={saveEvent} 
-              onClose={() => { setShowModal(false); setEditingEvent(null); }} 
+              onClose={() => { setShowModal(false); setEditingEvent(null); }}
+              saving={saving}
             />
           </div>
         </div>
@@ -276,11 +281,12 @@ export function ScheduleAdmin() {
   );
 }
 
-function ScheduleForm({ event, miniGroups, onSave, onClose }: { 
+function ScheduleForm({ event, miniGroups, onSave, onClose, saving }: { 
   event: ScheduleEvent | null; 
   miniGroups: MiniGroup[];
   onSave: (data: any) => void; 
-  onClose: () => void 
+  onClose: () => void;
+  saving?: boolean;
 }) {
   const [title, setTitle] = useState(event?.title || '');
   const [description, setDescription] = useState(event?.description || '');
@@ -398,8 +404,9 @@ function ScheduleForm({ event, miniGroups, onSave, onClose }: {
         </div>
       )}
       <div className="flex justify-end gap-3">
-        <button onClick={onClose} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl">Отмена</button>
+        <button onClick={onClose} disabled={saving} className="px-4 py-2 text-[#3d3527] hover:bg-gray-100 rounded-xl disabled:opacity-50">Отмена</button>
         <button 
+          disabled={saving}
           onClick={() => onSave({ 
             title, 
             description, 
@@ -410,9 +417,10 @@ function ScheduleForm({ event, miniGroups, onSave, onClose }: {
             link,
             allowedTariffs: showTariffs ? allowedTariffs : []
           })} 
-          className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl"
+          className="px-4 py-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-xl disabled:opacity-70 flex items-center gap-2"
         >
-          Сохранить
+          {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+          {saving ? 'Сохранение...' : 'Сохранить'}
         </button>
       </div>
     </div>

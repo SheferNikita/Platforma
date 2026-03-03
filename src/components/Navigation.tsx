@@ -31,7 +31,7 @@ export function Navigation() {
     { path: '/schedule', label: 'Расписание', icon: Calendar, section: 'schedule' as const },
     { path: '/mini-group', label: 'Мини-группа', icon: Users2, section: 'mini_group' as const, tariffCheck: hasMiniGroupAccess },
     { path: '/contacts', label: 'Контакты', icon: Users, section: 'contacts' as const },
-    { path: '/communities', label: 'Общины', icon: Building, section: 'communities' as const },
+    { path: '/communities', label: 'Общины трезвости', icon: Building, section: 'communities' as const },
   ];
 
   const navItems = allNavItems.filter(item => {
@@ -49,7 +49,7 @@ export function Navigation() {
     { path: '/schedule', label: 'Расписание', icon: Calendar, section: 'schedule' as const },
     { path: '/mini-group', label: 'Группа', icon: Users2, section: 'mini_group' as const, tariffCheck: hasMiniGroupAccess },
     { path: '/contacts', label: 'Контакты', icon: Users, section: 'contacts' as const },
-    { path: '/communities', label: 'Общины', icon: Building, section: 'communities' as const },
+    { path: '/communities', label: 'Общины трезвости', icon: Building, section: 'communities' as const },
     { path: '/sos', label: 'SOS', icon: AlertCircle, section: 'sos' as const },
     { path: '/profile', label: 'Профиль', icon: User, section: 'profile' as const },
   ];

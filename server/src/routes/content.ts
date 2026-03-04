@@ -5,7 +5,11 @@ import { z } from 'zod';
 import { startScheduledPublishJob } from '../services/scheduledPublish';
 import { startScheduledEmailJob } from '../services/scheduledEmail';
 import { notificationService } from '../services/notificationService';
+import { emailTemplateService } from '../services/emailTemplateService';
+import { sendEmail } from '../services/email';
 import { invalidateModulesCache } from './public';
+
+const PLATFORM_URL = 'https://schkola-trezvosti.ru';
 
 startScheduledPublishJob();
 startScheduledEmailJob();
@@ -334,6 +338,44 @@ router.put('/lessons/:id', moderatorRoles, async (req: AuthRequest & Request<IdP
     `;
     
     res.json(lesson);
+
+    if (isBeingPublished && !lesson.publishAt) {
+      const now = new Date();
+      prisma.student.findMany({
+        where: {
+          moduleAccess: {
+            some: {
+              moduleId: lesson.moduleId,
+              isActive: true,
+              OR: [
+                { expiresAt: null },
+                { expiresAt: { gt: now } }
+              ]
+            }
+          },
+          user: { isActive: true }
+        },
+        include: { user: true }
+      }).then(async (studentsWithAccess) => {
+        const module = await prisma.module.findUnique({ where: { id: lesson.moduleId } });
+        const moduleName = module?.title || '';
+        for (const student of studentsWithAccess) {
+          try {
+            const emailData = await emailTemplateService.getNewLessonEmail({
+              studentName: student.user.name,
+              lessonTitle: lesson.title,
+              moduleName,
+              lessonUrl: `${PLATFORM_URL}/lessons/${lesson.id}`
+            });
+            await sendEmail(student.user.email, emailData.subject, emailData.body);
+            await notificationService.createForNewLesson(student.userId, lesson.title, lesson.id, moduleName);
+          } catch (err) {
+            console.error(`[ManualPublish] Failed to notify ${student.user.email}:`, err);
+          }
+        }
+        console.log(`[ManualPublish] Notified ${studentsWithAccess.length} students about lesson: ${lesson.title}`);
+      }).catch(err => console.error('Background notifications error (manual publish lesson):', err));
+    }
   } catch (error: any) {
     console.error('Error updating lesson:', error);
     if (error instanceof z.ZodError) {
@@ -472,19 +514,24 @@ router.post('/library', moderatorRoles, async (req: AuthRequest, res: Response) 
       VALUES (gen_random_uuid(), ${req.user!.id}, 'CREATE', 'LIBRARY', ${item.id}, ${JSON.stringify({ title: item.title })}::jsonb, ${JSON.stringify(item)}::jsonb, NOW())
     `;
 
-    if (item.isPublished) {
-      const activeStudents = await prisma.student.findMany({
-        where: { user: { isActive: true } },
-        select: { userId: true }
-      });
-      await Promise.all(
-        activeStudents.map(s => 
-          notificationService.createForNewLibraryItem(s.userId, item.title, item.id)
-        )
-      );
-    }
-
     res.status(201).json(item);
+
+    if (item.isPublished) {
+      const itemTariffs = Array.isArray(item.allowedTariffs) ? item.allowedTariffs : [];
+      prisma.student.findMany({
+        where: { 
+          user: { isActive: true },
+          ...(itemTariffs.length > 0 ? { tariff: { in: itemTariffs as any } } : {})
+        },
+        select: { userId: true }
+      }).then(activeStudents => 
+        Promise.all(
+          activeStudents.map(s => 
+            notificationService.createForNewLibraryItem(s.userId, item.title, item.id)
+          )
+        )
+      ).catch(err => console.error('Background notifications error (create library):', err));
+    }
   } catch (error) {
     console.error('Create library item error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -502,19 +549,24 @@ router.put('/library/:id', moderatorRoles, async (req: AuthRequest & Request<IdP
       VALUES (gen_random_uuid(), ${req.user!.id}, 'UPDATE', 'LIBRARY', ${id}, ${JSON.stringify({ title: item.title })}::jsonb, ${JSON.stringify(oldItem)}::jsonb, ${JSON.stringify(item)}::jsonb, NOW())
     `;
 
-    if (!oldItem?.isPublished && item.isPublished) {
-      const activeStudents = await prisma.student.findMany({
-        where: { user: { isActive: true } },
-        select: { userId: true }
-      });
-      await Promise.all(
-        activeStudents.map(s => 
-          notificationService.createForNewLibraryItem(s.userId, item.title, item.id)
-        )
-      );
-    }
-    
     res.json(item);
+
+    if (!oldItem?.isPublished && item.isPublished) {
+      const itemTariffs = Array.isArray(item.allowedTariffs) ? item.allowedTariffs : [];
+      prisma.student.findMany({
+        where: { 
+          user: { isActive: true },
+          ...(itemTariffs.length > 0 ? { tariff: { in: itemTariffs as any } } : {})
+        },
+        select: { userId: true }
+      }).then(activeStudents => 
+        Promise.all(
+          activeStudents.map(s => 
+            notificationService.createForNewLibraryItem(s.userId, item.title, item.id)
+          )
+        )
+      ).catch(err => console.error('Background notifications error (update library):', err));
+    }
   } catch (error) {
     console.error('Update library item error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -598,7 +650,10 @@ router.post('/schedule', moderatorRoles, async (req: AuthRequest, res: Response)
 
     if (event.isPublished) {
       prisma.student.findMany({
-        where: { user: { isActive: true } },
+        where: { 
+          user: { isActive: true },
+          ...(tariffs.length > 0 ? { tariff: { in: tariffs as any } } : {})
+        },
         select: { userId: true }
       }).then(activeStudents => 
         Promise.all(
@@ -645,8 +700,12 @@ router.put('/schedule/:id', moderatorRoles, async (req: AuthRequest & Request<Id
     `.catch(err => console.error('Background AdminLog error (update schedule):', err));
 
     if (!prismaOldEvent?.isPublished && event.isPublished) {
+      const eventTariffs = updated?.allowedTariffs || [];
       prisma.student.findMany({
-        where: { user: { isActive: true } },
+        where: { 
+          user: { isActive: true },
+          ...(eventTariffs.length > 0 ? { tariff: { in: eventTariffs as any } } : {})
+        },
         select: { userId: true }
       }).then(activeStudents => 
         Promise.all(

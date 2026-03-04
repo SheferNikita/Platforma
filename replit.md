@@ -42,11 +42,17 @@ The backend is powered by **Express.js (Node.js)**, utilizing **Prisma ORM 5.22.
 -   **Platform Settings System:** Centralized configuration management for general settings, SOS features, section visibility, and email templates, with history tracking and rollback.
 -   **Audit Logging & Rollback System:** Tracks all CREATE, UPDATE, DELETE operations with before/after snapshots for entities, allowing rollback functionality.
 
+**Notification System:**
+-   Tariff-based filtering: schedule events and library items with `allowedTariffs` only notify students with matching tariffs. Empty tariffs = notify all.
+-   Lesson notifications: sent on both scheduled publishing (`scheduledPublish.ts`) and manual publishing (PUT /lessons/:id). Both use `ModuleAccess` to filter recipients. Manual publish also sends email via `emailTemplateService`.
+-   All notification sends are fire-and-forget (after response) to avoid blocking the admin UI.
+
 **Performance Optimizations:**
 -   Server-side compression (gzip), static asset caching, and code splitting for faster load times.
 -   In-memory server cache for modules/lessons.
 -   Combined API endpoints and deduplicated API calls.
 -   Mobile-specific optimizations for lesson pages (collapsible sections, deferred data loading, simplified CSS, hidden nav buttons, skipped `/public/modules` API call).
+-   AdminLog writes and notification sends moved to background (fire-and-forget) for schedule and library endpoints.
 
 The project is structured into `prisma/` (schema, seed), `server/` (entry point, middleware, routes, services), and `src/` (admin panel, shared components, utilities, public pages).
 

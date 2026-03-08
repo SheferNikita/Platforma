@@ -7,6 +7,7 @@ import { api } from '../lib/api';
 import { toast } from 'sonner';
 import { useSettings } from '../lib/settings';
 import { useAuth } from '../lib/auth';
+import { useAudioRecorder } from '../hooks/useAudioRecorder';
 
 interface AttachmentItem {
   filename: string;
@@ -116,16 +117,12 @@ export function MentorResponsesPage() {
   const [replyText, setReplyText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [recordingTime, setRecordingTime] = useState(0);
-  
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const audioMimeTypeRef = useRef<string>('audio/webm');
+
+  const {
+    isRecording, isPaused, recordingTime, audioBlob, audioMimeType,
+    startRecording, stopRecording, pauseRecording, resumeRecording, cancelRecording
+  } = useAudioRecorder();
 
   // Проверка видимости раздела
   const isSectionEnabled = isSectionVisible('mentor_responses', user?.tariff, user?.role);
@@ -174,92 +171,6 @@ export function MentorResponsesPage() {
     return replies.filter(r => r.authorRole !== 'STUDENT').length;
   };
 
-  const startRecording = async () => {
-    try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        toast.error('Ваш браузер не поддерживает запись аудио');
-        return;
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const { createMediaRecorder } = await import('../lib/audioRecorder');
-      const { recorder, mimeType: recMimeType } = createMediaRecorder(stream);
-      audioMimeTypeRef.current = recMimeType;
-      mediaRecorderRef.current = recorder;
-      audioChunksRef.current = [];
-
-      recorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
-      };
-
-      recorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: recMimeType });
-        setAudioBlob(audioBlob);
-        stream.getTracks().forEach(track => track.stop());
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
-      };
-
-      recorder.start();
-      setIsRecording(true);
-      setIsPaused(false);
-      setRecordingTime(0);
-
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-
-      toast.success('Запись началась');
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.name === 'NotAllowedError') {
-          toast.error('Доступ к микрофону запрещен');
-        } else if (error.name === 'NotFoundError') {
-          toast.error('Микрофон не найден');
-        } else {
-          toast.error('Не удалось получить доступ к микрофону');
-        }
-      }
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && (isRecording || isPaused)) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      setIsPaused(false);
-      toast.success('Запись остановлена');
-    }
-  };
-
-  const pauseRecording = () => {
-    if (mediaRecorderRef.current && isRecording && !isPaused) {
-      mediaRecorderRef.current.pause();
-      setIsPaused(true);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-  };
-
-  const resumeRecording = () => {
-    if (mediaRecorderRef.current && isPaused) {
-      mediaRecorderRef.current.resume();
-      setIsPaused(false);
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    }
-  };
-
-  const removeAudio = () => {
-    setAudioBlob(null);
-    setRecordingTime(0);
-    setIsPaused(false);
-  };
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -288,16 +199,14 @@ export function MentorResponsesPage() {
     setReplyingTo({ id: item.id, type: item.type });
     setReplyText('');
     setAttachedFiles([]);
-    setAudioBlob(null);
-    setRecordingTime(0);
+    cancelRecording();
   };
 
   const closeReplyForm = () => {
     setReplyingTo(null);
     setReplyText('');
     setAttachedFiles([]);
-    setAudioBlob(null);
-    setRecordingTime(0);
+    cancelRecording();
   };
 
   const submitReply = async () => {
@@ -311,7 +220,7 @@ export function MentorResponsesPage() {
     try {
       let audioData: string | undefined;
       if (audioBlob) {
-        audioData = await fileToBase64(new window.File([audioBlob], 'audio.webm', { type: audioMimeTypeRef.current }));
+        audioData = await fileToBase64(new window.File([audioBlob], 'audio.webm', { type: audioMimeType }));
       }
 
       const attachments = await Promise.all(
@@ -332,7 +241,7 @@ export function MentorResponsesPage() {
         reply: replyText.trim(),
         audioData,
         audioDuration: recordingTime,
-        audioMimeType: audioMimeTypeRef.current,
+        audioMimeType: audioMimeType,
         attachments: attachments.length > 0 ? attachments : undefined
       });
 
@@ -355,7 +264,11 @@ export function MentorResponsesPage() {
         closeReplyForm();
       }
     } catch (err: any) {
-      toast.error(err.message || 'Ошибка при отправке');
+      if (audioBlob) {
+        toast.error('Ошибка отправки. Запись сохранена — попробуйте ещё раз.', { duration: 8000 });
+      } else {
+        toast.error(err.message || 'Ошибка при отправке');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -610,7 +523,7 @@ export function MentorResponsesPage() {
                                       <span className="text-sm text-[var(--button-lavender-dark)]">
                                         Голосовое сообщение ({formatTime(recordingTime)})
                                       </span>
-                                      <button onClick={removeAudio} className="ml-auto text-red-400 hover:text-red-600">
+                                      <button onClick={cancelRecording} className="ml-auto text-red-400 hover:text-red-600">
                                         <X className="w-4 h-4" />
                                       </button>
                                     </div>

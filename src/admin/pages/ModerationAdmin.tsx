@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api } from '../../lib/api';
-import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye, Paperclip, Image, File, Download, Mic, Square, Play, Pause, Search, Users, List, Trash2 } from 'lucide-react';
+import { MessageCircle, BookOpen, FileText, CheckCircle, Clock, X, Send, User, Eye, Paperclip, Image, File, Download, Mic, Square, Play, Pause, Search, Users, List, Trash2, Loader2, RotateCcw } from 'lucide-react';
 import AudioPlayer from '../../components/AudioPlayer';
 import ImageViewer from '../../components/ImageViewer';
+import { useAudioRecorder } from '../../hooks/useAudioRecorder';
 import { toast } from 'sonner';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
@@ -173,6 +174,8 @@ export function ModerationAdmin() {
   const [dialogLoading, setDialogLoading] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [sendingAudio, setSendingAudio] = useState(false);
+  const [audioRetry, setAudioRetry] = useState<{ audioData: string; duration: number; mimeType: string; blob: Blob } | null>(null);
   const emailSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dialogs = activeTab === 'pending' ? pendingDialogs : activeTab === 'answered' ? answeredDialogs : allDialogs;
@@ -403,11 +406,11 @@ export function ModerationAdmin() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  async function submitAudioReply(audioData: string, duration: number, mimeType?: string, blob?: Blob) {
+  async function submitAudioReply(audioData: string, duration: number, mimeType?: string, blob?: Blob): Promise<boolean> {
     const targetItem = getTargetItem();
-    if (!targetItem) return;
+    if (!targetItem) return false;
 
-    setSubmitting(true);
+    setSendingAudio(true);
     try {
       const endpoint = targetItem.type === 'diary'
         ? `/public/moderation/diary/${targetItem.id}/reply`
@@ -420,17 +423,30 @@ export function ModerationAdmin() {
         audioMimeType: mimeType || 'audio/webm'
       });
       toast.success('Голосовое сообщение отправлено');
+      setAudioRetry(null);
       await Promise.all([reloadDialogItems(), refreshDialogsAfterAction()]);
+      return true;
     } catch (error) {
       const mime = mimeType || 'audio/webm';
       if (blob) {
-        toast.error('Ошибка отправки голосового сообщения. Скачайте запись, чтобы не потерять её, и загрузите через скрепку.', { duration: 10000 });
-        downloadAudioBlob(blob, mime);
+        setAudioRetry({ audioData, duration, mimeType: mime, blob });
+        toast.error('Ошибка отправки. Нажмите «Повторить» или скачайте запись.', { duration: 8000 });
       } else {
         toast.error('Ошибка отправки голосового сообщения');
       }
+      return false;
     } finally {
-      setSubmitting(false);
+      setSendingAudio(false);
+    }
+  }
+
+  async function retryAudioSend() {
+    if (!audioRetry) return;
+    const saved = audioRetry;
+    const success = await submitAudioReply(saved.audioData, saved.duration, saved.mimeType, saved.blob);
+    if (!success) {
+      downloadAudioBlob(saved.blob, saved.mimeType);
+      setAudioRetry(null);
     }
   }
 
@@ -769,6 +785,10 @@ export function ModerationAdmin() {
           onSubmitReply={submitReply}
           onSubmitAudioReply={submitAudioReply}
           onMarkAsViewed={markAsViewed}
+          sendingAudio={sendingAudio}
+          audioRetry={audioRetry}
+          onRetryAudio={retryAudioSend}
+          onDownloadAudio={audioRetry ? () => { downloadAudioBlob(audioRetry.blob, audioRetry.mimeType); setAudioRetry(null); } : undefined}
           onViewerSendMessage={async (text: string) => {
             const targetItem = getTargetItem();
             if (!targetItem) {
@@ -804,7 +824,11 @@ function ChatDialog({
   onSubmitAudioReply,
   onMarkAsViewed,
   onViewerSendMessage,
-  onDeleteComplete
+  onDeleteComplete,
+  sendingAudio,
+  audioRetry,
+  onRetryAudio,
+  onDownloadAudio
 }: {
   dialog: DialogSummary;
   items: ModerationItem[];
@@ -819,6 +843,10 @@ function ChatDialog({
   onMarkAsViewed: () => void;
   onViewerSendMessage: (text: string) => Promise<void>;
   onDeleteComplete: () => Promise<void>;
+  sendingAudio: boolean;
+  audioRetry: { audioData: string; duration: number; mimeType: string; blob: Blob } | null;
+  onRetryAudio: () => void;
+  onDownloadAudio?: () => void;
 }) {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -942,103 +970,16 @@ function ChatDialog({
     setViewerOpen(true);
   }, [items]);
 
-  const [isRecording, setIsRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [audioMimeType, setAudioMimeType] = useState<string>('audio/webm');
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const {
+    isRecording, isPaused, recordingTime, audioBlob, audioUrl, audioMimeType,
+    startRecording, stopRecording, pauseRecording, resumeRecording, cancelRecording
+  } = useAudioRecorder();
 
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [items]);
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-    };
-  }, [audioUrl]);
-
-  const startRecording = async () => {
-    try {
-      const { createMediaRecorder } = await import('../../lib/audioRecorder');
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const { recorder, mimeType } = createMediaRecorder(stream);
-      mediaRecorderRef.current = recorder;
-      setAudioMimeType(mimeType);
-      chunksRef.current = [];
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
-      };
-
-      recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        setAudioBlob(blob);
-        setAudioUrl(URL.createObjectURL(blob));
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      recorder.start();
-      setIsRecording(true);
-      setIsPaused(false);
-      setRecordingTime(0);
-      timerRef.current = setInterval(() => {
-        setRecordingTime(t => t + 1);
-      }, 1000);
-    } catch (err) {
-      toast.error('Не удалось получить доступ к микрофону');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && (isRecording || isPaused)) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      setIsPaused(false);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-  };
-
-  const pauseRecording = () => {
-    if (mediaRecorderRef.current && isRecording && !isPaused) {
-      mediaRecorderRef.current.pause();
-      setIsPaused(true);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-  };
-
-  const resumeRecording = () => {
-    if (mediaRecorderRef.current && isPaused) {
-      mediaRecorderRef.current.resume();
-      setIsPaused(false);
-      timerRef.current = setInterval(() => {
-        setRecordingTime(t => t + 1);
-      }, 1000);
-    }
-  };
-
-  const cancelRecording = () => {
-    if (audioUrl) URL.revokeObjectURL(audioUrl);
-    setAudioBlob(null);
-    setAudioUrl(null);
-    setRecordingTime(0);
-    setIsPaused(false);
-  };
 
   const sendAudioMessage = async () => {
     if (!audioBlob) return;
@@ -1357,8 +1298,39 @@ function ChatDialog({
             </div>
           )}
 
+          {/* Sending Audio Indicator */}
+          {sendingAudio && (
+            <div className="flex items-center gap-3 mb-4 p-3 bg-[#f5f3ed] rounded-xl border border-[#d4c9b0]">
+              <Loader2 className="w-5 h-5 animate-spin text-[#a67c52]" />
+              <span className="text-sm text-[#3d3527]/70">Отправка голосового сообщения...</span>
+            </div>
+          )}
+
+          {/* Audio Retry */}
+          {audioRetry && !sendingAudio && (
+            <div className="flex items-center gap-3 mb-4 p-3 bg-red-50 rounded-xl border border-red-200">
+              <span className="text-sm text-red-600 flex-1">Не удалось отправить голосовое</span>
+              <button
+                onClick={onRetryAudio}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#a67c52] text-white rounded-lg hover:bg-[#8b6a45] transition-colors text-sm"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Повторить
+              </button>
+              {onDownloadAudio && (
+                <button
+                  onClick={onDownloadAudio}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f5f3ed] text-[#3d3527] rounded-lg hover:bg-[#ebe7dd] transition-colors text-sm border border-[#d4c9b0]"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Скачать
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Recorded Audio Preview */}
-          {audioUrl && !isRecording && !isPaused && (
+          {audioUrl && !isRecording && !isPaused && !sendingAudio && (
             <div className="flex items-center gap-3 mb-4 p-3 bg-[#f5f3ed] rounded-xl border border-[#d4c9b0]">
               <audio src={audioUrl} controls className="flex-1 h-10" />
               <span className="text-sm text-[#3d3527]/60">{formatTime(recordingTime)}</span>
@@ -1371,7 +1343,7 @@ function ChatDialog({
               </button>
               <button
                 onClick={sendAudioMessage}
-                disabled={submitting}
+                disabled={submitting || sendingAudio}
                 className="p-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-lg disabled:opacity-50 hover:shadow-lg transition-all"
                 title="Отправить голосовое сообщение"
               >
@@ -1431,13 +1403,16 @@ function ChatDialog({
                     </button>
                     <span className="text-[10px] text-[#3d3527]/40 whitespace-nowrap">до 35 МБ</span>
                   </div>
-                  <button
-                    onClick={startRecording}
-                    className="p-3 bg-[#f5f3ed] text-[#a67c52] rounded-xl hover:bg-[#ebe7dd] transition-all border border-[#d4c9b0]"
-                    title="Записать голосовое сообщение"
-                  >
-                    <Mic className="w-5 h-5" />
-                  </button>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <button
+                      onClick={startRecording}
+                      className="p-3 bg-[#f5f3ed] text-[#a67c52] rounded-xl hover:bg-[#ebe7dd] transition-all border border-[#d4c9b0]"
+                      title="Записать голосовое сообщение"
+                    >
+                      <Mic className="w-5 h-5" />
+                    </button>
+                    <span className="text-[10px] text-[#3d3527]/40 whitespace-nowrap">до 15 мин</span>
+                  </div>
                   <button
                     onClick={() => {
                       onSubmitReply(attachedFiles.length > 0 ? attachedFiles : undefined);

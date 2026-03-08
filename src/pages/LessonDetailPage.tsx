@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { api } from '../lib/api';
 import { KinescopeMultiPlayer } from '../components/KinescopePlayer';
 import { useSettings } from '../lib/settings';
+import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { useAuth } from '../lib/auth';
 import { useIsMobile } from '../lib/useIsMobile';
 import heic2any from 'heic2any';
@@ -291,10 +292,10 @@ export function LessonDetailPage() {
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [diaryFiles, setDiaryFiles] = useState<File[]>([]);
   const [notesFiles, setNotesFiles] = useState<File[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [audioMimeType, setAudioMimeType] = useState<string>('audio/webm');
-  const [recordingTime, setRecordingTime] = useState(0);
+  const {
+    isRecording, audioBlob, audioMimeType, recordingTime,
+    startRecording, stopRecording, cancelRecording: removeAudio
+  } = useAudioRecorder();
   
   // Lesson completion state
   const [isLessonCompleted, setIsLessonCompleted] = useState(false);
@@ -413,9 +414,6 @@ export function LessonDetailPage() {
   }, []);
   
   
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const diaryFileInputRef = useRef<HTMLInputElement>(null);
   const notesFileInputRef = useRef<HTMLInputElement>(null);
@@ -787,8 +785,7 @@ export function LessonDetailPage() {
       toast.success('Ваш вопрос отправлен! Мы свяжемся с вами в ближайшее время.');
       setFeedback('');
       setAttachedFiles([]);
-      setAudioBlob(null);
-      setRecordingTime(0);
+      removeAudio();
       
       setTimeout(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -834,79 +831,6 @@ export function LessonDetailPage() {
     toast.success('Файл удален');
   };
 
-  // Audio recording functions
-  const startRecording = async () => {
-    try {
-      // Check if browser supports mediaDevices API
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        toast.error('Ваш браузер не поддерживает запись аудио');
-        return;
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const { createMediaRecorder } = await import('../lib/audioRecorder');
-      const { recorder, mimeType } = createMediaRecorder(stream);
-      mediaRecorderRef.current = recorder;
-      audioChunksRef.current = [];
-      setAudioMimeType(mimeType);
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        setAudioBlob(audioBlob);
-        stream.getTracks().forEach(track => track.stop());
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
-      };
-
-      recorder.start();
-      setIsRecording(true);
-      setRecordingTime(0);
-
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-
-      toast.success('Запись началась');
-    } catch (error) {
-      // Handle different error types
-      if (error instanceof Error) {
-        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-          toast.error('Доступ к микрофону запрещен. Разрешите доступ в настройках браузера', {
-            duration: 5000,
-          });
-        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-          toast.error('Микрофон не найден. Подключите микрофон и попробуйте снова');
-        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
-          toast.error('Микрофон используется другим приложением');
-        } else {
-          toast.error('Не удалось получить доступ к микрофону. Проверьте настройки');
-        }
-      } else {
-        toast.error('Произошла ошибка при записи аудио');
-      }
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      toast.success('Запись остановлена');
-    }
-  };
-
-  const removeAudio = () => {
-    setAudioBlob(null);
-    setRecordingTime(0);
-    toast.success('Аудио удалено');
-  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

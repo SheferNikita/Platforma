@@ -1089,6 +1089,18 @@ function ChatDialog({
             }> = [];
 
             items.forEach(item => {
+              const replyMessages = parseReplyHistory(item.reply);
+              const mentorAttachmentIds = new Set<string>();
+              replyMessages.forEach(msg => {
+                if (msg.audioAttachmentId) mentorAttachmentIds.add(msg.audioAttachmentId);
+                if (msg.fileAttachmentIds) msg.fileAttachmentIds.forEach(id => mentorAttachmentIds.add(id));
+                if (msg.fileAttachments) msg.fileAttachments.forEach(att => mentorAttachmentIds.add(att.id));
+              });
+
+              const studentAttachments = mentorAttachmentIds.size > 0 && item.attachments
+                ? item.attachments.filter(att => !mentorAttachmentIds.has(att.id))
+                : item.attachments;
+
               flatMessages.push({
                 key: `student-${item.id}`,
                 side: 'student',
@@ -1096,11 +1108,11 @@ function ChatDialog({
                 studentContent: item.content,
                 studentName: item.student.user.name,
                 hasReply: !!item.reply,
-                attachments: item.attachments,
+                attachments: studentAttachments,
                 itemType: item.type,
               });
 
-              parseReplyHistory(item.reply).forEach((msg, idx) => {
+              replyMessages.forEach((msg, idx) => {
                 flatMessages.push({
                   key: `reply-${item.id}-${idx}`,
                   side: 'mentor',
@@ -1178,12 +1190,23 @@ function ChatDialog({
                     <div className="max-w-[85%] md:max-w-[75%]">
                       <div className="bg-gradient-to-br from-[#a67c52] to-[#c4a57b] text-white rounded-2xl rounded-tr-md px-4 py-3 shadow-sm">
                         {msg.audioAttachmentId ? (
-                          <AudioPlayer
-                            audioUrl={`/api/public/attachments/${dialog.type === 'diary' ? 'diary' : 'note'}/${msg.audioAttachmentId}`}
-                            mimeType={msg.audioMimeType}
-                            duration={msg.audioDuration}
-                            variant="dark"
-                          />
+                          <div className="flex items-center gap-2">
+                            <AudioPlayer
+                              audioUrl={`/api/public/attachments/${dialog.type === 'diary' ? 'diary' : 'note'}/${msg.audioAttachmentId}`}
+                              mimeType={msg.audioMimeType}
+                              duration={msg.audioDuration}
+                              variant="dark"
+                            />
+                            <a
+                              href={`/api/public/attachments/${dialog.type === 'diary' ? 'diary' : 'note'}/${msg.audioAttachmentId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1 hover:bg-white/20 rounded transition-colors flex-shrink-0"
+                              title="Скачать"
+                            >
+                              <Download className="w-4 h-4" />
+                            </a>
+                          </div>
                         ) : msg.audioData ? (
                           <AudioPlayer
                             audioData={msg.audioData}

@@ -140,7 +140,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     const noReplyFilter = { OR: [{ reply: null }, { reply: '' }] };
     const hasReplyFilter = { reply: { not: null }, NOT: { reply: '' } };
 
-    const [uncheckedDiariesCounts, uncheckedNotesCounts] = await Promise.all([
+    const [uncheckedDiariesCounts, uncheckedNotesCounts, answeredDiariesCounts] = await Promise.all([
       prisma.diary.groupBy({
         by: ['studentId'],
         where: { studentId: { in: studentIds }, ...noReplyFilter },
@@ -150,6 +150,11 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         by: ['studentId'],
         where: { studentId: { in: studentIds }, ...noReplyFilter },
         _count: { id: true }
+      }),
+      prisma.diary.groupBy({
+        by: ['studentId'],
+        where: { studentId: { in: studentIds }, ...hasReplyFilter },
+        _count: { id: true }
       })
     ]);
 
@@ -157,6 +162,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
     uncheckedDiariesCounts.forEach(d => { uncheckedDiariesMap[d.studentId] = d._count.id; });
     const uncheckedNotesMap: Record<string, number> = {};
     uncheckedNotesCounts.forEach(n => { uncheckedNotesMap[n.studentId] = n._count.id; });
+    const answeredDiariesMap: Record<string, number> = {};
+    answeredDiariesCounts.forEach(d => { answeredDiariesMap[d.studentId] = d._count.id; });
 
     let mentorBreakdownMap: Record<string, { mentorId: string; mentorName: string; count: number }[]> = {};
     let checkedMap: Record<string, number> = {};
@@ -240,6 +247,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
         groups: s.miniGroups.map(mg => ({ id: mg.miniGroup.id, title: mg.miniGroup.title })),
         lessonsCompleted: s._count.progress,
         diariesSubmitted: s._count.diaries,
+        diariesAnswered: answeredDiariesMap[s.id] || 0,
         pendingReview: uncheckedDiaries + uncheckedNotes,
         checkedByMentor: checkedMap[s.id] || 0,
         mentorBreakdown: mentorBreakdownMap[s.id] || []

@@ -31,6 +31,7 @@ interface StudentStat {
   groups: { id: string; title: string }[];
   lessonsCompleted: number;
   diariesSubmitted: number;
+  diariesAnswered: number;
   pendingReview: number;
   checkedByMentor: number;
   mentorBreakdown: MentorBreakdownItem[];
@@ -57,7 +58,7 @@ interface StatisticsResponse {
   role: 'admin' | 'mentor';
 }
 
-type SortField = 'name' | 'lessonsCompleted' | 'diariesSubmitted' | 'pendingReview' | 'checkedByMentor' | 'tariff' | 'group';
+type SortField = 'name' | 'lessonsCompleted' | 'diariesSubmitted' | 'diariesAnswered' | 'pendingReview' | 'checkedByMentor' | 'tariff' | 'group';
 type SortDir = 'asc' | 'desc';
 
 const tariffLabels: Record<string, string> = {
@@ -157,6 +158,9 @@ export function StatisticsAdmin() {
         case 'diariesSubmitted':
           cmp = a.diariesSubmitted - b.diariesSubmitted;
           break;
+        case 'diariesAnswered':
+          cmp = a.diariesAnswered - b.diariesAnswered;
+          break;
         case 'pendingReview':
           cmp = a.pendingReview - b.pendingReview;
           break;
@@ -188,8 +192,8 @@ export function StatisticsAdmin() {
     const separator = '\t';
 
     const headers = isAdmin
-      ? ['Имя', 'Email', 'Тариф', 'Группа', 'Уроков пройдено', 'Дневников сдано', 'Заданий на проверку', 'Проверено наставником', 'Разбивка по наставникам']
-      : ['Имя', 'Email', 'Уроков пройдено', 'Дневников сдано', 'Заданий на проверку'];
+      ? ['Имя', 'Email', 'Тариф', 'Группа', 'Уроков пройдено', 'Дн. сдано', 'Дн. отвечено', 'Заданий на проверку', 'Проверено наставником', 'Разбивка по наставникам']
+      : ['Имя', 'Email', 'Уроков пройдено', 'Дн. сдано', 'Дн. отвечено', 'Заданий на проверку'];
 
     const rows = sortedStudents.map(s => {
       const base = [
@@ -204,6 +208,7 @@ export function StatisticsAdmin() {
           s.groups.map(g => g.title).join(', ') || 'Без группы',
           String(s.lessonsCompleted),
           String(s.diariesSubmitted),
+          String(s.diariesAnswered),
           String(s.pendingReview),
           String(s.checkedByMentor),
           mentorDetail
@@ -213,6 +218,7 @@ export function StatisticsAdmin() {
         ...base,
         String(s.lessonsCompleted),
         String(s.diariesSubmitted),
+        String(s.diariesAnswered),
         String(s.pendingReview)
       ];
     });
@@ -358,7 +364,7 @@ export function StatisticsAdmin() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-3 gap-2 mb-2">
+                  <div className="grid grid-cols-4 gap-2 mb-2">
                     <div className="text-center bg-white/60 rounded-lg p-2">
                       <BookOpen className="w-4 h-4 mx-auto mb-1 text-blue-500" />
                       <div className="text-lg font-bold text-[#3d3527]">{student.lessonsCompleted}</div>
@@ -367,7 +373,12 @@ export function StatisticsAdmin() {
                     <div className="text-center bg-white/60 rounded-lg p-2">
                       <FileText className="w-4 h-4 mx-auto mb-1 text-green-500" />
                       <div className="text-lg font-bold text-[#3d3527]">{student.diariesSubmitted}</div>
-                      <div className="text-[10px] text-[#3d3527]/50">Дневников</div>
+                      <div className="text-[10px] text-[#3d3527]/50">Дн. сдано</div>
+                    </div>
+                    <div className="text-center bg-white/60 rounded-lg p-2">
+                      <FileText className="w-4 h-4 mx-auto mb-1 text-green-500" />
+                      <div className="text-lg font-bold text-green-600">{student.diariesAnswered}</div>
+                      <div className="text-[10px] text-[#3d3527]/50">Дн. отвечено</div>
                     </div>
                     <div
                       className="text-center bg-white/60 rounded-lg p-2 cursor-pointer hover:bg-amber-50 transition-colors"
@@ -433,7 +444,12 @@ export function StatisticsAdmin() {
                     </th>
                     <th className="p-3 cursor-pointer hover:text-[#a67c52] select-none text-center" onClick={() => handleSort('diariesSubmitted')}>
                       <div className="flex items-center justify-center gap-1">
-                        <FileText className="w-3.5 h-3.5" /> Дневники <SortIcon field="diariesSubmitted" />
+                        <FileText className="w-3.5 h-3.5" /> Дн. сдано <SortIcon field="diariesSubmitted" />
+                      </div>
+                    </th>
+                    <th className="p-3 cursor-pointer hover:text-[#a67c52] select-none text-center" onClick={() => handleSort('diariesAnswered')}>
+                      <div className="flex items-center justify-center gap-1">
+                        <FileText className="w-3.5 h-3.5" /> Дн. отвечено <SortIcon field="diariesAnswered" />
                       </div>
                     </th>
                     <th className="p-3 cursor-pointer hover:text-[#a67c52] select-none text-center" onClick={() => handleSort('pendingReview')}>
@@ -472,6 +488,7 @@ export function StatisticsAdmin() {
                       )}
                       <td className="p-3 text-center font-medium text-[#3d3527]">{student.lessonsCompleted}</td>
                       <td className="p-3 text-center font-medium text-[#3d3527]">{student.diariesSubmitted}</td>
+                      <td className="p-3 text-center font-medium text-green-600">{student.diariesAnswered}</td>
                       <td className="p-3 text-center">
                         <button
                           onClick={() => goToModeration(student.email)}

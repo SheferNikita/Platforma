@@ -223,8 +223,8 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       paramIdx++;
     }
     if (status === 'answered') {
-      diaryWhere.push(`d.reply IS NOT NULL`);
-      noteWhere.push(`sn.reply IS NOT NULL`);
+      diaryWhere.push(`d.reply IS NOT NULL AND d.reply != ''`);
+      noteWhere.push(`sn.reply IS NOT NULL AND sn.reply != ''`);
     } else if (status === 'pending') {
       diaryWhere.push(`d.reply IS NULL`);
       noteWhere.push(`sn.reply IS NULL`);

@@ -1003,43 +1003,45 @@ function ChatDialog({
   const isImageFile = (mimeType: string) => mimeType.startsWith('image/');
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col my-8">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-0 md:p-4 overflow-y-auto">
+      <div className="bg-white w-full h-full md:rounded-2xl md:w-full md:max-w-2xl md:max-h-[90vh] md:h-auto flex flex-col md:my-8">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 md:p-6 border-b border-[#d4c9b0]/30">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center">
-              <TypeIcon className="w-5 h-5 text-white" />
+        <div className="p-3 md:p-6 border-b border-[#d4c9b0]/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+              <div className="w-9 h-9 md:w-10 md:h-10 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-xl flex items-center justify-center flex-shrink-0">
+                <TypeIcon className="w-4 h-4 md:w-5 md:h-5 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base md:text-lg font-bold text-[#3d3527] truncate">
+                  {typeConfig[dialog.type]?.label || 'Запись'} к уроку
+                </h2>
+                <p className="text-xs md:text-sm text-[#3d3527]/60 truncate">
+                  {dialog.lesson.title}
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-[#3d3527]">
-                {typeConfig[dialog.type]?.label || 'Запись'} к уроку
-              </h2>
-              <p className="text-sm text-[#3d3527]/60 truncate max-w-[200px] md:max-w-none">
-                {dialog.lesson.title}
-              </p>
+            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+              <button
+                onClick={toggleDeleteMode}
+                className={`p-2.5 md:p-2 rounded-lg transition-colors ${deleteMode ? 'bg-red-100 text-red-600' : 'hover:bg-gray-100 text-[#3d3527]/60'}`}
+                title={deleteMode ? 'Отмена удаления' : 'Удалить сообщения'}
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+              <button onClick={onClose} className="p-2.5 md:p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2 mr-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-white" />
+          <div className="flex items-center gap-2 mt-2 md:mt-2 pl-1">
+            <div className="w-7 h-7 md:w-8 md:h-8 bg-gradient-to-br from-[#a67c52] to-[#c4a57b] rounded-full flex items-center justify-center flex-shrink-0">
+              <User className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
             </div>
-            <div className="text-right">
-              <p className="text-sm font-medium text-[#3d3527]">{dialog.student.user.name}</p>
-              <p className="text-xs text-[#3d3527]/60">{dialog.student.user.email}</p>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-[#3d3527] truncate">{dialog.student.user.name}</p>
+              <p className="text-xs text-[#3d3527]/60 break-all">{dialog.student.user.email}</p>
             </div>
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <button
-              onClick={toggleDeleteMode}
-              className={`p-2 rounded-lg transition-colors ${deleteMode ? 'bg-red-100 text-red-600' : 'hover:bg-gray-100 text-[#3d3527]/60'}`}
-              title={deleteMode ? 'Отмена удаления' : 'Удалить сообщения'}
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
-              <X className="w-5 h-5" />
-            </button>
           </div>
         </div>
 
@@ -1069,7 +1071,7 @@ function ChatDialog({
         {/* Chat Messages Area */}
         <div
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 min-h-[200px] max-h-[40vh] bg-gradient-to-b from-[#f9f8f5] to-white"
+          className="flex-1 overflow-y-auto p-3 md:p-6 space-y-4 min-h-[200px] max-h-[50vh] md:max-h-[40vh] bg-gradient-to-b from-[#f9f8f5] to-white"
         >
           {dialogLoading ? (
             <div className="flex justify-center py-8">
@@ -1295,25 +1297,25 @@ function ChatDialog({
         </div>
 
         {/* Reply Input Area */}
-        <div className="p-4 md:p-6 border-t border-[#d4c9b0]/30 bg-white rounded-b-2xl">
+        <div className="p-3 md:p-6 border-t border-[#d4c9b0]/30 bg-white md:rounded-b-2xl">
           {/* Recording UI */}
           {(isRecording || isPaused) && (
-            <div className="flex items-center gap-3 mb-4 p-3 bg-red-50 rounded-xl border border-red-200">
-              <div className={`w-3 h-3 rounded-full ${isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}`} />
-              <span className={`font-medium ${isPaused ? 'text-yellow-600' : 'text-red-600'}`}>
+            <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4 p-2.5 md:p-3 bg-red-50 rounded-xl border border-red-200">
+              <div className={`w-3 h-3 rounded-full flex-shrink-0 ${isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}`} />
+              <span className={`font-medium text-sm md:text-base ${isPaused ? 'text-yellow-600' : 'text-red-600'}`}>
                 {isPaused ? 'Пауза' : 'Запись'}: {formatTime(recordingTime)}
               </span>
               <div className="flex-1" />
               <button
                 onClick={isPaused ? resumeRecording : pauseRecording}
-                className={`p-2 rounded-lg transition-colors ${isPaused ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}`}
+                className={`p-2.5 md:p-2 rounded-lg transition-colors ${isPaused ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}`}
                 title={isPaused ? 'Продолжить запись' : 'Пауза'}
               >
                 {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
               </button>
               <button
                 onClick={stopRecording}
-                className="p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                className="p-2.5 md:p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                 title="Остановить запись"
               >
                 <Square className="w-4 h-4" />
@@ -1323,19 +1325,19 @@ function ChatDialog({
 
           {/* Sending Audio Indicator */}
           {sendingAudio && (
-            <div className="flex items-center gap-3 mb-4 p-3 bg-[#f5f3ed] rounded-xl border border-[#d4c9b0]">
+            <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4 p-2.5 md:p-3 bg-[#f5f3ed] rounded-xl border border-[#d4c9b0]">
               <Loader2 className="w-5 h-5 animate-spin text-[#a67c52]" />
-              <span className="text-sm text-[#3d3527]/70">Отправка голосового сообщения...</span>
+              <span className="text-sm text-[#3d3527]/70">Отправка голосового...</span>
             </div>
           )}
 
           {/* Audio Retry */}
           {audioRetry && !sendingAudio && (
-            <div className="flex items-center gap-3 mb-4 p-3 bg-red-50 rounded-xl border border-red-200">
-              <span className="text-sm text-red-600 flex-1">Не удалось отправить голосовое</span>
+            <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-3 md:mb-4 p-2.5 md:p-3 bg-red-50 rounded-xl border border-red-200">
+              <span className="text-sm text-red-600 flex-1 min-w-0">Не удалось отправить</span>
               <button
                 onClick={onRetryAudio}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#a67c52] text-white rounded-lg hover:bg-[#8b6a45] transition-colors text-sm"
+                className="flex items-center gap-1.5 px-3 py-2 md:py-1.5 bg-[#a67c52] text-white rounded-lg hover:bg-[#8b6a45] transition-colors text-sm"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 Повторить
@@ -1343,7 +1345,7 @@ function ChatDialog({
               {onDownloadAudio && (
                 <button
                   onClick={onDownloadAudio}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f5f3ed] text-[#3d3527] rounded-lg hover:bg-[#ebe7dd] transition-colors text-sm border border-[#d4c9b0]"
+                  className="flex items-center gap-1.5 px-3 py-2 md:py-1.5 bg-[#f5f3ed] text-[#3d3527] rounded-lg hover:bg-[#ebe7dd] transition-colors text-sm border border-[#d4c9b0]"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Скачать
@@ -1354,12 +1356,12 @@ function ChatDialog({
 
           {/* Recorded Audio Preview */}
           {audioUrl && !isRecording && !isPaused && !sendingAudio && (
-            <div className="flex items-center gap-3 mb-4 p-3 bg-[#f5f3ed] rounded-xl border border-[#d4c9b0]">
-              <audio src={audioUrl} controls className="flex-1 h-10" />
-              <span className="text-sm text-[#3d3527]/60">{formatTime(recordingTime)}</span>
+            <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4 p-2.5 md:p-3 bg-[#f5f3ed] rounded-xl border border-[#d4c9b0]">
+              <audio src={audioUrl} controls className="flex-1 h-10 min-w-0" />
+              <span className="text-xs md:text-sm text-[#3d3527]/60">{formatTime(recordingTime)}</span>
               <button
                 onClick={cancelRecording}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                className="p-2.5 md:p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                 title="Отменить"
               >
                 <X className="w-4 h-4" />
@@ -1367,7 +1369,7 @@ function ChatDialog({
               <button
                 onClick={sendAudioMessage}
                 disabled={submitting || sendingAudio}
-                className="p-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-lg disabled:opacity-50 hover:shadow-lg transition-all"
+                className="p-2.5 md:p-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-lg disabled:opacity-50 hover:shadow-lg transition-all"
                 title="Отправить голосовое сообщение"
               >
                 <Send className="w-4 h-4" />
@@ -1383,7 +1385,7 @@ function ChatDialog({
                   {attachedFiles.map((file, idx) => (
                     <div key={idx} className="flex items-center gap-2 bg-[#f5f3ed] px-3 py-1.5 rounded-lg border border-[#d4c9b0] text-sm">
                       {file.type.startsWith('image/') ? <Image className="w-4 h-4 text-[#a67c52]" /> : <File className="w-4 h-4 text-[#a67c52]" />}
-                      <span className="max-w-[150px] truncate text-[#3d3527]">{file.name}</span>
+                      <span className="max-w-[120px] md:max-w-[150px] truncate text-[#3d3527]">{file.name}</span>
                       <span className="text-[#3d3527]/40 text-xs">({(file.size / 1024).toFixed(0)} КБ)</span>
                       <button onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600">
                         <X className="w-3.5 h-3.5" />
@@ -1392,50 +1394,45 @@ function ChatDialog({
                   ))}
                 </div>
               )}
-              <div className="flex items-end gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files) {
+                    setAttachedFiles(prev => [...prev, ...Array.from(files)]);
+                  }
+                  e.target.value = '';
+                }}
+              />
+              <div className="flex flex-col md:flex-row md:items-end gap-2 md:gap-3">
                 <div className="flex-1">
                   <textarea
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-3 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] resize-none text-sm md:text-base"
+                    rows={2}
+                    className="w-full px-3 md:px-4 py-2.5 md:py-3 border border-[#d4c9b0] rounded-xl focus:outline-none focus:border-[#a67c52] resize-none text-sm md:text-base"
                     placeholder="Напишите сообщение..."
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => {
-                      const files = e.target.files;
-                      if (files) {
-                        setAttachedFiles(prev => [...prev, ...Array.from(files)]);
-                      }
-                      e.target.value = '';
-                    }}
-                  />
-                  <div className="flex flex-col items-center gap-0.5">
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="p-3 bg-[#f5f3ed] text-[#a67c52] rounded-xl hover:bg-[#ebe7dd] transition-all border border-[#d4c9b0]"
-                      title="Прикрепить файл"
-                    >
-                      <Paperclip className="w-5 h-5" />
-                    </button>
-                    <span className="text-[10px] text-[#3d3527]/40 whitespace-nowrap">до 35 МБ</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-0.5">
-                    <button
-                      onClick={startRecording}
-                      className="p-3 bg-[#f5f3ed] text-[#a67c52] rounded-xl hover:bg-[#ebe7dd] transition-all border border-[#d4c9b0]"
-                      title="Записать голосовое сообщение"
-                    >
-                      <Mic className="w-5 h-5" />
-                    </button>
-                    <span className="text-[10px] text-[#3d3527]/40 whitespace-nowrap">до 15 мин</span>
-                  </div>
+                <div className="flex flex-row md:flex-col items-center gap-2">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-3 bg-[#f5f3ed] text-[#a67c52] rounded-xl hover:bg-[#ebe7dd] transition-all border border-[#d4c9b0]"
+                    title="Прикрепить файл (до 35 МБ)"
+                  >
+                    <Paperclip className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={startRecording}
+                    className="p-3 bg-[#f5f3ed] text-[#a67c52] rounded-xl hover:bg-[#ebe7dd] transition-all border border-[#d4c9b0]"
+                    title="Записать голосовое (до 15 мин)"
+                  >
+                    <Mic className="w-5 h-5" />
+                  </button>
+                  <div className="flex-1 md:hidden" />
                   <button
                     onClick={() => {
                       onSubmitReply(attachedFiles.length > 0 ? attachedFiles : undefined);
@@ -1453,10 +1450,10 @@ function ChatDialog({
           )}
 
           {/* Action buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-4">
+          <div className="flex items-center justify-between gap-3 mt-3 md:mt-4">
             <button
               onClick={onClose}
-              className="text-sm text-[#3d3527]/60 hover:text-[#3d3527] transition-colors"
+              className="text-sm text-[#3d3527]/60 hover:text-[#3d3527] transition-colors py-1"
             >
               Закрыть
             </button>
@@ -1465,10 +1462,11 @@ function ChatDialog({
                 <button
                   onClick={onMarkAsViewed}
                   disabled={submitting}
-                  className="flex items-center gap-2 px-4 py-2 border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed] rounded-xl disabled:opacity-50 text-sm transition-colors"
+                  className="flex items-center gap-2 px-3 md:px-4 py-2 border border-[#d4c9b0] text-[#3d3527] hover:bg-[#f5f3ed] rounded-xl disabled:opacity-50 text-sm transition-colors"
                 >
                   <Eye className="w-4 h-4" />
-                  {submitting ? 'Отметка...' : 'Отметить выполненным'}
+                  <span className="hidden sm:inline">{submitting ? 'Отметка...' : 'Отметить выполненным'}</span>
+                  <span className="sm:hidden">{submitting ? '...' : 'Выполнено'}</span>
                 </button>
               )}
             </div>

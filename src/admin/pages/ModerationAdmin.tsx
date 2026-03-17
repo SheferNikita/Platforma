@@ -1024,12 +1024,12 @@ function ChatDialog({
             <div className="flex items-center gap-1 flex-shrink-0 ml-2">
               <button
                 onClick={toggleDeleteMode}
-                className={`p-2.5 md:p-2 rounded-lg transition-colors ${deleteMode ? 'bg-red-100 text-red-600' : 'hover:bg-gray-100 text-[#3d3527]/60'}`}
+                className={`min-w-11 min-h-11 md:min-w-0 md:min-h-0 p-2.5 md:p-2 rounded-lg transition-colors flex items-center justify-center ${deleteMode ? 'bg-red-100 text-red-600' : 'hover:bg-gray-100 text-[#3d3527]/60'}`}
                 title={deleteMode ? 'Отмена удаления' : 'Удалить сообщения'}
               >
                 <Trash2 className="w-5 h-5" />
               </button>
-              <button onClick={onClose} className="p-2.5 md:p-2 hover:bg-gray-100 rounded-lg">
+              <button onClick={onClose} className="min-w-11 min-h-11 md:min-w-0 md:min-h-0 p-2.5 md:p-2 hover:bg-gray-100 rounded-lg flex items-center justify-center">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1039,7 +1039,7 @@ function ChatDialog({
               <User className="w-3.5 h-3.5 md:w-4 md:h-4 text-white" />
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium text-[#3d3527] truncate">{dialog.student.user.name}</p>
+              <p className="text-sm font-medium text-[#3d3527] break-words">{dialog.student.user.name}</p>
               <p className="text-xs text-[#3d3527]/60 break-all">{dialog.student.user.email}</p>
             </div>
           </div>
@@ -1308,14 +1308,14 @@ function ChatDialog({
               <div className="flex-1" />
               <button
                 onClick={isPaused ? resumeRecording : pauseRecording}
-                className={`p-2.5 md:p-2 rounded-lg transition-colors ${isPaused ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}`}
+                className={`min-w-11 min-h-11 md:min-w-0 md:min-h-0 p-2.5 md:p-2 rounded-lg transition-colors flex items-center justify-center ${isPaused ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-yellow-500 hover:bg-yellow-600 text-white'}`}
                 title={isPaused ? 'Продолжить запись' : 'Пауза'}
               >
                 {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
               </button>
               <button
                 onClick={stopRecording}
-                className="p-2.5 md:p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                className="min-w-11 min-h-11 md:min-w-0 md:min-h-0 p-2.5 md:p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center"
                 title="Остановить запись"
               >
                 <Square className="w-4 h-4" />
@@ -1361,7 +1361,7 @@ function ChatDialog({
               <span className="text-xs md:text-sm text-[#3d3527]/60">{formatTime(recordingTime)}</span>
               <button
                 onClick={cancelRecording}
-                className="p-2.5 md:p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                className="min-w-11 min-h-11 md:min-w-0 md:min-h-0 p-2.5 md:p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center"
                 title="Отменить"
               >
                 <X className="w-4 h-4" />
@@ -1369,7 +1369,7 @@ function ChatDialog({
               <button
                 onClick={sendAudioMessage}
                 disabled={submitting || sendingAudio}
-                className="p-2.5 md:p-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-lg disabled:opacity-50 hover:shadow-lg transition-all"
+                className="min-w-11 min-h-11 md:min-w-0 md:min-h-0 p-2.5 md:p-2 bg-gradient-to-r from-[#a67c52] to-[#c4a57b] text-white rounded-lg disabled:opacity-50 hover:shadow-lg transition-all flex items-center justify-center"
                 title="Отправить голосовое сообщение"
               >
                 <Send className="w-4 h-4" />

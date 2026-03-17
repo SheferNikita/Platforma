@@ -1300,7 +1300,7 @@ function ChatDialog({
         <div className="p-3 md:p-6 border-t border-[#d4c9b0]/30 bg-white md:rounded-b-2xl">
           {/* Recording UI */}
           {(isRecording || isPaused) && (
-            <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4 p-2.5 md:p-3 bg-red-50 rounded-xl border border-red-200">
+            <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-3 md:mb-4 p-2.5 md:p-3 bg-red-50 rounded-xl border border-red-200">
               <div className={`w-3 h-3 rounded-full flex-shrink-0 ${isPaused ? 'bg-yellow-500' : 'bg-red-500 animate-pulse'}`} />
               <span className={`font-medium text-sm md:text-base ${isPaused ? 'text-yellow-600' : 'text-red-600'}`}>
                 {isPaused ? 'Пауза' : 'Запись'}: {formatTime(recordingTime)}
@@ -1356,8 +1356,8 @@ function ChatDialog({
 
           {/* Recorded Audio Preview */}
           {audioUrl && !isRecording && !isPaused && !sendingAudio && (
-            <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4 p-2.5 md:p-3 bg-[#f5f3ed] rounded-xl border border-[#d4c9b0]">
-              <audio src={audioUrl} controls className="flex-1 h-10 min-w-0" />
+            <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-3 md:mb-4 p-2.5 md:p-3 bg-[#f5f3ed] rounded-xl border border-[#d4c9b0]">
+              <audio src={audioUrl} controls className="flex-1 h-10 min-w-0 basis-full md:basis-auto" />
               <span className="text-xs md:text-sm text-[#3d3527]/60">{formatTime(recordingTime)}</span>
               <button
                 onClick={cancelRecording}

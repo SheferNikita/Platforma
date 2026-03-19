@@ -92,6 +92,7 @@ router.use(authenticate);
 const adminOnly = requireRole('SUPER_ADMIN', 'ADMIN');
 const contentRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR');
 const moderatorRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'MODERATOR');
+const libraryRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR', 'ADMIN_ASSISTANT');
 const groupRoles = requireRole('SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN');
 
 const moduleSchema = z.object({
@@ -493,7 +494,7 @@ router.post('/lessons/:id/copy', moderatorRoles, async (req: AuthRequest & Reque
   }
 });
 
-router.get('/library', moderatorRoles, async (req: AuthRequest, res: Response) => {
+router.get('/library', libraryRoles, async (req: AuthRequest, res: Response) => {
   try {
     const items = await prisma.libraryItem.findMany({
       orderBy: { order: 'asc' }
@@ -505,7 +506,7 @@ router.get('/library', moderatorRoles, async (req: AuthRequest, res: Response) =
   }
 });
 
-router.post('/library', moderatorRoles, async (req: AuthRequest, res: Response) => {
+router.post('/library', libraryRoles, async (req: AuthRequest, res: Response) => {
   try {
     const item = await prisma.libraryItem.create({ data: req.body });
 
@@ -538,7 +539,7 @@ router.post('/library', moderatorRoles, async (req: AuthRequest, res: Response) 
   }
 });
 
-router.put('/library/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.put('/library/:id', libraryRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     const oldItem = await prisma.libraryItem.findUnique({ where: { id } });
@@ -573,7 +574,7 @@ router.put('/library/:id', moderatorRoles, async (req: AuthRequest & Request<IdP
   }
 });
 
-router.delete('/library/:id', moderatorRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
+router.delete('/library/:id', libraryRoles, async (req: AuthRequest & Request<IdParams>, res: Response) => {
   try {
     const id = req.params.id;
     const oldItem = await prisma.libraryItem.findUnique({ where: { id } });
@@ -1606,7 +1607,7 @@ router.get('/lessons/next-order/:moduleId', contentRoles, async (req: AuthReques
   }
 });
 
-router.get('/library/next-order', moderatorRoles, async (req: AuthRequest, res: Response) => {
+router.get('/library/next-order', libraryRoles, async (req: AuthRequest, res: Response) => {
   try {
     const maxItem = await prisma.libraryItem.findFirst({ orderBy: { order: 'desc' } });
     res.json({ nextOrder: (maxItem?.order || 0) + 1 });

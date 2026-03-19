@@ -38,7 +38,7 @@ const navItems: {
   roles?: UserRole[];
 }[] = [
   { path: '/admin/lessons', label: 'Уроки', icon: BookOpen, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR'] },
-  { path: '/admin/library', label: 'Библиотека', icon: Library, roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] },
+  { path: '/admin/library', label: 'Библиотека', icon: Library, roles: ['SUPER_ADMIN', 'ADMIN', 'CURATOR', 'MENTOR', 'PSYCHOLOGIST', 'INTERN', 'MODERATOR', 'ADMIN_ASSISTANT'] },
   { path: '/admin/schedule', label: 'Расписание', icon: Calendar, roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] },
   { path: '/admin/contacts', label: 'Контакты', icon: Phone, roles: ['SUPER_ADMIN', 'ADMIN'] },
   { path: '/admin/communities', label: 'Общины', icon: Building, roles: ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'] },

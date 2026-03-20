@@ -6,10 +6,18 @@ if (!databaseUrl) {
   throw new Error('EXTERNAL_DATABASE_URL environment variable is required. All data must persist in external TimeWeb database.');
 }
 
+const pooledUrl = new URL(databaseUrl);
+if (!pooledUrl.searchParams.has('connection_limit')) {
+  pooledUrl.searchParams.set('connection_limit', '20');
+}
+if (!pooledUrl.searchParams.has('pool_timeout')) {
+  pooledUrl.searchParams.set('pool_timeout', '30');
+}
+
 export const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: databaseUrl,
+      url: pooledUrl.toString(),
     },
   },
 });

@@ -54,6 +54,7 @@ The backend is powered by **Express.js (Node.js)**, utilizing **Prisma ORM 5.22.
 -   Combined API endpoints and deduplicated API calls.
 -   Mobile-specific optimizations for lesson pages (collapsible sections, deferred data loading, simplified CSS, hidden nav buttons, skipped `/public/modules` API call).
 -   AdminLog writes and notification sends moved to background (fire-and-forget) for schedule and library endpoints.
+-   Prisma connection pool: `connection_limit=20`, `pool_timeout=30` (configured programmatically in `server/src/db.ts`). Keepalive `SELECT 1` every 60 seconds.
 
 The project is structured into `prisma/` (schema, seed), `server/` (entry point, middleware, routes, services), and `src/` (admin panel, shared components, utilities, public pages).
 

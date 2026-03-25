@@ -395,6 +395,11 @@ router.get('/library', async (req, res) => {
       orderBy: { order: 'asc' }
     });
     
+    const userRole = await getUserRoleFromToken(req);
+    if (isAdminRole(userRole)) {
+      return res.json(items);
+    }
+
     const studentInfo = await getStudentFromToken(req);
     if (studentInfo) {
       const student = await prisma.student.findUnique({
